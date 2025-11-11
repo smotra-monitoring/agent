@@ -17,14 +17,14 @@ pub mod plugin;
 pub mod reporter;
 pub mod types;
 
-use std::sync::Arc;
 use parking_lot::RwLock;
+use std::sync::Arc;
 use tokio::sync::broadcast;
-use tracing::{info, warn};
+use tracing::info;
 
 pub use config::Config;
 pub use error::{Error, Result};
-pub use types::{MonitoringResult, AgentStatus};
+pub use types::{AgentStatus, MonitoringResult};
 
 /// Main agent instance that coordinates all monitoring tasks
 pub struct Agent {
@@ -37,7 +37,7 @@ impl Agent {
     /// Create a new agent instance with the given configuration
     pub fn new(config: Config) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
-        
+
         Self {
             config: Arc::new(RwLock::new(config)),
             status: Arc::new(RwLock::new(AgentStatus::default())),
@@ -48,10 +48,10 @@ impl Agent {
     /// Start the agent and all monitoring tasks
     pub async fn start(&self) -> Result<()> {
         info!("Starting Smotra agent");
-        
+
         let config = self.config.read().clone();
         let mut shutdown_rx = self.shutdown_tx.subscribe();
-        
+
         // Update status
         {
             let mut status = self.status.write();
@@ -64,10 +64,10 @@ impl Agent {
             let config = config.clone();
             let status = Arc::clone(&self.status);
             let mut shutdown_rx = self.shutdown_tx.subscribe();
-            
-            tokio::spawn(async move {
-                monitor::run_monitoring(config, status, &mut shutdown_rx).await
-            })
+
+            tokio::spawn(
+                async move { monitor::run_monitoring(config, status, &mut shutdown_rx).await },
+            )
         };
 
         // Start reporter task
@@ -75,10 +75,10 @@ impl Agent {
             let config = config.clone();
             let status = Arc::clone(&self.status);
             let mut shutdown_rx = self.shutdown_tx.subscribe();
-            
-            tokio::spawn(async move {
-                reporter::run_reporter(config, status, &mut shutdown_rx).await
-            })
+
+            tokio::spawn(
+                async move { reporter::run_reporter(config, status, &mut shutdown_rx).await },
+            )
         };
 
         // Wait for shutdown signal
@@ -99,7 +99,7 @@ impl Agent {
 
         // Wait for tasks to complete
         let _ = tokio::join!(monitor_handle, reporter_handle);
-        
+
         info!("Agent stopped");
         Ok(())
     }

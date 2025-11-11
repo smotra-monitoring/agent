@@ -72,7 +72,7 @@ impl Endpoint {
 }
 
 /// Current status of the agent
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AgentStatus {
     /// Whether the agent is currently running
     pub is_running: bool,
@@ -90,21 +90,6 @@ pub struct AgentStatus {
     pub server_connected: bool,
     /// Number of cached results waiting to be sent
     pub cached_results: usize,
-}
-
-impl Default for AgentStatus {
-    fn default() -> Self {
-        Self {
-            is_running: false,
-            started_at: None,
-            checks_performed: 0,
-            checks_successful: 0,
-            checks_failed: 0,
-            last_report_at: None,
-            server_connected: false,
-            cached_results: 0,
-        }
-    }
 }
 
 /// Traceroute hop information

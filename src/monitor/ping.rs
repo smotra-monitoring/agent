@@ -5,8 +5,8 @@ use crate::types::{CheckType, Endpoint, MonitoringResult};
 use chrono::Utc;
 use std::net::{IpAddr, ToSocketAddrs};
 use std::time::{Duration, Instant};
-use surge_ping::{Client, Config, PingIdentifier, PingSequence, ICMP};
-use tracing::{debug, warn};
+use surge_ping::{Client, Config, PingIdentifier, PingSequence};
+use tracing::debug;
 use uuid::Uuid;
 
 /// Ping checker for ICMP reachability tests
@@ -22,7 +22,7 @@ impl PingChecker {
         let config = Config::default();
         let client = Client::new(&config)
             .map_err(|e| Error::Network(format!("Failed to create ping client: {}", e)))?;
-        
+
         Ok(Self {
             client,
             timeout,
@@ -33,7 +33,7 @@ impl PingChecker {
     /// Perform a ping check on the given endpoint
     pub async fn check(&self, agent_id: &str, endpoint: &Endpoint) -> MonitoringResult {
         let start = Instant::now();
-        
+
         // Resolve the address
         let addr = match self.resolve_address(&endpoint.address).await {
             Ok(addr) => addr,
@@ -107,13 +107,10 @@ impl PingChecker {
         let sequence = PingSequence(seq);
 
         let mut pinger = self.client.pinger(addr, identifier).await;
-        
-        let start = Instant::now();
-        
-        match tokio::time::timeout(
-            self.timeout,
-            pinger.ping(sequence, &payload)
-        ).await {
+
+        // let start = Instant::now();
+
+        match tokio::time::timeout(self.timeout, pinger.ping(sequence, &payload)).await {
             Ok(Ok((_, duration))) => Ok(duration),
             Ok(Err(e)) => Err(Error::Network(format!("Ping failed: {}", e))),
             Err(_) => Err(Error::Network("Ping timeout".to_string())),
@@ -130,7 +127,8 @@ impl PingChecker {
         // Resolve as hostname
         let addr_str = format!("{}:0", address);
         let addrs: Vec<_> = tokio::task::spawn_blocking(move || {
-            addr_str.to_socket_addrs()
+            addr_str
+                .to_socket_addrs()
                 .map(|addrs| addrs.collect::<Vec<_>>())
         })
         .await

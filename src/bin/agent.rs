@@ -32,9 +32,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| {
-                    tracing_subscriber::EnvFilter::new(&cli.log_level)
-                }),
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(&cli.log_level)),
         )
         .with_target(true)
         .with_thread_ids(true)
@@ -47,7 +45,10 @@ async fn main() -> Result<()> {
     if cli.gen_config {
         let config = Config::default();
         config.save_to_file(&cli.config)?;
-        info!("Generated default configuration at: {}", cli.config.display());
+        info!(
+            "Generated default configuration at: {}",
+            cli.config.display()
+        );
         return Ok(());
     }
 
@@ -80,7 +81,7 @@ async fn main() -> Result<()> {
 
     // Create and start agent
     let agent = Agent::new(config);
-    
+
     match agent.start().await {
         Ok(_) => {
             info!("Agent stopped gracefully");

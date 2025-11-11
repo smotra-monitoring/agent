@@ -9,19 +9,19 @@ use std::time::Duration;
 pub struct Config {
     /// Unique identifier for this agent
     pub agent_id: String,
-    
+
     /// Tags for this agent (used for mesh organization)
     pub tags: Vec<String>,
-    
+
     /// Monitoring configuration
     pub monitoring: MonitoringConfig,
-    
+
     /// Server configuration
     pub server: ServerConfig,
-    
+
     /// Local storage configuration
     pub storage: StorageConfig,
-    
+
     /// Endpoints to monitor
     pub endpoints: Vec<Endpoint>,
 }
@@ -44,19 +44,19 @@ impl Default for Config {
 pub struct MonitoringConfig {
     /// Interval between checks in seconds
     pub interval_secs: u64,
-    
+
     /// Timeout for each check in seconds
     pub timeout_secs: u64,
-    
+
     /// Number of pings to send per check
     pub ping_count: u32,
-    
+
     /// Maximum number of concurrent checks
     pub max_concurrent: usize,
-    
+
     /// Enable traceroute on failed pings
     pub traceroute_on_failure: bool,
-    
+
     /// Maximum TTL for traceroute
     pub traceroute_max_hops: u8,
 }
@@ -89,19 +89,19 @@ impl MonitoringConfig {
 pub struct ServerConfig {
     /// Server URL
     pub url: Option<String>,
-    
+
     /// API key for authentication
     pub api_key: Option<String>,
-    
+
     /// Report interval in seconds
     pub report_interval_secs: u64,
-    
+
     /// Enable TLS verification
     pub verify_tls: bool,
-    
+
     /// Connection timeout in seconds
     pub timeout_secs: u64,
-    
+
     /// Retry attempts on failure
     pub retry_attempts: u32,
 }
@@ -138,10 +138,10 @@ impl ServerConfig {
 pub struct StorageConfig {
     /// Directory for storing cached data
     pub cache_dir: String,
-    
+
     /// Maximum number of results to cache
     pub max_cached_results: usize,
-    
+
     /// Maximum age of cached results in seconds
     pub max_cache_age_secs: u64,
 }
