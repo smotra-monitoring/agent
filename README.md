@@ -108,19 +108,19 @@ With custom log level:
 Interactive TUI:
 
 ```bash
-./agent-cli tui -c config.toml
+./agent-cli -c config.toml tui
 ```
 
 Show current status:
 
 ```bash
-./agent-cli status -c config.toml
+./agent-cli -c config.toml status
 ```
 
 Validate configuration:
 
 ```bash
-./agent-cli validate-config -c config.toml
+./agent-cli -c config.toml validate-config
 ```
 
 ### TUI Controls
