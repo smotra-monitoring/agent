@@ -211,7 +211,7 @@ cargo test
 ### Running with Debug Logging
 
 ```bash
-RUST_LOG=debug cargo run --bin agent -- -c config.toml
+RUST_LOG=debug cargo run --bin agent -- -c config.toml --log-level debug
 ```
 
 ## License
