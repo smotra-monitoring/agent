@@ -8,7 +8,7 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::info;
 
-use super::types::AgentStatus;
+use super::AgentStatus;
 use crate::config::Config;
 use crate::error::Result;
 
@@ -33,10 +33,10 @@ impl Agent {
 
     /// Start the agent and all monitoring tasks
     pub async fn start(&self) -> Result<()> {
-        info!("Starting Smotra agent");
-
         let config = self.config.read().clone();
         let mut shutdown_rx = self.shutdown_tx.subscribe();
+
+        info!("Starting agent id {}", config.agent_id);
 
         // Update status
         {
@@ -77,10 +77,14 @@ impl Agent {
             }
         }
 
+        info!("Stopping agent");
+
         // Update status
+        self.status.write().is_running = false;
         {
             let mut status = self.status.write();
             status.is_running = false;
+            status.stopped_at = Some(chrono::Utc::now());
         }
 
         // Wait for tasks to complete

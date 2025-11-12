@@ -78,6 +78,8 @@ pub struct AgentStatus {
     pub is_running: bool,
     /// When the agent was started
     pub started_at: Option<DateTime<Utc>>,
+    /// When the agent was shutdown
+    pub stopped_at: Option<DateTime<Utc>>,
     /// Number of checks performed
     pub checks_performed: u64,
     /// Number of successful checks
