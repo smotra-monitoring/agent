@@ -1,6 +1,5 @@
 //! Agent auto-updater binary
 
-use anyhow::Result;
 use clap::Parser;
 use std::path::PathBuf;
 
@@ -26,7 +25,7 @@ struct Cli {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     println!("Smotra Agent Auto-Updater");
@@ -36,14 +35,11 @@ async fn main() -> Result<()> {
 
     // TODO: Implement update checking logic
     println!("\nChecking for updates...");
-    
+
     if cli.check_only {
-        println!("No updates available (updater not yet implemented)");
-        return Ok(());
+        todo!("No updates available (updater not yet implemented)");
     }
 
     // TODO: Implement update download and installation
-    println!("Update functionality coming soon!");
-
-    Ok(())
+    todo!("Update functionality coming soon!");
 }

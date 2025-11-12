@@ -6,7 +6,7 @@ mod ping;
 pub use coordinator::run_monitoring;
 pub use ping::PingChecker;
 
-use crate::types::MonitoringResult;
+use crate::core::types::MonitoringResult;
 use tokio::sync::mpsc;
 
 /// Channel for sending monitoring results

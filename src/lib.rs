@@ -10,15 +10,14 @@
 //! - Local caching for offline operation
 //! - Plugin system for extensibility
 
-mod agent;
-pub mod config;
-pub mod error;
+mod config;
+mod core;
+mod error;
+
 pub mod monitor;
 pub mod plugin;
 pub mod reporter;
-pub mod types;
 
-pub use agent::Agent;
-pub use config::Config;
+pub use config::{Config, MonitoringConfig};
+pub use core::{Agent, AgentStatus, CheckType, Endpoint, MonitoringResult};
 pub use error::{Error, Result};
-pub use types::{AgentStatus, MonitoringResult};

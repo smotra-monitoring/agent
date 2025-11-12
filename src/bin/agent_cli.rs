@@ -216,7 +216,7 @@ fn render_header(f: &mut Frame, area: Rect, tabs: &[&str], selected: usize) {
     f.render_widget(header, area);
 }
 
-fn render_status(f: &mut Frame, area: Rect, status: &smotra_agent::types::AgentStatus) {
+fn render_status(f: &mut Frame, area: Rect, status: &smotra_agent::AgentStatus) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([

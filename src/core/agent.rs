@@ -8,9 +8,9 @@ use std::sync::Arc;
 use tokio::sync::broadcast;
 use tracing::info;
 
+use super::types::AgentStatus;
 use crate::config::Config;
 use crate::error::Result;
-use crate::types::AgentStatus;
 
 /// Main agent instance that coordinates all monitoring tasks
 pub struct Agent {

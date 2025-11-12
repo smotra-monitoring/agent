@@ -1,7 +1,7 @@
 //! Cache manager for storing results locally
 
+use crate::core::types::MonitoringResult;
 use crate::error::Result;
-use crate::types::MonitoringResult;
 use std::time::Duration;
 
 /// Cache manager for storing results locally

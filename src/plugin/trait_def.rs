@@ -1,7 +1,7 @@
 //! Plugin trait definition
 
+use crate::core::types::{Endpoint, MonitoringResult};
 use crate::error::Result;
-use crate::types::{Endpoint, MonitoringResult};
 use async_trait::async_trait;
 
 /// Trait for implementing monitoring plugins

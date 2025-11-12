@@ -1,6 +1,6 @@
 //! Configuration types
 
-use crate::types::Endpoint;
+use crate::core::types::Endpoint;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 

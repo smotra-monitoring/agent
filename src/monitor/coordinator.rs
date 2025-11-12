@@ -1,9 +1,9 @@
 //! Monitoring task coordination and execution
 
 use crate::config::Config;
+use crate::core::types::AgentStatus;
 use crate::error::Result;
 use crate::monitor::{PingChecker, ResultSender};
-use crate::types::AgentStatus;
 use parking_lot::RwLock;
 use std::sync::Arc;
 use tokio::sync::broadcast;

@@ -1,7 +1,7 @@
 //! ICMP ping monitoring
 
+use crate::core::types::{CheckType, Endpoint, MonitoringResult};
 use crate::error::{Error, Result};
-use crate::types::{CheckType, Endpoint, MonitoringResult};
 use chrono::Utc;
 use std::net::{IpAddr, ToSocketAddrs};
 use std::time::{Duration, Instant};

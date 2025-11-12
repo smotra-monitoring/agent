@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use clap::Parser;
-use smotra_agent::{Agent, Config};
+use smotra_agent::{Agent, Config, Endpoint};
 use std::path::PathBuf;
 use tracing::{error, info};
 
@@ -43,7 +43,12 @@ async fn main() -> Result<()> {
 
     // Generate config if requested
     if cli.gen_config {
-        let config = Config::default();
+        let mut config = Config::default();
+
+        config.endpoints.push(
+            Endpoint::new("8.8.8.8").with_tags(vec!["DNS".to_string(), "google".to_string()]),
+        );
+
         config.save_to_file(&cli.config)?;
         info!(
             "Generated default configuration at: {}",
