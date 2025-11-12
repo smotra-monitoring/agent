@@ -65,6 +65,11 @@ Files structure
 - `src/bin/agent_plugin_example.rs`: Example plugin demonstrating how to extend agent functionality.
 - `src/bin/agent_updater.rs`: Binary to handle auto-updates for the agent
 
-All mod.rs files should be in their respective directories and contain module declarations for the files in those directories. No functional code should be in mod.rs files.
+# Code organization
+
+- mod.rs files should not functional code should. The only mod definitions or re-export can be present in there. 
+- "utilities" module can be used inside other modules to declare only private support functions for the module.
+- reserve "support" module for external functions that cna be used by other projects in cargo workspaces
+
 
 Tracing should be implemented using the "tracing" crate with support for different log levels and output formats. 
