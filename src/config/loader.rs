@@ -38,6 +38,25 @@ impl Config {
             ));
         }
 
+        if self.server.report_interval_secs == 0 {
+            return Err(Error::Config(
+                "server report_interval must be greater than 0".to_string(),
+            ));
+        }
+
+        if self.server.timeout_secs == 0 {
+            return Err(Error::Config(
+                "server timeout must be greater than 0".to_string(),
+            ));
+        }
+
+        if self.server.report_interval_secs < self.monitoring.timeout_secs * 2 {
+            return Err(Error::Config(
+                "server report_interval should be at least two times greater than the monitoring interval"
+                    .to_string(),
+            ));
+        }
+
         Ok(())
     }
 }

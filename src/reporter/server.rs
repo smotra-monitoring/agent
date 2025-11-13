@@ -30,7 +30,7 @@ pub async fn run_reporter(
             _ = interval.tick() => {
                 match config.server.is_configured() {
                     true => {
-                        match send_report(&config, &status).await {
+                        match send_agent_report(&config, &status).await {
                             Ok(_) => {
                                 let mut s = status.write();
                                 s.server_connected = true;
@@ -59,8 +59,8 @@ pub async fn run_reporter(
     Ok(())
 }
 
-/// Send a report to the server
-async fn send_report(config: &Config, status: &Arc<RwLock<AgentStatus>>) -> Result<()> {
+/// Send an agent report to the server
+async fn send_agent_report(config: &Config, status: &Arc<RwLock<AgentStatus>>) -> Result<()> {
     let server_url = config
         .server
         .url
