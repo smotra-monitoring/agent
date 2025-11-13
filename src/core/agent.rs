@@ -74,6 +74,7 @@ impl Agent {
             }
             _ = tokio::signal::ctrl_c() => {
                 info!("Ctrl+C received, shutting down");
+                let _ = self.shutdown_tx.send(());
             }
         }
 

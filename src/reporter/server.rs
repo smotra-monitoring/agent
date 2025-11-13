@@ -28,19 +28,24 @@ pub async fn run_reporter(
     loop {
         tokio::select! {
             _ = interval.tick() => {
-                if config.server.is_configured() {
-                    match send_report(&config, &status).await {
-                        Ok(_) => {
-                            let mut s = status.write();
-                            s.server_connected = true;
-                            s.last_report_at = Some(Utc::now());
-                            debug!("Report sent successfully");
+                match config.server.is_configured() {
+                    true => {
+                        match send_report(&config, &status).await {
+                            Ok(_) => {
+                                let mut s = status.write();
+                                s.server_connected = true;
+                                s.last_report_at = Some(Utc::now());
+                                debug!("Report sent successfully");
+                            }
+                            Err(e) => {
+                                let mut s = status.write();
+                                s.server_connected = false;
+                                error!("Failed to send report: {}", e);
+                            }
                         }
-                        Err(e) => {
-                            let mut s = status.write();
-                            s.server_connected = false;
-                            error!("Failed to send report: {}", e);
-                        }
+                    }
+                    false => {
+                        warn!("Implement local caching logic");
                     }
                 }
             }
