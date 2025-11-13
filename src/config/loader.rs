@@ -50,7 +50,7 @@ impl Config {
             ));
         }
 
-        if self.server.report_interval_secs < self.monitoring.timeout_secs * 2 {
+        if self.server.report_interval_secs < self.server.timeout_secs * 2 {
             return Err(Error::Config(
                 "server report_interval should be at least two times greater than the monitoring interval"
                     .to_string(),
