@@ -113,7 +113,7 @@ impl Default for ServerConfig {
             api_key: None,
             report_interval_secs: 300,
             verify_tls: true,
-            timeout_secs: 30,
+            timeout_secs: 5,
             retry_attempts: 3,
         }
     }
