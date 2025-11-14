@@ -3,12 +3,24 @@
 use crate::config::Config;
 use crate::core::types::AgentStatus;
 use crate::error::Result;
-use crate::monitor::{PingChecker, ResultSender};
+use crate::monitor::PingChecker;
 use parking_lot::RwLock;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::time::interval;
 use tracing::{error, info};
+
+use crate::core::types::MonitoringResult;
+use tokio::sync::mpsc;
+
+/// Channel for sending monitoring results
+type ResultSender = mpsc::UnboundedSender<MonitoringResult>;
+type ResultReceiver = mpsc::UnboundedReceiver<MonitoringResult>;
+
+/// Create a result channel
+fn result_channel() -> (ResultSender, ResultReceiver) {
+    mpsc::unbounded_channel()
+}
 
 /// Run the monitoring loop
 pub async fn run_monitoring(
@@ -18,7 +30,7 @@ pub async fn run_monitoring(
 ) -> Result<()> {
     info!("Starting monitoring tasks");
 
-    let (result_tx, mut result_rx) = crate::monitor::result_channel();
+    let (result_tx, mut result_rx) = result_channel();
 
     // Create ping checker
     let ping_checker =
