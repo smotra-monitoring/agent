@@ -3,25 +3,35 @@
 ## Generated Files
 
 ### Core Library Files
-- `src/lib.rs` - Main library entry point with Agent struct
+- `src/lib.rs` - Main library entry point with Agent struct and public exports
 - `src/error.rs` - Error types and Result aliases
-- `src/types.rs` - Common types (MonitoringResult, AgentStatus, Endpoint, etc.)
 
-### Configuration
-- `src/config/mod.rs` - Configuration loading and validation
-- `src/config/types.rs` - Configuration data structures
+### Configuration Module (`src/config/`)
+- `src/config/mod.rs` - Module exports for configuration
+- `src/config/loader.rs` - Configuration loading and validation logic
+- `src/config/types.rs` - Configuration data structures (Config, MonitoringConfig, ServerConfig, etc.)
 
-### Monitoring
-- `src/monitor/mod.rs` - Monitoring coordinator and task management
-- `src/monitor/ping.rs` - ICMP ping implementation using surge-ping
+### Core Module (`src/core/`)
+- `src/core/mod.rs` - Module exports for core types
+- `src/core/agent.rs` - Agent struct implementation with lifecycle management
+- `src/core/types.rs` - Core types (MonitoringResult, AgentStatus, Endpoint, CheckType, etc.)
 
-### Reporting
-- `src/reporter/mod.rs` - Data reporter with server communication and caching
+### Monitoring Module (`src/monitor/`)
+- `src/monitor/mod.rs` - Module exports for monitoring
+- `src/monitor/coordinator.rs` - Monitoring coordinator and task management
+- `src/monitor/ping.rs` - ICMP ping implementation using surge-ping (PingChecker)
 
-### Plugin System
-- `src/plugin/mod.rs` - Plugin trait and registry for extensibility
+### Reporter Module (`src/reporter/`)
+- `src/reporter/mod.rs` - Module exports for reporting
+- `src/reporter/server.rs` - Server communication and result reporting
+- `src/reporter/cache.rs` - Cache manager for offline data storage
 
-### Binaries
+### Plugin System (`src/plugin/`)
+- `src/plugin/mod.rs` - Module exports for plugin system
+- `src/plugin/trait_def.rs` - MonitoringPlugin trait definition
+- `src/plugin/registry.rs` - Plugin registry for managing plugins
+
+### Binaries (`src/bin/`)
 - `src/bin/agent.rs` - Main daemon for running the agent
 - `src/bin/agent_cli.rs` - Interactive TUI with Ratatui
 - `src/bin/agent_plugin_example.rs` - HTTP monitoring plugin example
@@ -31,6 +41,8 @@
 - `Cargo.toml` - Rust project configuration with dependencies
 - `README.md` - Comprehensive documentation
 - `config.example.toml` - Example configuration file
+- `config.toml` - Local configuration file
+- `PROJECT_STRUCTURE.md` - This file
 - `.gitignore` - Git ignore patterns
 
 ## Key Features Implemented
@@ -118,6 +130,7 @@
 2. **Health Check**: HTTP endpoint for health status
 3. **Configuration Hot-reload**: Support runtime config updates
 4. **Advanced TUI**: Add graphs and more interactive features
+5. **Retry in server reporting** Implement retry logic in reporter/server.rs
 
 ## Usage Examples
 

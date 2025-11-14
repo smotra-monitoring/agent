@@ -74,7 +74,7 @@ pub async fn run_monitoring(
                         }
                     }
                     _ = shutdown_rx.recv() => {
-                        info!("Result processor shutting down");
+                        info!("Monitoring sub-task shutting down");
                         break;
                     }
                 }
@@ -83,7 +83,12 @@ pub async fn run_monitoring(
     };
 
     // Wait for shutdown
-    let _ = shutdown_rx.recv().await;
+    // Due to result_handle spawned in another task and resubscribed to shoutdown_rx we need to wait here
+    // for the signal as well
+    match shutdown_rx.recv().await {
+        Ok(_) => tracing::info!("Monitoring task shutting down"),
+        Err(_) => tracing::warn!("Monitoring shutdown channel already closed"),
+    }
 
     // Wait for tasks to complete
     let _ = tokio::join!(monitor_handle, result_handle);
