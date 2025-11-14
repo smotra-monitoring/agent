@@ -88,6 +88,8 @@ pub struct AgentStatus {
     pub checks_failed: u64,
     /// Last time data was sent to server
     pub last_report_at: Option<DateTime<Utc>>,
+    /// Number of failed report attempts
+    pub failed_report_count: u64,
     /// Whether the agent is connected to the server
     pub server_connected: bool,
     /// Number of cached results waiting to be sent

@@ -40,6 +40,7 @@ pub async fn run_reporter(
                             Err(e) => {
                                 let mut s = agent_status.write();
                                 s.server_connected = false;
+                                s.failed_report_count += 1;
                                 error!("Failed to send report: {}", e);
                             }
                         }

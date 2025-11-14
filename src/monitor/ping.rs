@@ -4,7 +4,7 @@ use crate::core::types::{CheckType, Endpoint, MonitoringResult};
 use crate::error::{Error, Result};
 use chrono::Utc;
 use std::net::{IpAddr, ToSocketAddrs};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 use surge_ping::{Client, Config, PingIdentifier, PingSequence};
 use tracing::debug;
 use uuid::Uuid;
@@ -32,8 +32,6 @@ impl PingChecker {
 
     /// Perform a ping check on the given endpoint
     pub async fn check(&self, agent_id: &str, endpoint: &Endpoint) -> MonitoringResult {
-        let start = Instant::now();
-
         // Resolve the address
         let addr = match self.resolve_address(&endpoint.address).await {
             Ok(addr) => addr,
@@ -102,7 +100,7 @@ impl PingChecker {
 
     /// Perform a single ping
     async fn ping_once(&self, addr: IpAddr, seq: u16) -> Result<Duration> {
-        let payload = [0; 56];
+        let payload = "******    ping   ------ 1234567890 ===== abcdefghi ____ ".as_bytes();
         let identifier = PingIdentifier(rand::random());
         let sequence = PingSequence(seq);
 
@@ -110,7 +108,7 @@ impl PingChecker {
 
         // let start = Instant::now();
 
-        match tokio::time::timeout(self.timeout, pinger.ping(sequence, &payload)).await {
+        match tokio::time::timeout(self.timeout, pinger.ping(sequence, payload)).await {
             Ok(Ok((_, duration))) => Ok(duration),
             Ok(Err(e)) => Err(Error::Network(format!("Ping failed: {}", e))),
             Err(_) => Err(Error::Network("Ping timeout".to_string())),
@@ -134,6 +132,8 @@ impl PingChecker {
         .await
         .map_err(|e| Error::Network(format!("Resolution failed: {}", e)))?
         .map_err(|e| Error::Network(format!("Resolution failed: {}", e)))?;
+
+        debug!("DNS resolution {} to {:?}", address, debug(&addrs));
 
         addrs
             .first()
