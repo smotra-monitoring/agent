@@ -25,8 +25,8 @@ fn result_channel() -> (ResultSender, ResultReceiver) {
 /// Run the monitoring loop
 pub async fn run_monitoring(
     config: Config,
-    status: Arc<RwLock<AgentStatus>>,
-    shutdown_rx: &mut broadcast::Receiver<()>,
+    agent_status: Arc<RwLock<AgentStatus>>,
+    agent_shutdown_rx: &mut broadcast::Receiver<()>,
 ) -> Result<()> {
     info!("Starting monitoring tasks");
 
@@ -45,20 +45,27 @@ pub async fn run_monitoring(
     // Spawn monitoring task
     let monitor_handle = {
         let config = config.clone();
-        let status = Arc::clone(&status);
+        let agent_status = Arc::clone(&agent_status);
         let ping_checker = Arc::clone(&ping_checker);
         let result_tx = result_tx.clone();
-        let mut shutdown_rx = shutdown_rx.resubscribe();
+        let mut agent_shutdown_rx = agent_shutdown_rx.resubscribe();
 
         tokio::spawn(async move {
-            run_check_loop(config, status, ping_checker, result_tx, &mut shutdown_rx).await
+            run_check_loop(
+                config,
+                agent_status,
+                ping_checker,
+                result_tx,
+                &mut agent_shutdown_rx,
+            )
+            .await
         })
     };
 
     // Process results
     let result_handle = {
-        let status = Arc::clone(&status);
-        let mut shutdown_rx = shutdown_rx.resubscribe();
+        let status = Arc::clone(&agent_status);
+        let mut agent_shutdown_rx = agent_shutdown_rx.resubscribe();
 
         tokio::spawn(async move {
             loop {
@@ -73,7 +80,7 @@ pub async fn run_monitoring(
                             s.checks_failed += 1;
                         }
                     }
-                    _ = shutdown_rx.recv() => {
+                    _ = agent_shutdown_rx.recv() => {
                         info!("Monitoring sub-task shutting down");
                         break;
                     }
@@ -85,7 +92,7 @@ pub async fn run_monitoring(
     // Wait for shutdown
     // Due to result_handle spawned in another task and resubscribed to shoutdown_rx we need to wait here
     // for the signal as well
-    match shutdown_rx.recv().await {
+    match agent_shutdown_rx.recv().await {
         Ok(_) => tracing::info!("Monitoring task shutting down"),
         Err(_) => tracing::warn!("Monitoring shutdown channel already closed"),
     }
@@ -100,10 +107,10 @@ pub async fn run_monitoring(
 /// Main check loop that runs periodically
 async fn run_check_loop(
     config: Config,
-    status: Arc<RwLock<AgentStatus>>,
+    agent_status: Arc<RwLock<AgentStatus>>,
     ping_checker: Arc<PingChecker>,
     result_tx: ResultSender,
-    shutdown_rx: &mut broadcast::Receiver<()>,
+    agnet_shutdown_rx: &mut broadcast::Receiver<()>,
 ) {
     let mut interval = interval(config.monitoring.interval());
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -144,7 +151,7 @@ async fn run_check_loop(
                     let _ = task.await;
                 }
             }
-            _ = shutdown_rx.recv() => {
+            _ = agnet_shutdown_rx.recv() => {
                 info!("Check loop shutting down");
                 break;
             }

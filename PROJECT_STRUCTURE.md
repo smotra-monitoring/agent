@@ -131,6 +131,7 @@
 3. **Configuration Hot-reload**: Support runtime config updates
 4. **Advanced TUI**: Add graphs and more interactive features
 5. **Retry in server reporting** Implement retry logic in reporter/server.rs
+6. **Track number of failed sends to server** Add tracking to server status struct
 
 ## Usage Examples
 

@@ -13,8 +13,8 @@ use tracing::{debug, error, info, warn};
 /// Run the reporter loop
 pub async fn run_reporter(
     config: Config,
-    status: Arc<RwLock<AgentStatus>>,
-    shutdown_rx: &mut broadcast::Receiver<()>,
+    agent_status: Arc<RwLock<AgentStatus>>,
+    agent_shutdown_rx: &mut broadcast::Receiver<()>,
 ) -> Result<()> {
     info!("Starting reporter");
 
@@ -30,15 +30,15 @@ pub async fn run_reporter(
             _ = interval.tick() => {
                 match config.server.is_configured() {
                     true => {
-                        match send_agent_report(&config, &status).await {
+                        match send_agent_report(&config, &agent_status).await {
                             Ok(_) => {
-                                let mut s = status.write();
+                                let mut s = agent_status.write();
                                 s.server_connected = true;
                                 s.last_report_at = Some(Utc::now());
                                 debug!("Report sent successfully");
                             }
                             Err(e) => {
-                                let mut s = status.write();
+                                let mut s = agent_status.write();
                                 s.server_connected = false;
                                 error!("Failed to send report: {}", e);
                             }
@@ -49,8 +49,8 @@ pub async fn run_reporter(
                     }
                 }
             }
-            _ = shutdown_rx.recv() => {
-                info!("Reporter shutting down");
+            _ = agent_shutdown_rx.recv() => {
+                info!("Agent status reporter shutting down");
                 break;
             }
         }
@@ -60,7 +60,7 @@ pub async fn run_reporter(
 }
 
 /// Send an agent report to the server
-async fn send_agent_report(config: &Config, status: &Arc<RwLock<AgentStatus>>) -> Result<()> {
+async fn send_agent_report(config: &Config, agent_status: &Arc<RwLock<AgentStatus>>) -> Result<()> {
     let server_url = config
         .server
         .url
@@ -72,7 +72,7 @@ async fn send_agent_report(config: &Config, status: &Arc<RwLock<AgentStatus>>) -
         .danger_accept_invalid_certs(!config.server.verify_tls)
         .build()?;
 
-    let status_data = status.read().clone();
+    let status_data = agent_status.read().clone();
     let report_url = format!("{}/api/v1/agent/report", server_url);
 
     let mut request = client.post(&report_url).json(&status_data);

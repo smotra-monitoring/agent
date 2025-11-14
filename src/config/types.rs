@@ -65,7 +65,7 @@ impl Default for MonitoringConfig {
     fn default() -> Self {
         Self {
             interval_secs: 60,
-            timeout_secs: 5,
+            timeout_secs: 2,
             ping_count: 3,
             max_concurrent: 10,
             traceroute_on_failure: false,
