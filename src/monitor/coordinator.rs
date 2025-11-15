@@ -81,7 +81,7 @@ pub async fn run_monitoring(
                         }
                     }
                     _ = agent_shutdown_rx.recv() => {
-                        info!("Monitoring sub-task shutting down");
+                        info!("Monitoring coordinator shutting down");
                         break;
                     }
                 }
@@ -100,7 +100,7 @@ pub async fn run_monitoring(
     // Wait for tasks to complete
     let _ = tokio::join!(monitor_handle, result_handle);
 
-    info!("Monitoring tasks stopped");
+    info!("All monitoring tasks stopped");
     Ok(())
 }
 
