@@ -17,11 +17,6 @@ use tokio::sync::mpsc;
 type ResultSender = mpsc::UnboundedSender<MonitoringResult>;
 type ResultReceiver = mpsc::UnboundedReceiver<MonitoringResult>;
 
-/// Create a result channel
-fn result_channel() -> (ResultSender, ResultReceiver) {
-    mpsc::unbounded_channel()
-}
-
 /// Run the monitoring loop
 pub async fn run_monitoring(
     config: Config,
@@ -30,7 +25,7 @@ pub async fn run_monitoring(
 ) -> Result<()> {
     info!("Starting monitoring tasks");
 
-    let (result_tx, mut result_rx) = result_channel();
+    let (result_tx, mut result_rx) = mpsc::unbounded_channel::<MonitoringResult>();
 
     // Create ping checker
     let ping_checker =
@@ -90,7 +85,7 @@ pub async fn run_monitoring(
     };
 
     // Wait for shutdown
-    // Due to result_handle spawned in another task and resubscribed to shoutdown_rx we need to wait here
+    // Due to result_handle spawned in another task and resubscribed to shutdown_rx we need to wait here
     // for the signal as well
     match agent_shutdown_rx.recv().await {
         Ok(_) => tracing::info!("Monitoring task shutting down"),
