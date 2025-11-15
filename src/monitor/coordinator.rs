@@ -152,7 +152,7 @@ async fn run_check_loop(
                 }
             }
             _ = agent_shutdown_rx.recv() => {
-                info!("Check loop shutting down");
+                info!("Check_loop shutting down");
                 break;
             }
         }
