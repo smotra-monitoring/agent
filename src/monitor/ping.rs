@@ -7,6 +7,7 @@ use std::net::{IpAddr, ToSocketAddrs};
 use std::time::Duration;
 use surge_ping::{Client, Config, PingIdentifier, PingSequence};
 use tracing::debug;
+use tracing_subscriber::field::debug;
 use uuid::Uuid;
 
 /// Ping checker for ICMP reachability tests
@@ -50,8 +51,6 @@ impl PingChecker {
             }
         };
 
-        debug!("Pinging {} ({})", endpoint.address, addr);
-
         // Perform multiple pings
         let mut successes = 0;
         let mut total_time = 0.0;
@@ -60,10 +59,12 @@ impl PingChecker {
         for seq in 0..self.count {
             match self.ping_once(addr, seq as u16).await {
                 Ok(rtt) => {
+                    // debug!("Ping reply from {}: time={:?}", addr, rtt);
                     successes += 1;
-                    total_time += rtt.as_secs_f64() * 1000.0;
+                    total_time += rtt.as_millis() as f64;
                 }
                 Err(e) => {
+                    // debug!("Ping error from {}: {}", addr, e);
                     errors.push(e.to_string());
                 }
             }
@@ -80,6 +81,11 @@ impl PingChecker {
         metadata.insert("ping_count".to_string(), self.count.to_string());
         metadata.insert("successes".to_string(), successes.to_string());
         metadata.insert("resolved_ip".to_string(), addr.to_string());
+
+        debug!(
+            "Ping check to {} ({}): {}/{} success, avg_time={:?} ms",
+            endpoint.address, addr, successes, self.count, avg_time
+        );
 
         MonitoringResult {
             id: Uuid::new_v4(),

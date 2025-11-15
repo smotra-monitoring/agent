@@ -73,3 +73,6 @@ Files structure
 
 
 Tracing should be implemented using the "tracing" crate with support for different log levels and output formats. 
+
+## Project Structure
+For detailed project structure, please refer to the [Project Structure](PROJECT_STRUCTURE.md) document.

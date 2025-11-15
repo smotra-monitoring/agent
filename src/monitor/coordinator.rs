@@ -110,7 +110,7 @@ async fn run_check_loop(
     agent_status: Arc<RwLock<AgentStatus>>,
     ping_checker: Arc<PingChecker>,
     result_tx: ResultSender,
-    agnet_shutdown_rx: &mut broadcast::Receiver<()>,
+    agent_shutdown_rx: &mut broadcast::Receiver<()>,
 ) {
     let mut interval = interval(config.monitoring.interval());
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -151,7 +151,7 @@ async fn run_check_loop(
                     let _ = task.await;
                 }
             }
-            _ = agnet_shutdown_rx.recv() => {
+            _ = agent_shutdown_rx.recv() => {
                 info!("Check loop shutting down");
                 break;
             }

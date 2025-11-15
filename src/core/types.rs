@@ -74,6 +74,8 @@ impl Endpoint {
 /// Current status of the agent
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AgentStatus {
+    /// Unique identifier for this agent
+    pub agent_id: String,
     /// Whether the agent is currently running
     pub is_running: bool,
     /// When the agent was started
@@ -94,6 +96,15 @@ pub struct AgentStatus {
     pub server_connected: bool,
     /// Number of cached results waiting to be sent
     pub cached_results: usize,
+}
+
+impl AgentStatus {
+    pub fn new(agent_id: impl Into<String>) -> Self {
+        Self {
+            agent_id: agent_id.into(),
+            ..Default::default()
+        }
+    }
 }
 
 /// Traceroute hop information
