@@ -30,6 +30,10 @@ struct Cli {
     /// Configuration file path
     #[arg(short, long, default_value = "config.toml")]
     config: PathBuf,
+
+    /// Log level (trace, debug, info, warn, error)
+    #[arg(short, long, default_value = "info")]
+    log_level: String,
 }
 
 #[derive(Subcommand)]
@@ -53,15 +57,15 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let cli = Cli::parse();
+
     // Initialize tracing
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive(tracing::Level::INFO.into()),
+                .add_directive(cli.log_level.parse().unwrap()),
         )
         .init();
-
-    let cli = Cli::parse();
 
     match cli.command {
         Some(Commands::Tui) => run_tui(cli.config).await?,
@@ -80,8 +84,11 @@ async fn run_tui(config_path: PathBuf) -> Result<()> {
     let config = if config_path.exists() {
         Config::from_file(&config_path)?
     } else {
-        eprintln!("Config file not found, using default configuration");
-        Config::default()
+        eprintln!("✗ Config file not found at: {}", config_path.display());
+        return Err(smotra_agent::Error::Config(format!(
+            "Configuration file {} not found",
+            config_path.display()
+        )));
     };
 
     config.validate()?;
