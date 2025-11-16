@@ -1,6 +1,5 @@
 //! Agent CLI with interactive TUI for monitoring and configuration
 
-use anyhow::Result;
 use clap::{Parser, Subcommand};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
@@ -15,6 +14,7 @@ use ratatui::{
     widgets::{Block, Borders, Gauge, List, ListItem, Paragraph},
     Frame, Terminal,
 };
+use smotra_agent::Result;
 use smotra_agent::{Agent, Config};
 use std::io;
 use std::path::PathBuf;
@@ -83,6 +83,8 @@ async fn run_tui(config_path: PathBuf) -> Result<()> {
         eprintln!("Config file not found, using default configuration");
         Config::default()
     };
+
+    config.validate()?;
 
     // Setup terminal
     enable_raw_mode()?;
@@ -404,12 +406,12 @@ async fn validate_config(config_path: PathBuf) -> Result<()> {
             Ok(_) => println!("✓ Configuration is valid"),
             Err(e) => {
                 eprintln!("✗ Configuration validation failed: {}", e);
-                std::process::exit(1);
+                return Err(e);
             }
         },
         Err(e) => {
             eprintln!("✗ Failed to load configuration: {}", e);
-            std::process::exit(1);
+            return Err(e.into());
         }
     }
 

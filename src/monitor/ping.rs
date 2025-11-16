@@ -1,6 +1,6 @@
 //! ICMP ping monitoring
 
-use crate::core::types::{CheckType, Endpoint, MonitoringResult};
+use crate::core::{CheckType, Endpoint, MonitoringResult};
 use crate::error::{Error, Result};
 use chrono::Utc;
 use std::net::{IpAddr, ToSocketAddrs};
@@ -97,7 +97,7 @@ impl PingChecker {
             error: if success {
                 None
             } else {
-                Some(errors.join("; "))
+                Some(errors.join(": "))
             },
             timestamp: Utc::now(),
             metadata,

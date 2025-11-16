@@ -1,7 +1,7 @@
 //! Monitoring task coordination and execution
 
 use crate::config::Config;
-use crate::core::types::AgentStatus;
+use crate::core::AgentStatus;
 use crate::error::Result;
 use crate::monitor::PingChecker;
 use parking_lot::RwLock;
@@ -10,7 +10,7 @@ use tokio::sync::broadcast;
 use tokio::time::interval;
 use tracing::{error, info};
 
-use crate::core::types::MonitoringResult;
+use crate::core::MonitoringResult;
 use tokio::sync::mpsc;
 
 /// Channel for sending monitoring results

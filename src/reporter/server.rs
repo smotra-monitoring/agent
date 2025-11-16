@@ -1,7 +1,7 @@
 //! Server reporting functionality
 
 use crate::config::Config;
-use crate::core::types::AgentStatus;
+use crate::core::AgentStatus;
 use crate::error::{Error, Result};
 use chrono::Utc;
 use parking_lot::RwLock;
