@@ -83,6 +83,9 @@ impl Agent {
 
         info!("Stopping agent");
 
+        // Wait for tasks to complete
+        let _ = tokio::join!(monitor_handle, reporter_handle);
+
         // Update status
         self.status.write().is_running = false;
         {
@@ -90,9 +93,6 @@ impl Agent {
             status.is_running = false;
             status.stopped_at = Some(chrono::Utc::now());
         }
-
-        // Wait for tasks to complete
-        let _ = tokio::join!(monitor_handle, reporter_handle);
 
         info!("Agent stopped");
         Ok(())
