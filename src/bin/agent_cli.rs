@@ -6,6 +6,7 @@ use crossterm::{
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+use parking_lot::Mutex;
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -16,9 +17,20 @@ use ratatui::{
 };
 use smotra_agent::Result;
 use smotra_agent::{Agent, Config};
+use std::collections::VecDeque;
+use std::fmt;
 use std::path::PathBuf;
 use std::time::Duration;
 use std::{io, sync::Arc};
+use tracing::Level;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+
+// Tab indices
+const TAB_STATUS: usize = 0;
+const TAB_ENDPOINTS: usize = 1;
+const TAB_CONFIG: usize = 2;
+const TAB_LOGS: usize = 3;
 
 #[derive(Parser)]
 #[command(name = "agent-cli")]
@@ -55,36 +67,148 @@ enum Commands {
     },
 }
 
+/// Log entry with level and message
+#[derive(Clone)]
+struct LogEntry {
+    level: Level,
+    message: String,
+    timestamp: chrono::DateTime<chrono::Local>,
+}
+
+impl fmt::Display for LogEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "[{}] {:5} {}",
+            self.timestamp.format("%H:%M:%S"),
+            self.level,
+            self.message
+        )
+    }
+}
+
+/// Custom tracing layer that captures logs into a buffer
+struct LogBuffer {
+    entries: Arc<Mutex<VecDeque<LogEntry>>>,
+    max_entries: usize,
+}
+
+impl LogBuffer {
+    fn new(max_entries: usize) -> Self {
+        Self {
+            entries: Arc::new(Mutex::new(VecDeque::with_capacity(max_entries))),
+            max_entries,
+        }
+    }
+
+    fn add_entry(&self, level: Level, message: String) {
+        let mut entries = self.entries.lock();
+        if entries.len() >= self.max_entries {
+            entries.pop_front();
+        }
+        entries.push_back(LogEntry {
+            level,
+            message,
+            timestamp: chrono::Local::now(),
+        });
+    }
+
+    fn clone_handle(&self) -> Arc<Mutex<VecDeque<LogEntry>>> {
+        Arc::clone(&self.entries)
+    }
+}
+
+impl<S> tracing_subscriber::Layer<S> for LogBuffer
+where
+    S: tracing::Subscriber,
+{
+    fn on_event(
+        &self,
+        event: &tracing::Event<'_>,
+        _ctx: tracing_subscriber::layer::Context<'_, S>,
+    ) {
+        let metadata = event.metadata();
+        let level = *metadata.level();
+
+        // Extract message from the event
+        struct MessageVisitor(String);
+        impl tracing::field::Visit for MessageVisitor {
+            fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn fmt::Debug) {
+                if field.name() == "message" {
+                    let msg = format!("{:?}", value);
+                    // Remove surrounding quotes if present
+                    self.0 = msg.trim_matches('"').to_string();
+                }
+            }
+        }
+
+        let mut visitor = MessageVisitor(String::new());
+        event.record(&mut visitor);
+
+        self.add_entry(level, visitor.0);
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    // Initialize tracing
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive(cli.log_level.parse().unwrap()),
-        )
-        .init();
-
     match cli.command {
-        Some(Commands::Tui) => run_tui(cli.config).await?,
-        Some(Commands::Status) => show_status(cli.config).await?,
-        Some(Commands::ValidateConfig) => validate_config(cli.config).await?,
-        Some(Commands::GenConfig { output }) => generate_config(output).await?,
-        None => run_tui(cli.config).await?,
+        Some(Commands::Tui) | None => {
+            // For TUI mode, use in-memory log buffer
+            let log_entries = init_tui_logging(&cli.log_level);
+            run_tui(cli.config, log_entries).await?
+        }
+        Some(Commands::Status) => {
+            // For non-TUI commands, use regular stdout logging
+            init_stdout_logging(&cli.log_level);
+            show_status(cli.config).await?
+        }
+        Some(Commands::ValidateConfig) => {
+            init_stdout_logging(&cli.log_level);
+            validate_config(cli.config).await?
+        }
+        Some(Commands::GenConfig { output }) => {
+            init_stdout_logging(&cli.log_level);
+            generate_config(output).await?
+        }
     }
 
     Ok(())
 }
 
+/// Initialize stdout logging for non-TUI commands
+fn init_stdout_logging(log_level: &str) {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive(log_level.parse().unwrap()),
+        )
+        .init();
+}
+
+fn init_tui_logging(log_level: &str) -> Arc<Mutex<VecDeque<LogEntry>>> {
+    let log_buffer = LogBuffer::new(1000);
+    let log_entries = log_buffer.clone_handle();
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive(log_level.parse().unwrap()),
+        )
+        .with(log_buffer)
+        .init();
+
+    log_entries
+}
+
 /// Run the interactive TUI
-async fn run_tui(config_path: PathBuf) -> Result<()> {
+async fn run_tui(config_path: PathBuf, log_entries: Arc<Mutex<VecDeque<LogEntry>>>) -> Result<()> {
     // Load configuration
     let config = if config_path.exists() {
         Config::from_file(&config_path)?
     } else {
-        eprintln!("✗ Config file not found at: {}", config_path.display());
+        tracing::error!("Config file not found at: {}", config_path.display());
         return Err(smotra_agent::Error::Config(format!(
             "Configuration file {} not found",
             config_path.display()
@@ -104,7 +228,7 @@ async fn run_tui(config_path: PathBuf) -> Result<()> {
     let agent = Agent::new(config);
 
     // Run the UI
-    let result = run_ui(&mut terminal, agent).await;
+    let result = run_ui_loop(&mut terminal, agent, log_entries).await;
 
     // Restore terminal
     disable_raw_mode()?;
@@ -119,14 +243,21 @@ async fn run_tui(config_path: PathBuf) -> Result<()> {
 }
 
 /// Main UI loop
-async fn run_ui(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, agent: Agent) -> Result<()> {
+async fn run_ui_loop(
+    terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+    agent: Agent,
+    log_entries: Arc<Mutex<VecDeque<LogEntry>>>,
+) -> Result<()> {
     let mut selected_tab = 0;
+    let mut config_scroll_offset = 0usize;
     let tabs = vec!["Status", "Endpoints", "Configuration", "Logs"];
     let agent = Arc::new(agent);
 
     loop {
+        // Update data
         let status = agent.status();
         let config = agent.config();
+        let logs: Vec<LogEntry> = log_entries.lock().iter().cloned().collect();
 
         terminal.draw(|f| {
             let size = f.area();
@@ -146,10 +277,10 @@ async fn run_ui(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, agent: Ag
 
             // Render content based on selected tab
             match selected_tab {
-                0 => render_status(f, chunks[1], &status),
-                1 => render_endpoints(f, chunks[1], &config),
-                2 => render_config(f, chunks[1], &config),
-                3 => render_logs(f, chunks[1]),
+                TAB_STATUS => render_status(f, chunks[1], &status),
+                TAB_ENDPOINTS => render_endpoints(f, chunks[1], &config),
+                TAB_CONFIG => render_config(f, chunks[1], &config, config_scroll_offset),
+                TAB_LOGS => render_logs(f, chunks[1], &logs),
                 _ => {}
             }
 
@@ -180,6 +311,33 @@ async fn run_ui(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, agent: Ag
                     KeyCode::Right | KeyCode::Char('l') => {
                         if selected_tab < tabs.len() - 1 {
                             selected_tab += 1;
+                        }
+                    }
+                    KeyCode::Up | KeyCode::Char('k') => {
+                        if selected_tab == TAB_CONFIG {
+                            // Configuration tab - scroll up
+                            config_scroll_offset = config_scroll_offset.saturating_sub(1);
+                        }
+                    }
+                    KeyCode::Down | KeyCode::Char('j') => {
+                        if selected_tab == TAB_CONFIG {
+                            // Configuration tab - scroll down
+                            config_scroll_offset = config_scroll_offset.saturating_add(1);
+                        }
+                    }
+                    KeyCode::PageUp => {
+                        if selected_tab == TAB_CONFIG {
+                            config_scroll_offset = config_scroll_offset.saturating_sub(10);
+                        }
+                    }
+                    KeyCode::PageDown => {
+                        if selected_tab == TAB_CONFIG {
+                            config_scroll_offset = config_scroll_offset.saturating_add(10);
+                        }
+                    }
+                    KeyCode::Home => {
+                        if selected_tab == TAB_CONFIG {
+                            config_scroll_offset = 0;
                         }
                     }
                     KeyCode::Char('s') => {
@@ -330,50 +488,92 @@ fn render_endpoints(f: &mut Frame, area: Rect, config: &Config) {
     f.render_widget(list, area);
 }
 
-fn render_config(f: &mut Frame, area: Rect, config: &Config) {
-    let config_text = vec![
-        Line::from(format!("Agent ID: {}", config.agent_id)),
-        Line::from(format!("Tags: {}", config.tags.join(", "))),
-        Line::from(format!(
-            "Check Interval: {}s",
-            config.monitoring.interval_secs
-        )),
-        Line::from(format!(
-            "Check Timeout: {}s",
-            config.monitoring.timeout_secs
-        )),
-        Line::from(format!("Ping Count: {}", config.monitoring.ping_count)),
-        Line::from(format!(
-            "Max Concurrent: {}",
-            config.monitoring.max_concurrent
-        )),
-        Line::from(format!(
-            "Server URL: {}",
-            config.server.url.as_deref().unwrap_or("not configured")
-        )),
-        Line::from(format!(
-            "Report Interval: {}s",
-            config.server.report_interval_secs
-        )),
-    ];
+fn render_config(f: &mut Frame, area: Rect, config: &Config, scroll_offset: usize) {
+    // Serialize the full config structure to TOML format
+    let config_str = match toml::to_string_pretty(config) {
+        Ok(s) => s,
+        Err(e) => format!("Error serializing config: {}", e),
+    };
 
-    let paragraph = Paragraph::new(config_text).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title("Configuration"),
-    );
+    // Convert the TOML string into lines for display
+    let all_lines: Vec<String> = config_str.lines().map(|s| s.to_string()).collect();
+    let total_lines = all_lines.len();
+
+    // Calculate visible area (subtract 2 for borders)
+    let visible_height = area.height.saturating_sub(2) as usize;
+
+    // Clamp scroll offset to valid range
+    let max_scroll = total_lines.saturating_sub(visible_height);
+    let clamped_offset = scroll_offset.min(max_scroll);
+
+    // Get the visible slice of lines
+    let visible_lines: Vec<Line> = all_lines
+        .iter()
+        .skip(clamped_offset)
+        .take(visible_height)
+        .map(|line| Line::from(line.clone()))
+        .collect();
+
+    let title = if total_lines > visible_height {
+        format!(
+            "Configuration (lines {}-{}/{}, ↑↓/j/k to scroll)",
+            clamped_offset + 1,
+            (clamped_offset + visible_height).min(total_lines),
+            total_lines
+        )
+    } else {
+        "Configuration".to_string()
+    };
+
+    let paragraph =
+        Paragraph::new(visible_lines).block(Block::default().borders(Borders::ALL).title(title));
 
     f.render_widget(paragraph, area);
 }
 
-fn render_logs(f: &mut Frame, area: Rect) {
-    let logs = vec![
-        "Log display coming soon...",
-        "This will show recent monitoring events",
-    ];
+fn render_logs(f: &mut Frame, area: Rect, logs: &[LogEntry]) {
+    // Calculate visible height (subtract 2 for borders)
+    let visible_height = area.height.saturating_sub(2) as usize;
 
-    let items: Vec<ListItem> = logs.iter().map(|&l| ListItem::new(l)).collect();
-    let list = List::new(items).block(Block::default().borders(Borders::ALL).title("Logs"));
+    // Take only the last N logs that fit in the visible area
+    let visible_logs = if logs.len() > visible_height {
+        &logs[logs.len() - visible_height..]
+    } else {
+        logs
+    };
+
+    let items: Vec<ListItem> = visible_logs
+        .iter()
+        .map(|entry| {
+            let color = match entry.level {
+                Level::ERROR => Color::Red,
+                Level::WARN => Color::Yellow,
+                Level::INFO => Color::Green,
+                Level::DEBUG => Color::Cyan,
+                Level::TRACE => Color::Gray,
+            };
+
+            let line = Line::from(vec![
+                Span::styled(
+                    format!("[{}] ", entry.timestamp.format("%H:%M:%S")),
+                    Style::default().fg(Color::DarkGray),
+                ),
+                Span::styled(
+                    format!("{:5} ", entry.level),
+                    Style::default().fg(color).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(&entry.message, Style::default().fg(Color::White)),
+            ]);
+
+            ListItem::new(line)
+        })
+        .collect();
+
+    let list = List::new(items).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title(format!("Logs ({} entries)", logs.len())),
+    );
 
     f.render_widget(list, area);
 }
@@ -385,6 +585,8 @@ fn render_footer(f: &mut Frame, area: Rect) {
         Span::raw("] Quit | ["),
         Span::styled("←/→", Style::default().fg(Color::Yellow)),
         Span::raw("] Navigate | ["),
+        Span::styled("↑↓/j/k", Style::default().fg(Color::Yellow)),
+        Span::raw("] Scroll | ["),
         Span::styled("s", Style::default().fg(Color::Yellow)),
         Span::raw("] Start"),
     ]);
@@ -423,7 +625,7 @@ async fn validate_config(config_path: PathBuf) -> Result<()> {
         },
         Err(e) => {
             eprintln!("✗ Failed to load configuration: {}", e);
-            return Err(e.into());
+            return Err(e);
         }
     }
 
