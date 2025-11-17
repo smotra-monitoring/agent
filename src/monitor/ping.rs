@@ -7,7 +7,6 @@ use std::net::{IpAddr, ToSocketAddrs};
 use std::time::Duration;
 use surge_ping::{Client, Config, PingIdentifier, PingSequence};
 use tracing::debug;
-use tracing_subscriber::field::debug;
 use uuid::Uuid;
 
 /// Ping checker for ICMP reachability tests
