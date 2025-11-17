@@ -16,9 +16,9 @@ use ratatui::{
 };
 use smotra_agent::Result;
 use smotra_agent::{Agent, Config};
-use std::io;
 use std::path::PathBuf;
 use std::time::Duration;
+use std::{io, sync::Arc};
 
 #[derive(Parser)]
 #[command(name = "agent-cli")]
@@ -122,6 +122,7 @@ async fn run_tui(config_path: PathBuf) -> Result<()> {
 async fn run_ui(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, agent: Agent) -> Result<()> {
     let mut selected_tab = 0;
     let tabs = vec!["Status", "Endpoints", "Configuration", "Logs"];
+    let agent = Arc::new(agent);
 
     loop {
         let status = agent.status();
@@ -159,6 +160,11 @@ async fn run_ui(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, agent: Ag
         // Handle input
         if event::poll(Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
+                // Only handle KeyPress events, ignore KeyRelease and KeyRepeat
+                if key.kind != event::KeyEventKind::Press {
+                    continue;
+                }
+
                 match key.code {
                     KeyCode::Char('q') | KeyCode::Esc => {
                         agent.stop()?;
@@ -169,9 +175,7 @@ async fn run_ui(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, agent: Ag
                         break;
                     }
                     KeyCode::Left | KeyCode::Char('h') => {
-                        if selected_tab > 0 {
-                            selected_tab -= 1;
-                        }
+                        selected_tab = selected_tab.saturating_sub(1);
                     }
                     KeyCode::Right | KeyCode::Char('l') => {
                         if selected_tab < tabs.len() - 1 {
@@ -181,9 +185,10 @@ async fn run_ui(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>, agent: Ag
                     KeyCode::Char('s') => {
                         if !status.is_running {
                             // Start agent in background
-                            let agent_clone = Agent::new(config.clone());
+                            // let agent_clone = Agent::new(config.clone());
+                            let agent = Arc::clone(&agent);
                             tokio::spawn(async move {
-                                let _ = agent_clone.start().await;
+                                let _ = agent.start().await;
                             });
                         }
                     }
