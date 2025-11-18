@@ -36,14 +36,15 @@
 - `src/bin/agent_plugin_example.rs` - HTTP monitoring plugin example
 - `src/bin/agent_updater.rs` - Auto-updater stub
 
-#### Binary - Interactive agent TUI with Ratatui
+### Binary - Interactive agent TUI with Ratatui
 - `src/bin/agent_cli/main.rs` - Main entry point
-- `src/bin/agent_cli/cli_args.rs` - CLI argument parsing
-- `src/bin/agent_cli/commands.rs` - Command handlers
-- `src/bin/agent_cli/logging.rs` - Logging infrastructure
+- `src/bin/agent_cli/cli_args.rs` - Command-line argument definitions
+- `src/bin/agent_cli/commands.rs` - Status, validation, and config generation handlers
+- `src/bin/agent_cli/logging.rs` - Log buffer and initialization logic
 - `src/bin/agent_cli/tui/mod.rs` - TUI initialization
-- `src/bin/agent_cli/tui/render.rs` - Rendering functions
-- `src/bin/agent_cli/tui/ui_loop.rs` - Event loop
+- `src/bin/agent_cli/tui/render.rs` - TUI-related functionality rendering functions
+- `src/bin/agent_cli/tui/ui_loop.rs` - TUI-related functionality event loop
+- `src/bin/agent_cli/tui/runner.rs` - TUI-related functionality initializing and starting event loop
 
 ### Configuration & Documentation
 - `Cargo.toml` - Rust project configuration with dependencies
