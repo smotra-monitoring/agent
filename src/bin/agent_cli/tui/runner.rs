@@ -1,7 +1,7 @@
 //! TUI runner - handles terminal setup and teardown
 
 use crate::logging::LogEntry;
-use crate::tui::ui_loop;
+use crate::tui;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
@@ -44,7 +44,7 @@ pub async fn run_tui(
     let agent = Arc::new(Agent::new(config));
 
     // Run the UI
-    let result = ui_loop::run_ui_loop(&mut terminal, agent, log_entries).await;
+    let result = tui::run_ui_loop(&mut terminal, agent, log_entries).await;
 
     // Restore terminal
     disable_raw_mode()?;
