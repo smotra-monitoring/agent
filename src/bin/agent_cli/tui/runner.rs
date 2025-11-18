@@ -16,7 +16,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Run the interactive TUI
-pub async fn start_tui(
+pub async fn run_tui(
     config_path: PathBuf,
     log_entries: Arc<Mutex<VecDeque<LogEntry>>>,
 ) -> Result<()> {

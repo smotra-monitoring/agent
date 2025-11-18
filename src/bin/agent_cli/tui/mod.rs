@@ -4,4 +4,4 @@ pub mod render;
 pub mod runner;
 pub mod ui_loop;
 
-pub use runner::start_tui;
+pub use runner::run_tui;
