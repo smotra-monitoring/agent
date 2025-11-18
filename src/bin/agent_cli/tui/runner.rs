@@ -41,7 +41,7 @@ pub async fn run_tui(
     let mut terminal = Terminal::new(backend)?;
 
     // Create agent
-    let agent = Agent::new(config);
+    let agent = Arc::new(Agent::new(config));
 
     // Run the UI
     let result = ui_loop::run_ui_loop(&mut terminal, agent, log_entries).await;

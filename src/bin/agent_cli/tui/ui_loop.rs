@@ -24,13 +24,13 @@ const TAB_LOGS: usize = 3;
 /// Main UI loop
 pub async fn run_ui_loop(
     terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
-    agent: Agent,
+    agent: Arc<Agent>,
     log_entries: Arc<Mutex<VecDeque<LogEntry>>>,
 ) -> Result<()> {
     let mut selected_tab = 0;
     let mut config_scroll_offset = 0usize;
     let tabs = vec!["Status", "Endpoints", "Configuration", "Logs"];
-    let agent = Arc::new(agent);
+    // let agent = Arc::new(agent);
 
     loop {
         // Update data
