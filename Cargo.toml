@@ -16,7 +16,7 @@ path = "src/bin/agent.rs"
 
 [[bin]]
 name = "agent-cli"
-path = "src/bin/agent_cli.rs"
+path = "src/bin/agent_cli/main.rs"
 
 [[bin]]
 name = "agent-plugin-example"
