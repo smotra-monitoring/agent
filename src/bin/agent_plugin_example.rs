@@ -8,6 +8,9 @@ use smotra_agent::{
 };
 use std::collections::HashMap;
 
+const PLUGIN_NAME: &str = "http_plugin";
+const PLUGIN_VERSION: &str = "0.0.1";
+
 /// Example HTTP monitoring plugin
 struct HttpPlugin {
     client: reqwest::Client,
@@ -24,11 +27,11 @@ impl HttpPlugin {
 #[async_trait]
 impl MonitoringPlugin for HttpPlugin {
     fn name(&self) -> &str {
-        "http_check"
+        PLUGIN_NAME
     }
 
     fn version(&self) -> &str {
-        "0.1.0"
+        PLUGIN_VERSION
     }
 
     async fn check(
@@ -60,7 +63,7 @@ impl MonitoringPlugin for HttpPlugin {
                     id: uuid::Uuid::new_v4(),
                     agent_id: agent_id.to_string(),
                     target: endpoint.clone(),
-                    check_type: CheckType::Plugin("http_check".to_string()),
+                    check_type: CheckType::Plugin(PLUGIN_NAME.into()),
                     success,
                     response_time_ms: Some(duration.as_secs_f64() * 1000.0),
                     error: if success {
@@ -76,7 +79,7 @@ impl MonitoringPlugin for HttpPlugin {
                 id: uuid::Uuid::new_v4(),
                 agent_id: agent_id.to_string(),
                 target: endpoint.clone(),
-                check_type: CheckType::Plugin("http_check".to_string()),
+                check_type: CheckType::Plugin(PLUGIN_NAME.to_string()),
                 success: false,
                 response_time_ms: None,
                 error: Some(e.to_string()),

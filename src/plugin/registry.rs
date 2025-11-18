@@ -4,6 +4,7 @@ use crate::error::Result;
 use crate::plugin::MonitoringPlugin;
 
 /// Plugin registry for managing plugins
+#[derive(Default)]
 pub struct PluginRegistry {
     plugins: Vec<Box<dyn MonitoringPlugin>>,
 }
@@ -50,11 +51,5 @@ impl PluginRegistry {
             plugin.shutdown().await?;
         }
         Ok(())
-    }
-}
-
-impl Default for PluginRegistry {
-    fn default() -> Self {
-        Self::new()
     }
 }
