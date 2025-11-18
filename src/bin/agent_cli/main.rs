@@ -17,7 +17,7 @@ async fn main() -> Result<()> {
         Some(Commands::Tui) | None => {
             // For TUI mode, use in-memory log buffer
             let log_entries = logging::init_tui_logging(&cli.log_level);
-            tui::run_tui(cli.config, log_entries).await?
+            tui::start_tui(cli.config, log_entries).await?
         }
         Some(Commands::Status) => {
             // For non-TUI commands, use regular stdout logging
