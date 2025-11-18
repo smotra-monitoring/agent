@@ -59,13 +59,13 @@ impl MonitoringPlugin for HttpPlugin {
                 );
                 metadata.insert("url".to_string(), url.clone());
 
-                MonitoringResult {
+                let result = MonitoringResult {
                     id: uuid::Uuid::new_v4(),
                     agent_id: agent_id.to_string(),
                     target: endpoint.clone(),
                     check_type: CheckType::Plugin(PLUGIN_NAME.into()),
                     success,
-                    response_time_ms: Some(duration.as_secs_f64() * 1000.0),
+                    response_time_ms: Some(duration.as_millis() as f64),
                     error: if success {
                         None
                     } else {
@@ -73,22 +73,13 @@ impl MonitoringPlugin for HttpPlugin {
                     },
                     timestamp: chrono::Utc::now(),
                     metadata,
-                }
+                };
+                Ok(result)
             }
-            Err(e) => MonitoringResult {
-                id: uuid::Uuid::new_v4(),
-                agent_id: agent_id.to_string(),
-                target: endpoint.clone(),
-                check_type: CheckType::Plugin(PLUGIN_NAME.to_string()),
-                success: false,
-                response_time_ms: None,
-                error: Some(e.to_string()),
-                timestamp: chrono::Utc::now(),
-                metadata: HashMap::new(),
-            },
+            Err(e) => Err(smotra_agent::Error::Http(e)),
         };
 
-        Ok(result)
+        result
     }
 }
 
