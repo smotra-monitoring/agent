@@ -87,18 +87,18 @@ pub enum CheckType {
 /// Result of a ping check
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct PingResult {
+    /// Resolved IP address
+    pub resolved_ip: Option<String>,
     /// Number of successfully received replies
     pub successes: u32,
     /// Number of timeouts or other ICMP related errors  
     pub failures: u32,
     /// Latency for each successful check in milliseconds
     pub success_latencies: Vec<f64>,
-    /// ICMP error messages
-    pub errors: Vec<String>,
     /// Average response time in milliseconds
     pub avg_response_time_ms: Option<f64>,
-    /// Resolved IP address
-    pub resolved_ip: Option<String>,
+    /// ICMP error messages
+    pub errors: Vec<String>,
 }
 
 /// Result of a traceroute check
