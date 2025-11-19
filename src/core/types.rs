@@ -173,6 +173,8 @@ pub struct HttpGetResult {
 pub struct PluginResult {
     /// Name of the plugin
     pub plugin_name: String,
+    /// Version of the plugin
+    pub plugin_version: String,
     /// Whether the check was successful
     pub success: bool,
     /// Response time in milliseconds

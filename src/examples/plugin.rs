@@ -50,8 +50,9 @@ impl MonitoringPlugin for HttpPlugin {
         let result = match self.client.get(&url).send().await {
             Ok(response) => {
                 let duration = start.elapsed();
-                let success = response.status().is_success();
                 let response_time_ms = duration.as_millis() as f64;
+
+                let success = response.status().is_success();
 
                 let mut data = HashMap::new();
                 data.insert(
@@ -62,6 +63,7 @@ impl MonitoringPlugin for HttpPlugin {
 
                 let plugin_result = PluginResult {
                     plugin_name: PLUGIN_NAME.to_string(),
+                    plugin_version: PLUGIN_VERSION.to_string(),
                     success,
                     response_time_ms: Some(response_time_ms),
                     error: if success {
@@ -72,17 +74,13 @@ impl MonitoringPlugin for HttpPlugin {
                     data,
                 };
 
-                let mut metadata = HashMap::new();
-                metadata.insert("plugin_name".to_string(), PLUGIN_NAME.to_string());
-                metadata.insert("plugin_version".to_string(), PLUGIN_VERSION.to_string());
-
                 let result = MonitoringResult {
                     id: uuid::Uuid::new_v4(),
                     agent_id: agent_id.to_string(),
                     target: endpoint.clone(),
                     check_type: CheckType::Plugin(plugin_result),
                     timestamp: chrono::Utc::now(),
-                    metadata,
+                    metadata: HashMap::new(),
                 };
                 Ok(result)
             }
