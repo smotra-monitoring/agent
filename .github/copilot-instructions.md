@@ -93,7 +93,7 @@ Each variant contains detailed result structs:
 
 Created detailed result structures:
 - PingResult: Contains successes, failures, success_latencies, errors, avg_response_time_ms, resolved_ip
-- TracerouteCheckResult: Contains hops, target_reached, total_time_ms, errors
+- TracerouteResult: Contains hops, target_reached, total_time_ms, errors
 - TcpConnectResult: Contains connected, connect_time_ms, error, resolved_ip
 - UdpConnectResult: Contains probe_successful, response_time_ms, error, resolved_ip
 - HttpGetResult: Contains status_code, response_time_ms, response_size_bytes, error, success
