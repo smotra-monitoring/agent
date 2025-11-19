@@ -97,7 +97,7 @@ Created detailed result structures:
 - TcpConnectResult: Contains connected, connect_time_ms, error, resolved_ip
 - UdpConnectResult: Contains probe_successful, response_time_ms, error, resolved_ip
 - HttpGetResult: Contains status_code, response_time_ms, response_size_bytes, error, success
-- PluginResult: Contains plugin_name, success, response_time_ms, error, data
+- PluginResult: Contains plugin_name, plugin_version, success, response_time_ms, error, data
 
 
 
