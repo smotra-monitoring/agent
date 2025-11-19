@@ -33,7 +33,6 @@
 
 ### Binaries (`src/bin/`)
 - `src/bin/agent.rs` - Main daemon for running the agent
-- `src/bin/agent_plugin_example.rs` - HTTP monitoring plugin example
 - `src/bin/agent_updater.rs` - Auto-updater stub
 
 ### Binary - Interactive agent TUI with Ratatui
@@ -45,6 +44,10 @@
 - `src/bin/agent_cli/tui/render.rs` - TUI-related functionality rendering functions
 - `src/bin/agent_cli/tui/ui_loop.rs` - TUI-related functionality event loop
 - `src/bin/agent_cli/tui/runner.rs` - TUI-related functionality initializing and starting event loop
+
+### Examples (`src/examples/`)
+- `src/examples/plugin.rs` - HTTP monitoring plugin example
+
 
 ### Configuration & Documentation
 - `Cargo.toml` - Rust project configuration with dependencies

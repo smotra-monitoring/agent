@@ -18,9 +18,9 @@ path = "src/bin/agent.rs"
 name = "agent-cli"
 path = "src/bin/agent_cli/main.rs"
 
-[[bin]]
-name = "agent-plugin-example"
-path = "src/bin/agent_plugin_example.rs"
+[[example]]
+name = "plugin"
+path = "src/examples/plugin.rs"
 
 [[bin]]
 name = "agent-updater"
