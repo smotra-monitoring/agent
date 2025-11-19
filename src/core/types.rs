@@ -14,30 +14,173 @@ pub struct MonitoringResult {
     pub agent_id: String,
     /// Target endpoint that was checked
     pub target: Endpoint,
-    /// Type of check performed
+    /// Type of check performed with detailed results
     pub check_type: CheckType,
-    /// Whether the check was successful
-    pub success: bool,
-    /// Response time in milliseconds
-    pub response_time_ms: Option<f64>,
-    /// Error message if check failed
-    pub error: Option<String>,
     /// Timestamp when the check was performed
     pub timestamp: DateTime<Utc>,
     /// Additional metadata
     pub metadata: std::collections::HashMap<String, String>,
 }
 
-/// Type of monitoring check
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+impl MonitoringResult {
+    /// Helper method to determine if the check was successful
+    pub fn is_successful(&self) -> bool {
+        match &self.check_type {
+            CheckType::Ping(result) => result.successes > 0,
+            CheckType::Traceroute(result) => result.target_reached,
+            CheckType::TcpConnect(result) => result.connected,
+            CheckType::UdpConnect(result) => result.probe_successful,
+            CheckType::HttpGet(result) => result.success,
+            CheckType::Plugin(result) => result.success,
+        }
+    }
+
+    /// Helper method to get the primary response time
+    pub fn response_time_ms(&self) -> Option<f64> {
+        match &self.check_type {
+            CheckType::Ping(result) => result.avg_response_time_ms,
+            CheckType::Traceroute(result) => result.total_time_ms,
+            CheckType::TcpConnect(result) => result.connect_time_ms,
+            CheckType::UdpConnect(result) => result.response_time_ms,
+            CheckType::HttpGet(result) => result.response_time_ms,
+            CheckType::Plugin(result) => result.response_time_ms,
+        }
+    }
+
+    /// Helper method to get the primary error message
+    pub fn error_message(&self) -> Option<String> {
+        match &self.check_type {
+            CheckType::Ping(result) => {
+                if result.errors.is_empty() {
+                    None
+                } else {
+                    Some(result.errors.join("; "))
+                }
+            }
+            CheckType::Traceroute(result) => {
+                if result.errors.is_empty() {
+                    None
+                } else {
+                    Some(result.errors.join("; "))
+                }
+            }
+            CheckType::TcpConnect(result) => result.error.clone(),
+            CheckType::UdpConnect(result) => result.error.clone(),
+            CheckType::HttpGet(result) => result.error.clone(),
+            CheckType::Plugin(result) => result.error.clone(),
+        }
+    }
+}
+
+/// Type of monitoring check with detailed results
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum CheckType {
-    Ping,
-    Traceroute,
-    TcpConnect,
-    UdpConnect,
-    HttpGet,
-    Plugin(String),
+    Ping(PingResult),
+    Traceroute(TracerouteResult),
+    TcpConnect(TcpConnectResult),
+    UdpConnect(UdpConnectResult),
+    HttpGet(HttpGetResult),
+    Plugin(PluginResult),
+}
+
+/// Result of a ping check
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PingResult {
+    /// Number of successfully received replies
+    pub successes: u32,
+    /// Number of timeouts or other ICMP related errors  
+    pub failures: u32,
+    /// Latency for each successful check in milliseconds
+    pub success_latencies: Vec<f64>,
+    /// ICMP error messages
+    pub errors: Vec<String>,
+    /// Average response time in milliseconds
+    pub avg_response_time_ms: Option<f64>,
+    /// Resolved IP address
+    pub resolved_ip: Option<String>,
+}
+
+/// Result of a traceroute check
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TracerouteResult {
+    /// List of hops in the traceroute
+    pub hops: Vec<TracerouteHop>,
+    /// Whether the target was reached
+    pub target_reached: bool,
+    /// Total time for the traceroute
+    pub total_time_ms: Option<f64>,
+    /// Any errors encountered
+    pub errors: Vec<String>,
+}
+
+/// Traceroute hop information
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TracerouteHop {
+    /// Hop number (TTL)
+    pub hop: u8,
+    /// IP address of the hop
+    pub address: Option<IpAddr>,
+    /// Response time in milliseconds
+    pub response_time_ms: Option<f64>,
+    /// Hostname if resolved
+    pub hostname: Option<String>,
+}
+
+/// Result of a TCP connection check
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct TcpConnectResult {
+    /// Whether the connection was successful
+    pub connected: bool,
+    /// Time to establish connection in milliseconds
+    pub connect_time_ms: Option<f64>,
+    /// Error message if connection failed
+    pub error: Option<String>,
+    /// Resolved IP address
+    pub resolved_ip: Option<String>,
+}
+
+/// Result of a UDP connection check
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct UdpConnectResult {
+    /// Whether the UDP probe was successful
+    pub probe_successful: bool,
+    /// Response time in milliseconds
+    pub response_time_ms: Option<f64>,
+    /// Error message if probe failed
+    pub error: Option<String>,
+    /// Resolved IP address
+    pub resolved_ip: Option<String>,
+}
+
+/// Result of an HTTP GET check
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct HttpGetResult {
+    /// HTTP status code
+    pub status_code: Option<u16>,
+    /// Response time in milliseconds
+    pub response_time_ms: Option<f64>,
+    /// Size of response body in bytes
+    pub response_size_bytes: Option<usize>,
+    /// Error message if request failed
+    pub error: Option<String>,
+    /// Whether the request was successful
+    pub success: bool,
+}
+
+/// Result of a plugin check
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PluginResult {
+    /// Name of the plugin
+    pub plugin_name: String,
+    /// Whether the check was successful
+    pub success: bool,
+    /// Response time in milliseconds
+    pub response_time_ms: Option<f64>,
+    /// Error message if check failed
+    pub error: Option<String>,
+    /// Plugin-specific data
+    pub data: std::collections::HashMap<String, String>,
 }
 
 /// Endpoint to monitor
@@ -105,30 +248,4 @@ impl AgentStatus {
             ..Default::default()
         }
     }
-}
-
-/// Traceroute hop information
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TracerouteHop {
-    /// Hop number (TTL)
-    pub hop: u8,
-    /// IP address of the hop
-    pub address: Option<IpAddr>,
-    /// Response time in milliseconds
-    pub response_time_ms: Option<f64>,
-    /// Hostname if resolved
-    pub hostname: Option<String>,
-}
-
-/// Complete traceroute result
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TracerouteResult {
-    /// Target address
-    pub target: String,
-    /// List of hops
-    pub hops: Vec<TracerouteHop>,
-    /// Whether the target was reached
-    pub reached: bool,
-    /// Timestamp
-    pub timestamp: DateTime<Utc>,
 }
