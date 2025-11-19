@@ -74,5 +74,32 @@ Files structure
 
 Tracing should be implemented using the "tracing" crate with support for different log levels and output formats. 
 
+
+# Check types
+
+MonitoringResult is an enum representing different types of monitoring checks that can be performed by the agent. Each variant of the enum corresponds to a specific type of check, such as Ping, Traceroute, TCP Connect, UDP Connect, HTTP GET, and Plugin-based checks.
+It's helper methods:
+- is_successful(): Determines success based on the specific check type
+- response_time_ms(): Gets primary response time from specific result
+- error_message(): Gets primary error message from specific result
+
+Each variant contains detailed result structs:
+- Ping(PingResult)
+- Traceroute(TracerouteResult)
+- TcpConnect(TcpConnectResult)
+- UdpConnect(UdpConnectResult)
+- HttpGet(HttpGetResult)
+- Plugin(PluginResult)
+
+Created detailed result structures:
+- PingResult: Contains successes, failures, success_latencies, errors, avg_response_time_ms, resolved_ip
+- TracerouteCheckResult: Contains hops, target_reached, total_time_ms, errors
+- TcpConnectResult: Contains connected, connect_time_ms, error, resolved_ip
+- UdpConnectResult: Contains probe_successful, response_time_ms, error, resolved_ip
+- HttpGetResult: Contains status_code, response_time_ms, response_size_bytes, error, success
+- PluginResult: Contains plugin_name, success, response_time_ms, error, data
+
+
+
 ## Project Structure
 For detailed project structure, please refer to the [Project Structure](PROJECT_STRUCTURE.md) document.
