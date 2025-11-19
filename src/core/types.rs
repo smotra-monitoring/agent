@@ -73,6 +73,8 @@ impl MonitoringResult {
 }
 
 /// Type of monitoring check with detailed results
+// NOTE: We do not derive `Eq` here because the enum variants contain types with floating point fields (e.g., `f64` for response times).
+// Rust's `Eq` trait cannot be implemented for types containing floats due to the possibility of NaN values, which do not satisfy equality.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum CheckType {
