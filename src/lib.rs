@@ -19,5 +19,8 @@ pub mod plugin;
 pub mod reporter;
 
 pub use config::{Config, MonitoringConfig};
-pub use core::{Agent, AgentStatus, CheckType, Endpoint, MonitoringResult};
+pub use core::{
+    Agent, AgentStatus, CheckType, Endpoint, HttpGetResult, MonitoringResult, PingResult,
+    PluginResult, TcpConnectResult, TracerouteHop, TracerouteResult, UdpConnectResult,
+};
 pub use error::{Error, Result};
