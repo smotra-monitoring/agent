@@ -1,6 +1,6 @@
 //! ICMP ping monitoring
 
-use crate::core::{CheckType, Endpoint, MonitoringResult};
+use crate::core::{CheckType, Endpoint, MonitoringResult, PingResult};
 use crate::error::{Error, Result};
 use chrono::Utc;
 use std::net::{IpAddr, ToSocketAddrs};
@@ -36,14 +36,20 @@ impl PingChecker {
         let addr = match self.resolve_address(&endpoint.address).await {
             Ok(addr) => addr,
             Err(e) => {
+                let ping_result = PingResult {
+                    successes: 0,
+                    failures: 1,
+                    success_latencies: Vec::new(),
+                    errors: vec![format!("Failed to resolve address: {}", e)],
+                    avg_response_time_ms: None,
+                    resolved_ip: None,
+                };
+
                 return MonitoringResult {
                     id: Uuid::new_v4(),
                     agent_id: agent_id.to_string(),
                     target: endpoint.clone(),
-                    check_type: CheckType::Ping,
-                    success: false,
-                    response_time_ms: None,
-                    error: Some(format!("Failed to resolve address: {}", e)),
+                    check_type: CheckType::Ping(ping_result),
                     timestamp: Utc::now(),
                     metadata: std::collections::HashMap::new(),
                 };
@@ -52,54 +58,51 @@ impl PingChecker {
 
         // Perform multiple pings
         let mut successes = 0;
-        let mut total_time = 0.0;
+        let mut failures = 0;
+        let mut success_latencies = Vec::new();
         let mut errors = Vec::new();
 
         for seq in 0..self.count {
             match self.ping_once(addr, seq as u16).await {
                 Ok(rtt) => {
-                    // debug!("Ping reply from {}: time={:?}", addr, rtt);
                     successes += 1;
-                    total_time += rtt.as_millis() as f64;
+                    let latency_ms = rtt.as_millis() as f64;
+                    success_latencies.push(latency_ms);
                 }
                 Err(e) => {
-                    // debug!("Ping error from {}: {}", addr, e);
+                    failures += 1;
                     errors.push(e.to_string());
                 }
             }
         }
 
-        let success = successes > 0;
-        let avg_time = if successes > 0 {
-            Some(total_time / successes as f64)
+        let avg_response_time_ms = if !success_latencies.is_empty() {
+            Some(success_latencies.iter().sum::<f64>() / success_latencies.len() as f64)
         } else {
             None
         };
 
-        let mut metadata = std::collections::HashMap::new();
-        metadata.insert("ping_count".to_string(), self.count.to_string());
-        metadata.insert("successes".to_string(), successes.to_string());
-        metadata.insert("resolved_ip".to_string(), addr.to_string());
-
         debug!(
-            "Ping check to {} ({}): {}/{} success, avg_time={:?} ms",
-            endpoint.address, addr, successes, self.count, avg_time
+            "Ping check to {} ({}): {}/{} success, avg_time={:.2?} ms",
+            endpoint.address, addr, successes, self.count, avg_response_time_ms
         );
+
+        let ping_result = PingResult {
+            resolved_ip: Some(addr.to_string()),
+            successes,
+            failures,
+            success_latencies: success_latencies.clone(),
+            avg_response_time_ms,
+            errors: errors.clone(),
+        };
 
         MonitoringResult {
             id: Uuid::new_v4(),
             agent_id: agent_id.to_string(),
             target: endpoint.clone(),
-            check_type: CheckType::Ping,
-            success,
-            response_time_ms: avg_time,
-            error: if success {
-                None
-            } else {
-                Some(errors.join(": "))
-            },
+            check_type: CheckType::Ping(ping_result),
             timestamp: Utc::now(),
-            metadata,
+            metadata: std::collections::HashMap::new(),
         }
     }
 
@@ -135,7 +138,7 @@ impl PingChecker {
                 .map(|addrs| addrs.collect::<Vec<_>>())
         })
         .await
-        .map_err(|e| Error::Network(format!("Resolution failed: {}", e)))?
+        .map_err(Error::JoinError)?
         .map_err(|e| Error::Network(format!("Resolution failed: {}", e)))?;
 
         debug!("DNS resolution {} to {:?}", address, debug(&addrs));

@@ -15,7 +15,6 @@ use tokio::sync::mpsc;
 
 /// Channel for sending monitoring results
 type ResultSender = mpsc::UnboundedSender<MonitoringResult>;
-type ResultReceiver = mpsc::UnboundedReceiver<MonitoringResult>;
 
 /// Run the monitoring loop
 pub async fn run_monitoring(
@@ -69,7 +68,7 @@ pub async fn run_monitoring(
                         // Update statistics
                         let mut s = status.write();
                         s.checks_performed += 1;
-                        if result.success {
+                        if result.is_successful() {
                             s.checks_successful += 1;
                         } else {
                             s.checks_failed += 1;

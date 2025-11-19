@@ -29,6 +29,9 @@ pub enum Error {
     #[error("Plugin error: {0}")]
     Plugin(String),
 
+    #[error("Join error: {0}")]
+    JoinError(#[from] tokio::task::JoinError),
+
     #[error("Unknown error: {0}")]
     Unknown(String),
 }
