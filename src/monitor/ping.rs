@@ -71,8 +71,7 @@ impl PingChecker {
                 }
                 Err(e) => {
                     failures += 1;
-                    let error_msg = e.to_string();
-                    errors.push(error_msg.clone());
+                    errors.push(e.to_string());
                 }
             }
         }
