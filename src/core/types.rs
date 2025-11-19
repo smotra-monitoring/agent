@@ -93,7 +93,7 @@ pub struct PingResult {
     pub resolved_ip: Option<String>,
     /// Number of successfully received replies
     pub successes: u32,
-    /// Number of timeouts or other ICMP related errors  
+    /// Number of timeouts or other ICMP related errors
     pub failures: u32,
     /// Latency for each successful check in milliseconds
     pub success_latencies: Vec<f64>,
