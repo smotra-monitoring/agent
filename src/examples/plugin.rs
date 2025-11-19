@@ -4,7 +4,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use smotra_agent::{
     plugin::MonitoringPlugin,
-    {CheckType, Endpoint, MonitoringResult},
+    {CheckType, Endpoint, MonitoringResult, PluginResult},
 };
 use std::collections::HashMap;
 
@@ -51,26 +51,36 @@ impl MonitoringPlugin for HttpPlugin {
             Ok(response) => {
                 let duration = start.elapsed();
                 let success = response.status().is_success();
+                let response_time_ms = duration.as_millis() as f64;
 
-                let mut metadata = HashMap::new();
-                metadata.insert(
+                let mut data = HashMap::new();
+                data.insert(
                     "status_code".to_string(),
                     response.status().as_u16().to_string(),
                 );
-                metadata.insert("url".to_string(), url.clone());
+                data.insert("url".to_string(), url.clone());
 
-                let result = MonitoringResult {
-                    id: uuid::Uuid::new_v4(),
-                    agent_id: agent_id.to_string(),
-                    target: endpoint.clone(),
-                    check_type: CheckType::Plugin(PLUGIN_NAME.into()),
+                let plugin_result = PluginResult {
+                    plugin_name: PLUGIN_NAME.to_string(),
                     success,
-                    response_time_ms: Some(duration.as_millis() as f64),
+                    response_time_ms: Some(response_time_ms),
                     error: if success {
                         None
                     } else {
                         Some(format!("HTTP {}", response.status()))
                     },
+                    data,
+                };
+
+                let mut metadata = HashMap::new();
+                metadata.insert("plugin_name".to_string(), PLUGIN_NAME.to_string());
+                metadata.insert("plugin_version".to_string(), PLUGIN_VERSION.to_string());
+
+                let result = MonitoringResult {
+                    id: uuid::Uuid::new_v4(),
+                    agent_id: agent_id.to_string(),
+                    target: endpoint.clone(),
+                    check_type: CheckType::Plugin(plugin_result),
                     timestamp: chrono::Utc::now(),
                     metadata,
                 };
@@ -104,11 +114,11 @@ async fn main() -> Result<()> {
     let result = plugin.check("example-agent", &endpoint).await?;
 
     println!("\nResult:");
-    println!("  Success: {}", result.success);
-    if let Some(time) = result.response_time_ms {
+    println!("  Success: {}", result.is_successful());
+    if let Some(time) = result.response_time_ms() {
         println!("  Response Time: {:.2}ms", time);
     }
-    if let Some(error) = result.error {
+    if let Some(error) = result.error_message() {
         println!("  Error: {}", error);
     }
     println!("  Metadata: {:?}", result.metadata);
