@@ -15,7 +15,6 @@ use tokio::sync::mpsc;
 
 /// Channel for sending monitoring results
 type ResultSender = mpsc::UnboundedSender<MonitoringResult>;
-type ResultReceiver = mpsc::UnboundedReceiver<MonitoringResult>;
 
 /// Run the monitoring loop
 pub async fn run_monitoring(
