@@ -26,11 +26,14 @@ max_cache_age_secs = 86400
 [[endpoints]]
 address = "8.8.8.8"
 tags = ["dns", "google"]
+enabled = true  # Optional, defaults to true
 
 [[endpoints]]
 address = "1.1.1.1"
 tags = ["dns", "cloudflare"]
+enabled = true
 
 [[endpoints]]
 address = "example.com"
 tags = ["web"]
+# enabled = false  # Uncomment to disable this endpoint

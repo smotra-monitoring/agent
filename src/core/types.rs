@@ -194,6 +194,14 @@ pub struct Endpoint {
     pub port: Option<u16>,
     /// Tags for organizing endpoints
     pub tags: Vec<String>,
+    /// Whether this endpoint is enabled for monitoring
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+}
+
+/// Default value for enabled field
+fn default_enabled() -> bool {
+    true
 }
 
 impl Endpoint {
@@ -202,6 +210,7 @@ impl Endpoint {
             address: address.into(),
             port: None,
             tags: Vec::new(),
+            enabled: true,
         }
     }
 
@@ -212,6 +221,11 @@ impl Endpoint {
 
     pub fn with_tags(mut self, tags: Vec<String>) -> Self {
         self.tags = tags;
+        self
+    }
+
+    pub fn with_enabled(mut self, enabled: bool) -> Self {
+        self.enabled = enabled;
         self
     }
 }
@@ -249,5 +263,56 @@ impl AgentStatus {
             agent_id: agent_id.into(),
             ..Default::default()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_endpoint_enabled_by_default() {
+        let endpoint = Endpoint::new("example.com");
+        assert!(endpoint.enabled, "Endpoint should be enabled by default");
+    }
+
+    #[test]
+    fn test_endpoint_with_enabled() {
+        let endpoint = Endpoint::new("example.com").with_enabled(false);
+        assert!(!endpoint.enabled, "Endpoint should be disabled");
+
+        let endpoint = Endpoint::new("example.com").with_enabled(true);
+        assert!(endpoint.enabled, "Endpoint should be enabled");
+    }
+
+    #[test]
+    fn test_endpoint_deserialization_with_enabled() {
+        let json = r#"{"address": "example.com", "port": null, "tags": [], "enabled": false}"#;
+        let endpoint: Endpoint = serde_json::from_str(json).unwrap();
+        assert!(
+            !endpoint.enabled,
+            "Deserialized endpoint should be disabled"
+        );
+    }
+
+    #[test]
+    fn test_endpoint_deserialization_without_enabled() {
+        // When enabled field is missing, it should default to true
+        let json = r#"{"address": "example.com", "port": null, "tags": []}"#;
+        let endpoint: Endpoint = serde_json::from_str(json).unwrap();
+        assert!(
+            endpoint.enabled,
+            "Endpoint without enabled field should default to true"
+        );
+    }
+
+    #[test]
+    fn test_endpoint_serialization() {
+        let endpoint = Endpoint::new("example.com").with_enabled(false);
+        let json = serde_json::to_string(&endpoint).unwrap();
+        assert!(
+            json.contains(r#""enabled":false"#),
+            "Serialized JSON should contain enabled field"
+        );
     }
 }

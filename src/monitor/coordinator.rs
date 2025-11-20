@@ -116,13 +116,22 @@ async fn run_check_loop(
                     continue;
                 }
 
-                info!("Running checks for {} endpoints", config.endpoints.len());
+                // Filter only enabled endpoints
+                let enabled_endpoints: Vec<_> = config.endpoints.iter()
+                    .filter(|e| e.enabled)
+                    .collect();
+
+                if enabled_endpoints.is_empty() {
+                    continue;
+                }
+
+                info!("Running checks for {} enabled endpoints", enabled_endpoints.len());
 
                 // Run checks concurrently with limit
                 let semaphore = Arc::new(tokio::sync::Semaphore::new(config.monitoring.max_concurrent));
                 let mut tasks = Vec::new();
 
-                for endpoint in &config.endpoints {
+                for endpoint in enabled_endpoints {
                     let permit = semaphore.clone().acquire_owned().await.unwrap();
                     let ping_checker = Arc::clone(&ping_checker);
                     let agent_id = config.agent_id.clone();
