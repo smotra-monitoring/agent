@@ -18,8 +18,6 @@ pub struct MonitoringResult {
     pub check_type: CheckType,
     /// Timestamp when the check was performed
     pub timestamp: DateTime<Utc>,
-    /// Additional metadata
-    pub metadata: std::collections::HashMap<String, String>,
 }
 
 impl MonitoringResult {

@@ -51,7 +51,6 @@ impl PingChecker {
                     target: endpoint.clone(),
                     check_type: CheckType::Ping(ping_result),
                     timestamp: Utc::now(),
-                    metadata: std::collections::HashMap::new(),
                 };
             }
         };
@@ -102,7 +101,6 @@ impl PingChecker {
             target: endpoint.clone(),
             check_type: CheckType::Ping(ping_result),
             timestamp: Utc::now(),
-            metadata: std::collections::HashMap::new(),
         }
     }
 

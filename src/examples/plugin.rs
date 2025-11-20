@@ -80,7 +80,6 @@ impl MonitoringPlugin for HttpPlugin {
                     target: endpoint.clone(),
                     check_type: CheckType::Plugin(plugin_result),
                     timestamp: chrono::Utc::now(),
-                    metadata: HashMap::new(),
                 };
                 Ok(result)
             }
@@ -119,7 +118,6 @@ async fn main() -> Result<()> {
     if let Some(error) = result.error_message() {
         println!("  Error: {}", error);
     }
-    println!("  Metadata: {:?}", result.metadata);
 
     Ok(())
 }
