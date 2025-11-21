@@ -52,8 +52,8 @@ impl HeartbeatReporter {
         }
 
         if let Some(mem) = memory_usage {
-            // If memory usage is above 2GB, consider degraded (arbitrary threshold)
-            if mem > 2048.0 {
+            // If memory usage is above 90%, consider degraded
+            if mem > 90.0 {
                 heartbeat = heartbeat.with_status(AgentHealthStatus::Degraded);
             }
         }
@@ -139,11 +139,17 @@ impl HeartbeatReporter {
         // Refresh memory info
         system.refresh_memory();
 
-        // Get used memory in bytes and convert to MB
-        let used_memory_bytes = system.used_memory();
-        let used_memory_mb = used_memory_bytes as f32 / 1_048_576.0; // 1024 * 1024
+        // Get total and used memory
+        let total_memory = system.total_memory();
+        let used_memory = system.used_memory();
 
-        Some(used_memory_mb)
+        if total_memory > 0 {
+            // Calculate percentage
+            let memory_percent = (used_memory as f64 / total_memory as f64) * 100.0;
+            Some(memory_percent as f32)
+        } else {
+            None
+        }
     }
 }
 
@@ -204,7 +210,7 @@ mod tests {
         // Verify deserialization works
         let deserialized: AgentHeartbeat = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.cpu_usage_percent, Some(45.5));
-        assert_eq!(deserialized.memory_usage_mb, Some(512.0));
+        assert_eq!(deserialized.memory_usage_percent, Some(512.0));
     }
 
     #[test]
@@ -235,6 +241,7 @@ mod tests {
         let mem = reporter.get_memory_usage();
         if let Some(mem_val) = mem {
             assert!(mem_val > 0.0, "Memory usage should be positive");
+            assert!(mem_val <= 100.0, "Memory usage should not exceed 100%");
         }
     }
 

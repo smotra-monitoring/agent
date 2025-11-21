@@ -250,9 +250,9 @@ pub struct AgentHeartbeat {
     /// CPU usage percentage (0.0 to 100.0)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cpu_usage_percent: Option<f32>,
-    /// Memory usage in megabytes
+    /// Memory usage percentage (0.0 to 100.0)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub memory_usage_mb: Option<f32>,
+    pub memory_usage_percent: Option<f32>,
 }
 
 impl AgentHeartbeat {
@@ -262,7 +262,7 @@ impl AgentHeartbeat {
             timestamp: Utc::now(),
             status: AgentHealthStatus::Healthy,
             cpu_usage_percent: None,
-            memory_usage_mb: None,
+            memory_usage_percent: None,
         }
     }
 
@@ -272,7 +272,7 @@ impl AgentHeartbeat {
             timestamp: Utc::now(),
             status: AgentHealthStatus::Healthy,
             cpu_usage_percent: cpu_usage,
-            memory_usage_mb: memory_usage,
+            memory_usage_percent: memory_usage,
         }
     }
 
