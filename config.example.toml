@@ -1,0 +1,40 @@
+agent_id = "example-agent-001"
+tags = ["production", "monitoring"]
+
+[monitoring]
+interval_secs = 60
+timeout_secs = 5
+ping_count = 3
+max_concurrent = 10
+traceroute_on_failure = false
+traceroute_max_hops = 30
+
+[server]
+# url = "https://monitoring.example.com"
+# api_key = "your-api-key-here"
+report_interval_secs = 300
+heartbeat_interval_secs = 300  # Send lightweight heartbeat every 5 minutes
+verify_tls = true
+timeout_secs = 30
+retry_attempts = 3
+
+[storage]
+cache_dir = "./cache"
+max_cached_results = 10000
+max_cache_age_secs = 86400
+
+# Example endpoints to monitor
+[[endpoints]]
+address = "8.8.8.8"
+tags = ["dns", "google"]
+enabled = true  # Optional, defaults to true
+
+[[endpoints]]
+address = "1.1.1.1"
+tags = ["dns", "cloudflare"]
+enabled = true
+
+[[endpoints]]
+address = "example.com"
+tags = ["web"]
+# enabled = false  # Uncomment to disable this endpoint
