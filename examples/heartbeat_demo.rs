@@ -2,7 +2,8 @@
 
 use smotra_agent::{Config, HeartbeatReporter, MonitoringConfig, ServerConfig, StorageConfig};
 
-fn main() {
+#[tokio::main]
+async fn main() {
     println!("=== Heartbeat Metrics Demo ===\n");
 
     // Create a test configuration
@@ -30,7 +31,7 @@ fn main() {
 
     // Collect metrics
     println!("Collecting system metrics...\n");
-    let heartbeat = reporter.collect_metrics();
+    let heartbeat = reporter.collect_metrics().await;
 
     // Display the metrics
     println!("Agent Heartbeat:");

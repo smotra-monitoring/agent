@@ -3,8 +3,8 @@
 use crate::config::Config;
 use crate::core::{AgentHealthStatus, AgentHeartbeat};
 use crate::error::{Error, Result};
-use std::sync::Mutex;
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
+use tokio::sync::Mutex;
 use tracing::{debug, error, warn};
 
 /// Heartbeat reporter for sending lightweight agent status updates
@@ -38,9 +38,9 @@ impl HeartbeatReporter {
     }
 
     /// Collect current system metrics for heartbeat
-    pub fn collect_metrics(&self) -> AgentHeartbeat {
-        let cpu_usage = self.get_cpu_usage();
-        let memory_usage = self.get_memory_usage();
+    pub async fn collect_metrics(&self) -> AgentHeartbeat {
+        let cpu_usage = self.get_cpu_usage().await;
+        let memory_usage = self.get_memory_usage().await;
 
         let mut heartbeat = AgentHeartbeat::with_metrics(cpu_usage, memory_usage);
 
@@ -70,7 +70,7 @@ impl HeartbeatReporter {
             .as_ref()
             .ok_or_else(|| Error::Config("Server URL not configured".to_string()))?;
 
-        let heartbeat = self.collect_metrics();
+        let heartbeat = self.collect_metrics().await;
         let heartbeat_url = format!(
             "{}/api/v1/agent/{}/heartbeat",
             server_url, self.config.agent_id
@@ -116,8 +116,8 @@ impl HeartbeatReporter {
     }
 
     /// Get current CPU usage percentage
-    fn get_cpu_usage(&self) -> Option<f32> {
-        let mut system = self.system.lock().ok()?;
+    async fn get_cpu_usage(&self) -> Option<f32> {
+        let mut system = self.system.lock().await;
 
         // Refresh CPU info
         system.refresh_cpu_all();
@@ -133,8 +133,8 @@ impl HeartbeatReporter {
     }
 
     /// Get current memory usage in MB
-    fn get_memory_usage(&self) -> Option<f32> {
-        let mut system = self.system.lock().ok()?;
+    async fn get_memory_usage(&self) -> Option<f32> {
+        let mut system = self.system.lock().await;
 
         // Refresh memory info
         system.refresh_memory();
@@ -181,11 +181,11 @@ mod tests {
         assert!(reporter.is_ok());
     }
 
-    #[test]
-    fn test_collect_metrics() {
+    #[tokio::test]
+    async fn test_collect_metrics() {
         let config = create_test_config();
         let reporter = HeartbeatReporter::new(config).unwrap();
-        let heartbeat = reporter.collect_metrics();
+        let heartbeat = reporter.collect_metrics().await;
 
         // Verify timestamp is recent (within last second)
         let now = Utc::now();
@@ -225,31 +225,31 @@ mod tests {
         assert_eq!(heartbeat.status, AgentHealthStatus::Degraded);
     }
 
-    #[test]
-    fn test_system_metrics_collection() {
+    #[tokio::test]
+    async fn test_system_metrics_collection() {
         let config = create_test_config();
         let reporter = HeartbeatReporter::new(config).unwrap();
 
         // Get CPU usage
-        let cpu = reporter.get_cpu_usage();
+        let cpu = reporter.get_cpu_usage().await;
         if let Some(cpu_val) = cpu {
             assert!(cpu_val >= 0.0, "CPU usage should be non-negative");
             assert!(cpu_val <= 100.0, "CPU usage should not exceed 100%");
         }
 
         // Get memory usage
-        let mem = reporter.get_memory_usage();
+        let mem = reporter.get_memory_usage().await;
         if let Some(mem_val) = mem {
             assert!(mem_val > 0.0, "Memory usage should be positive");
             assert!(mem_val <= 100.0, "Memory usage should not exceed 100%");
         }
     }
 
-    #[test]
-    fn test_metrics_in_heartbeat() {
+    #[tokio::test]
+    async fn test_metrics_in_heartbeat() {
         let config = create_test_config();
         let reporter = HeartbeatReporter::new(config).unwrap();
-        let heartbeat = reporter.collect_metrics();
+        let heartbeat = reporter.collect_metrics().await;
 
         // Verify the heartbeat was created successfully with valid status
         // Status can be either Healthy or Degraded depending on system load

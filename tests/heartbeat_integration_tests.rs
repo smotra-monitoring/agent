@@ -15,7 +15,7 @@ async fn test_heartbeat_with_mock_server() {
 async fn test_heartbeat_collection() {
     let config = create_test_config();
     let reporter = HeartbeatReporter::new(config).unwrap();
-    let heartbeat = reporter.collect_metrics();
+    let heartbeat = reporter.collect_metrics().await;
 
     // Verify basic structure
     assert!(heartbeat.timestamp.timestamp() > 0);
