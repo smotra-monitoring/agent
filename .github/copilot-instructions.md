@@ -61,9 +61,10 @@ Files structure
 - `src/lib.rs`: Main library file for the agent.
 - `src/bin/`: Directory containing the main binaries for the agent.
 - `src/bin/agent.rs`: Main binary to run the monitoring agent.
-- `src/bin/agent_cli.rs`: Command-line interface for managing and configuring the agent.
-- `src/bin/agent_plugin_example.rs`: Example plugin demonstrating how to extend agent functionality.
-- `src/bin/agent_updater.rs`: Binary to handle auto-updates for the agent
+- `src/bin/agent_cli/`: Directory for the agent CLI with TUI implementation.
+- `src/bin/agent_cli/main.rs`: Main entry point for the agent CLI.
+- `src/bin/agent_cli/tui/`: TUI implementation with Ratatui (mod.rs, render.rs, runner.rs, ui_loop.rs).
+- `src/bin/agent_updater.rs`: Binary to handle auto-updates for the agent.
 
 # Code organization
 
@@ -98,6 +99,14 @@ Created detailed result structures:
 - UdpConnectResult: Contains probe_successful, response_time_ms, error, resolved_ip
 - HttpGetResult: Contains status_code, response_time_ms, response_size_bytes, error, success
 - PluginResult: Contains plugin_name, plugin_version, success, response_time_ms, error, data
+
+# Heartbeat System
+
+The agent implements a lightweight heartbeat system for reporting agent health status to the server:
+- AgentHeartbeat: Contains agent_id, timestamp, status, system metrics (CPU usage, memory usage, uptime)
+- AgentHealthStatus: Enum with states (Healthy, Degraded, Critical, Unknown)
+- HeartbeatReporter: Sends periodic health updates to server using system metrics from sysinfo crate
+- Separate from full monitoring results for efficient status tracking
 
 
 

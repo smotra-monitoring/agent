@@ -25,6 +25,7 @@
 - `src/reporter/mod.rs` - Module exports for reporting
 - `src/reporter/server.rs` - Server communication and result reporting
 - `src/reporter/cache.rs` - Cache manager for offline data storage
+- `src/reporter/heartbeat.rs` - Heartbeat reporter for lightweight agent status updates
 
 ### Plugin System (`src/plugin/`)
 - `src/plugin/mod.rs` - Module exports for plugin system
@@ -45,9 +46,13 @@
 - `src/bin/agent_cli/tui/ui_loop.rs` - TUI-related functionality event loop
 - `src/bin/agent_cli/tui/runner.rs` - TUI-related functionality initializing and starting event loop
 
-### Examples (`src/examples/`)
-- `src/examples/plugin.rs` - HTTP monitoring plugin example
+### Examples (`examples/`)
+- `examples/plugin.rs` - HTTP monitoring plugin example
+- `examples/heartbeat_demo.rs` - Heartbeat demonstration example
 
+
+### Tests (`tests/`)
+- `tests/heartbeat_integration_tests.rs` - Integration tests for heartbeat functionality
 
 ### Configuration & Documentation
 - `Cargo.toml` - Rust project configuration with dependencies
@@ -86,6 +91,8 @@
 - HTTP client with authentication
 - Connection status tracking
 - Cache manager structure (to be implemented)
+- Heartbeat reporting with system metrics (CPU, memory, uptime)
+- Agent health status monitoring
 
 ### Plugin System
 - MonitoringPlugin trait for custom checks
