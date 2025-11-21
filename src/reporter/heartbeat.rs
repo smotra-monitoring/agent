@@ -3,6 +3,8 @@
 use crate::config::Config;
 use crate::core::{AgentHealthStatus, AgentHeartbeat};
 use crate::error::{Error, Result};
+use std::sync::Mutex;
+use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
 use tracing::{debug, error, warn};
 
 /// Heartbeat reporter for sending lightweight agent status updates
@@ -10,6 +12,7 @@ use tracing::{debug, error, warn};
 pub struct HeartbeatReporter {
     config: Config,
     client: reqwest::Client,
+    system: Mutex<System>,
 }
 
 impl HeartbeatReporter {
@@ -20,15 +23,24 @@ impl HeartbeatReporter {
             .danger_accept_invalid_certs(!config.server.verify_tls)
             .build()?;
 
-        Ok(Self { config, client })
+        // Initialize system with minimal refresh for better performance
+        let system = System::new_with_specifics(
+            RefreshKind::nothing()
+                .with_cpu(CpuRefreshKind::everything())
+                .with_memory(MemoryRefreshKind::everything()),
+        );
+
+        Ok(Self {
+            config,
+            client,
+            system: Mutex::new(system),
+        })
     }
 
     /// Collect current system metrics for heartbeat
     pub fn collect_metrics(&self) -> AgentHeartbeat {
-        // For now, we'll create a basic heartbeat without system metrics
-        // System metrics collection can be added later using a crate like sysinfo
-        let cpu_usage = Self::get_cpu_usage();
-        let memory_usage = Self::get_memory_usage();
+        let cpu_usage = self.get_cpu_usage();
+        let memory_usage = self.get_memory_usage();
 
         let mut heartbeat = AgentHeartbeat::with_metrics(cpu_usage, memory_usage);
 
@@ -104,17 +116,34 @@ impl HeartbeatReporter {
     }
 
     /// Get current CPU usage percentage
-    /// TODO: Implement actual CPU usage collection using sysinfo crate
-    fn get_cpu_usage() -> Option<f32> {
-        // Placeholder - would use sysinfo crate in production
-        None
+    fn get_cpu_usage(&self) -> Option<f32> {
+        let mut system = self.system.lock().ok()?;
+
+        // Refresh CPU info
+        system.refresh_cpu_all();
+
+        // Get global CPU usage
+        let cpu_usage = system.global_cpu_usage();
+
+        if cpu_usage.is_finite() && cpu_usage >= 0.0 {
+            Some(cpu_usage)
+        } else {
+            None
+        }
     }
 
     /// Get current memory usage in MB
-    /// TODO: Implement actual memory usage collection using sysinfo crate
-    fn get_memory_usage() -> Option<f32> {
-        // Placeholder - would use sysinfo crate in production
-        None
+    fn get_memory_usage(&self) -> Option<f32> {
+        let mut system = self.system.lock().ok()?;
+
+        // Refresh memory info
+        system.refresh_memory();
+
+        // Get used memory in bytes and convert to MB
+        let used_memory_bytes = system.used_memory();
+        let used_memory_mb = used_memory_bytes as f32 / 1_048_576.0; // 1024 * 1024
+
+        Some(used_memory_mb)
     }
 }
 
@@ -188,5 +217,42 @@ mod tests {
     fn test_heartbeat_with_status() {
         let heartbeat = AgentHeartbeat::new().with_status(AgentHealthStatus::Degraded);
         assert_eq!(heartbeat.status, AgentHealthStatus::Degraded);
+    }
+
+    #[test]
+    fn test_system_metrics_collection() {
+        let config = create_test_config();
+        let reporter = HeartbeatReporter::new(config).unwrap();
+
+        // Get CPU usage
+        let cpu = reporter.get_cpu_usage();
+        if let Some(cpu_val) = cpu {
+            assert!(cpu_val >= 0.0, "CPU usage should be non-negative");
+            assert!(cpu_val <= 100.0, "CPU usage should not exceed 100%");
+        }
+
+        // Get memory usage
+        let mem = reporter.get_memory_usage();
+        if let Some(mem_val) = mem {
+            assert!(mem_val > 0.0, "Memory usage should be positive");
+        }
+    }
+
+    #[test]
+    fn test_metrics_in_heartbeat() {
+        let config = create_test_config();
+        let reporter = HeartbeatReporter::new(config).unwrap();
+        let heartbeat = reporter.collect_metrics();
+
+        // Verify the heartbeat was created successfully with valid status
+        // Status can be either Healthy or Degraded depending on system load
+        match heartbeat.status {
+            AgentHealthStatus::Healthy | AgentHealthStatus::Degraded => {
+                // Both are valid
+            }
+        }
+
+        // Verify timestamp is set
+        assert!(heartbeat.timestamp.timestamp() > 0);
     }
 }
