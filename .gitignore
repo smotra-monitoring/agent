@@ -1,7 +1,6 @@
 /target
 /cache
 *.toml
-!config.example.toml
 !Cargo.toml
 *.log
 .DS_Store
