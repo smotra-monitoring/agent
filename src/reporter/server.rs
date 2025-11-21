@@ -98,7 +98,7 @@ async fn send_agent_report(config: &Config, agent_status: &Arc<RwLock<AgentStatu
 /// Run the heartbeat loop in a separate task
 pub async fn run_heartbeat(
     config: Config,
-    mut heartbeat_shutdown_rx: broadcast::Receiver<()>,
+    mut agent_shutdown_rx: broadcast::Receiver<()>,
 ) -> Result<()> {
     info!("Starting heartbeat reporter");
 
@@ -134,7 +134,7 @@ pub async fn run_heartbeat(
                     }
                 }
             }
-            _ = heartbeat_shutdown_rx.recv() => {
+            _ = agent_shutdown_rx.recv() => {
                 info!("Heartbeat reporter shutting down");
                 break;
             }
