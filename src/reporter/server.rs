@@ -3,9 +3,9 @@
 use crate::config::Config;
 use crate::core::AgentStatus;
 use crate::error::{Error, Result};
+use crate::reporter::HeartbeatReporter;
 use chrono::Utc;
 use parking_lot::RwLock;
-use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::time::interval;
@@ -90,6 +90,55 @@ async fn send_agent_report(config: &Config, agent_status: &Arc<RwLock<AgentStatu
             "Server returned error: {}",
             response.status()
         )));
+    }
+
+    Ok(())
+}
+
+/// Run the heartbeat loop in a separate task
+pub async fn run_heartbeat(
+    config: Config,
+    mut heartbeat_shutdown_rx: broadcast::Receiver<()>,
+) -> Result<()> {
+    info!("Starting heartbeat reporter");
+
+    if !config.server.is_configured() {
+        warn!("Server not configured, heartbeat disabled");
+        return Ok(());
+    }
+
+    let heartbeat_reporter = HeartbeatReporter::new(config.clone())?;
+    let mut interval = interval(config.server.heartbeat_interval());
+    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
+    loop {
+        tokio::select! {
+            _ = interval.tick() => {
+                match heartbeat_reporter.send_heartbeat().await {
+                    Ok(_) => {
+                        debug!("Heartbeat sent successfully");
+                    }
+                    Err(e) => {
+                        // Log error but continue - heartbeats are best-effort
+                        match &e {
+                            Error::Authentication(_) => {
+                                error!("Heartbeat authentication failed: {}", e);
+                            }
+                            Error::Network(_) => {
+                                warn!("Heartbeat network error: {}", e);
+                            }
+                            _ => {
+                                error!("Heartbeat failed: {}", e);
+                            }
+                        }
+                    }
+                }
+            }
+            _ = heartbeat_shutdown_rx.recv() => {
+                info!("Heartbeat reporter shutting down");
+                break;
+            }
+        }
     }
 
     Ok(())

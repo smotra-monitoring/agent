@@ -230,6 +230,70 @@ impl Endpoint {
     }
 }
 
+/// Agent heartbeat status
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum AgentHealthStatus {
+    Healthy,
+    Degraded,
+}
+
+impl Default for AgentHealthStatus {
+    fn default() -> Self {
+        Self::Healthy
+    }
+}
+
+/// Agent heartbeat data sent to the server
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentHeartbeat {
+    /// Timestamp when the heartbeat was generated
+    pub timestamp: DateTime<Utc>,
+    /// Current health status of the agent
+    #[serde(default)]
+    pub status: AgentHealthStatus,
+    /// CPU usage percentage (0.0 to 100.0)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cpu_usage_percent: Option<f32>,
+    /// Memory usage in megabytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub memory_usage_mb: Option<f32>,
+}
+
+impl AgentHeartbeat {
+    /// Create a new heartbeat with the current timestamp
+    pub fn new() -> Self {
+        Self {
+            timestamp: Utc::now(),
+            status: AgentHealthStatus::Healthy,
+            cpu_usage_percent: None,
+            memory_usage_mb: None,
+        }
+    }
+
+    /// Create a heartbeat with system metrics
+    pub fn with_metrics(cpu_usage: Option<f32>, memory_usage: Option<f32>) -> Self {
+        Self {
+            timestamp: Utc::now(),
+            status: AgentHealthStatus::Healthy,
+            cpu_usage_percent: cpu_usage,
+            memory_usage_mb: memory_usage,
+        }
+    }
+
+    /// Set the health status
+    pub fn with_status(mut self, status: AgentHealthStatus) -> Self {
+        self.status = status;
+        self
+    }
+}
+
+impl Default for AgentHeartbeat {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Current status of the agent
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AgentStatus {

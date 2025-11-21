@@ -18,9 +18,11 @@ pub mod monitor;
 pub mod plugin;
 pub mod reporter;
 
-pub use config::{Config, MonitoringConfig};
+pub use config::{Config, MonitoringConfig, ServerConfig, StorageConfig};
 pub use core::{
-    Agent, AgentStatus, CheckType, Endpoint, HttpGetResult, MonitoringResult, PingResult,
-    PluginResult, TcpConnectResult, TracerouteHop, TracerouteResult, UdpConnectResult,
+    Agent, AgentHealthStatus, AgentHeartbeat, AgentStatus, CheckType, Endpoint, HttpGetResult,
+    MonitoringResult, PingResult, PluginResult, TcpConnectResult, TracerouteHop,
+    TracerouteResult, UdpConnectResult,
 };
 pub use error::{Error, Result};
+pub use reporter::HeartbeatReporter;

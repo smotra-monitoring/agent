@@ -17,6 +17,9 @@ pub enum Error {
     #[error("Network error: {0}")]
     Network(String),
 
+    #[error("Authentication error: {0}")]
+    Authentication(String),
+
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
 
