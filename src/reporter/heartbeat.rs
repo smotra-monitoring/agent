@@ -205,7 +205,7 @@ mod tests {
         assert!(json.contains("timestamp"));
         assert!(json.contains("status"));
         assert!(json.contains("cpu_usage_percent"));
-        assert!(json.contains("memory_usage_mb"));
+        assert!(json.contains("memory_usage_percent"));
 
         // Verify deserialization works
         let deserialized: AgentHeartbeat = serde_json::from_str(&json).unwrap();
