@@ -15,7 +15,7 @@ pub async fn show_status(config_path: PathBuf) -> Result<()> {
     println!("  Checks Successful: {}", status.checks_successful);
     println!("  Checks Failed: {}", status.checks_failed);
     println!("  Server Connected: {}", status.server_connected);
-    println!("  Cached Results: {}", status.cached_results);
+    println!("  Cached Results: {}", status.cached_reports);
 
     Ok(())
 }

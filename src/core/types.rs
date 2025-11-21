@@ -253,8 +253,8 @@ pub struct AgentStatus {
     pub failed_report_count: u64,
     /// Whether the agent is connected to the server
     pub server_connected: bool,
-    /// Number of cached results waiting to be sent
-    pub cached_results: usize,
+    /// Number of cached reports waiting to be sent
+    pub cached_reports: usize,
 }
 
 impl AgentStatus {
