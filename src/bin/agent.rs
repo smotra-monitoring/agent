@@ -63,7 +63,7 @@ async fn main() -> Result<()> {
             Ok(config) => config,
             Err(e) => {
                 error!("Failed to load configuration: {}", e);
-                return Err(e.into());
+                return Err(e);
             }
         }
     } else {
@@ -75,7 +75,7 @@ async fn main() -> Result<()> {
     // Validate configuration
     if let Err(e) = config.validate() {
         error!("Configuration validation failed: {}", e);
-        return Err(e.into());
+        return Err(e);
     }
 
     info!("Configuration loaded successfully");
@@ -93,7 +93,7 @@ async fn main() -> Result<()> {
         }
         Err(e) => {
             error!("Agent error: {}", e);
-            Err(e.into())
+            Err(e)
         }
     }
 }

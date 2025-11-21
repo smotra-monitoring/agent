@@ -96,6 +96,9 @@ pub struct ServerConfig {
     /// Report interval in seconds
     pub report_interval_secs: u64,
 
+    /// Heartbeat interval in seconds
+    pub heartbeat_interval_secs: u64,
+
     /// Enable TLS verification
     pub verify_tls: bool,
 
@@ -112,6 +115,7 @@ impl Default for ServerConfig {
             url: None,
             api_key: None,
             report_interval_secs: 300,
+            heartbeat_interval_secs: 300,
             verify_tls: true,
             timeout_secs: 5,
             retry_attempts: 3,
@@ -122,6 +126,10 @@ impl Default for ServerConfig {
 impl ServerConfig {
     pub fn report_interval(&self) -> Duration {
         Duration::from_secs(self.report_interval_secs)
+    }
+
+    pub fn heartbeat_interval(&self) -> Duration {
+        Duration::from_secs(self.heartbeat_interval_secs)
     }
 
     pub fn timeout(&self) -> Duration {

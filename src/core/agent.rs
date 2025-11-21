@@ -70,6 +70,16 @@ impl Agent {
             })
         };
 
+        // Start heartbeat task
+        let heartbeat_handle = {
+            let config = config.clone();
+            let shutdown_rx = self.shutdown_tx.subscribe();
+
+            tokio::spawn(async move {
+                crate::reporter::run_heartbeat(config, shutdown_rx).await
+            })
+        };
+
         // Wait for shutdown signal
         tokio::select! {
             _ = shutdown_rx.recv() => {
@@ -84,7 +94,7 @@ impl Agent {
         info!("Stopping agent");
 
         // Wait for tasks to complete
-        let _ = tokio::join!(monitor_handle, reporter_handle);
+        let _ = tokio::join!(monitor_handle, reporter_handle, heartbeat_handle);
 
         // Update status
         self.status.write().is_running = false;
