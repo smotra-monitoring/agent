@@ -114,4 +114,4 @@ The agent implements a lightweight heartbeat system for reporting agent health s
 For detailed project structure, please refer to the [Project Structure](PROJECT_STRUCTURE.md) document.
 
 ## OpenApi Specification
-For detailed OpenAPI specification, please refer to the [OpenAPI Specification](https://github.com/smotra-monitoring/openapi/blob/master/openapi.yaml) document.
+For detailed OpenAPI specification, please refer to the [OpenAPI Specification](https://github.com/smotra-monitoring/openapi/blob/master/openapi/spec.yaml) document.
