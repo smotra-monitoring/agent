@@ -83,7 +83,7 @@ impl HeartbeatReporter {
 
         let mut request = self.client.post(&heartbeat_url).json(&heartbeat);
 
-        // Use X-API-Key header as specified in OpenAPI spec (AgentApiKey security scheme)
+        // Use Bearer header as specified in OpenAPI spec (AgentApiKey security scheme)
         if let Some(api_key) = &self.config.server.api_key {
             request = request.header("Authorization", format!("Bearer {}", api_key));
         }
