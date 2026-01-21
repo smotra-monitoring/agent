@@ -83,6 +83,9 @@ impl HeartbeatReporter {
 
         let mut request = self.client.post(&heartbeat_url).json(&heartbeat);
 
+        // Add agent version header
+        request = request.header("X-Agent-Version", self.config.version.to_string());
+
         // Use Bearer header as specified in OpenAPI spec (AgentApiKey security scheme)
         if let Some(api_key) = &self.config.server.api_key {
             request = request.header("Authorization", format!("Bearer {}", api_key));
