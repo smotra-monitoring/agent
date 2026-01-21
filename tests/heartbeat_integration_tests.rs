@@ -1,6 +1,7 @@
 //! Integration tests for heartbeat functionality
 
 use smotra_agent::{Config, HeartbeatReporter};
+use uuid::Uuid;
 
 #[tokio::test]
 async fn test_heartbeat_with_mock_server() {

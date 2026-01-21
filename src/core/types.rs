@@ -186,7 +186,7 @@ pub struct PluginResult {
 }
 
 /// Endpoint to monitor
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Endpoint {
     /// Target address (hostname or IP)
     pub address: String,
