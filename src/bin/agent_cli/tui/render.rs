@@ -75,9 +75,10 @@ pub fn render_status(f: &mut Frame, area: Rect, status: &smotra_agent::AgentStat
     .block(Block::default().borders(Borders::ALL).title("Status"));
     f.render_widget(status_widget, chunks[0]);
 
-    // Agent name
+    // Agent name and config version
+    let agent_info_text = format!("{} (v{})", config.agent_name, config.version);
     let agent_name_widget = Paragraph::new(Line::from(Span::styled(
-        &config.agent_name,
+        agent_info_text,
         Style::default()
             .fg(Color::Cyan)
             .add_modifier(Modifier::BOLD),
