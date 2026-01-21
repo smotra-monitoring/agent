@@ -1,4 +1,6 @@
+version = 1
 agent_id = "example-agent-001"
+agent_name = "Production Agent 001"
 tags = ["production", "monitoring"]
 
 [monitoring]

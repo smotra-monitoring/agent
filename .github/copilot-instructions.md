@@ -108,6 +108,27 @@ The agent implements a lightweight heartbeat system for reporting agent health s
 - HeartbeatReporter: Sends periodic health updates to server using system metrics from sysinfo crate
 - Separate from full monitoring results for efficient status tracking
 
+# Configuration Versioning and Server Polling
+
+The agent configuration includes a `version` field (unsigned integer) that tracks the current configuration version. This is used for synchronization with the central server.
+
+## Config Version Implementation
+- Config struct has a `version` field (type `u32`) that starts at 1
+- Version is included in configuration files (config.toml, config.example.toml)
+
+## Future Implementation: Config Polling from Server
+**TODO**: Implement periodic configuration polling from the server with the following behavior:
+- Agent should periodically poll the server for updated configuration
+- When polling, include current config version in the `X-Config-Version` HTTP header
+- Server should compare the header version with the latest available config version
+- If versions match (server version == current version), no update needed - server returns 304 Not Modified
+- If server version is newer, server returns the new configuration with updated version number
+- Agent should validate received config and update its running configuration
+- Agent should persist the new config to disk for use after restarts
+- On config update, agent should reload monitoring tasks with new endpoints and settings
+- Config polling should respect server connectivity status (skip if server unreachable)
+- Consider implementing exponential backoff for config polling failures
+
 
 
 ## Project Structure

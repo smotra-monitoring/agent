@@ -8,7 +8,9 @@ async fn main() {
 
     // Create a test configuration
     let config = Config {
+        version: 1,
         agent_id: "demo-agent-001".to_string(),
+        agent_name: "Demo Agent".to_string(),
         tags: vec!["demo".to_string()],
         monitoring: MonitoringConfig::default(),
         server: ServerConfig {
