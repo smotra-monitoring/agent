@@ -56,7 +56,7 @@ pub async fn run_ui_loop(
 
             // Render content based on selected tab
             match selected_tab {
-                TAB_STATUS => render::render_status(f, chunks[1], &status),
+                TAB_STATUS => render::render_status(f, chunks[1], &status, &config),
                 TAB_ENDPOINTS => render::render_endpoints(f, chunks[1], &config),
                 TAB_CONFIG => render::render_config(f, chunks[1], &config, config_scroll_offset),
                 TAB_LOGS => render::render_logs(f, chunks[1], &logs),

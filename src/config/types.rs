@@ -7,8 +7,14 @@ use std::time::Duration;
 /// Main configuration for the agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+    /// Configuration version (used for syncing with server)
+    pub version: u32,
+
     /// Unique identifier for this agent
     pub agent_id: String,
+
+    /// Human-readable agent name
+    pub agent_name: String,
 
     /// Tags for this agent (used for mesh organization)
     pub tags: Vec<String>,
@@ -29,7 +35,9 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
+            version: 1,
             agent_id: uuid::Uuid::new_v4().to_string(),
+            agent_name: String::from("Unnamed Agent"),
             tags: Vec::new(),
             monitoring: MonitoringConfig::default(),
             server: ServerConfig::default(),

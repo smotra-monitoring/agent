@@ -40,12 +40,13 @@ pub fn render_header(f: &mut Frame, area: Rect, tabs: &[&str], selected: usize) 
     f.render_widget(header, area);
 }
 
-pub fn render_status(f: &mut Frame, area: Rect, status: &smotra_agent::AgentStatus) {
+pub fn render_status(f: &mut Frame, area: Rect, status: &smotra_agent::AgentStatus, config: &Config) {
     use ratatui::layout::{Constraint, Direction, Layout};
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
+            Constraint::Length(3),
             Constraint::Length(3),
             Constraint::Length(3),
             Constraint::Length(3),
@@ -74,6 +75,17 @@ pub fn render_status(f: &mut Frame, area: Rect, status: &smotra_agent::AgentStat
     .block(Block::default().borders(Borders::ALL).title("Status"));
     f.render_widget(status_widget, chunks[0]);
 
+    // Agent name and config version
+    let agent_info_text = format!("{} (v{})", config.agent_name, config.version);
+    let agent_name_widget = Paragraph::new(Line::from(Span::styled(
+        agent_info_text,
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD),
+    )))
+    .block(Block::default().borders(Borders::ALL).title("Agent Name"));
+    f.render_widget(agent_name_widget, chunks[1]);
+
     // Server connection
     let server_text = if status.server_connected {
         "Connected"
@@ -90,7 +102,7 @@ pub fn render_status(f: &mut Frame, area: Rect, status: &smotra_agent::AgentStat
         Style::default().fg(server_color),
     )))
     .block(Block::default().borders(Borders::ALL).title("Server"));
-    f.render_widget(server_widget, chunks[1]);
+    f.render_widget(server_widget, chunks[2]);
 
     // Statistics
     let total = status.checks_performed;
@@ -106,14 +118,14 @@ pub fn render_status(f: &mut Frame, area: Rect, status: &smotra_agent::AgentStat
     );
     let stats_widget = Paragraph::new(stats_text)
         .block(Block::default().borders(Borders::ALL).title("Statistics"));
-    f.render_widget(stats_widget, chunks[2]);
+    f.render_widget(stats_widget, chunks[3]);
 
     // Success rate gauge
     let gauge = Gauge::default()
         .block(Block::default().borders(Borders::ALL).title("Success Rate"))
         .gauge_style(Style::default().fg(Color::Green))
         .ratio(success_rate / 100.0);
-    f.render_widget(gauge, chunks[3]);
+    f.render_widget(gauge, chunks[4]);
 }
 
 pub fn render_endpoints(f: &mut Frame, area: Rect, config: &Config) {

@@ -35,7 +35,9 @@ fn create_test_config() -> Config {
     use smotra_agent::{MonitoringConfig, ServerConfig, StorageConfig};
 
     Config {
+        version: 1,
         agent_id: "test-agent-001".to_string(),
+        agent_name: "Test Agent".to_string(),
         tags: vec!["test".to_string()],
         monitoring: MonitoringConfig::default(),
         server: ServerConfig {
