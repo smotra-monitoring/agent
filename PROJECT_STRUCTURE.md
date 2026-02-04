@@ -58,9 +58,9 @@
 - `Cargo.toml` - Rust project configuration with dependencies
 - `README.md` - Comprehensive documentation
 - `config.example.toml` - Example configuration file
-- `config.toml` - Local configuration file
 - `PROJECT_STRUCTURE.md` - This file
 - `.gitignore` - Git ignore patterns
+- `api/openapi/api/spec.yaml` - OpenAPI specification for the monitoring API
 
 ## Key Features Implemented
 
@@ -72,11 +72,12 @@
 
 ### Configuration System
 - TOML-based configuration
+- Configuration versioning (version field) for server synchronization
 - Validation logic
 - Default values for all settings
-- Support for multiple endpoints with tags
-- Server connection configuration
-- Local storage settings
+- Support for multiple endpoints with UUIDs, tags, and enabled flag
+- Server connection configuration with heartbeat intervals
+- Local storage settings for caching
 
 ### Monitoring System
 - ICMP ping checks using surge-ping
@@ -88,11 +89,11 @@
 
 ### Reporting System
 - Periodic reporting to central server
-- HTTP client with authentication
+- HTTP client with authentication (reqwest with rustls-tls)
 - Connection status tracking
-- Cache manager structure (to be implemented)
-- Heartbeat reporting with system metrics (CPU, memory, uptime)
-- Agent health status monitoring
+- Cache manager stub (disk persistence to be implemented)
+- Heartbeat reporting with system metrics (CPU, memory, uptime) using sysinfo crate
+- Agent health status monitoring (Healthy, Degraded, Critical, Unknown)
 
 ### Plugin System
 - MonitoringPlugin trait for custom checks
@@ -100,13 +101,15 @@
 - Example HTTP plugin implementation
 
 ### CLI Tools
-- `agent`: Full-featured daemon with logging
+- `agent`: Full-featured daemon with logging and signal handling
 - `agent-cli`: Interactive TUI with:
   - Status dashboard with real-time updates
-  - Endpoints list view
+  - Endpoints list view with monitoring results
   - Configuration viewer
-  - Logs view (placeholder)
-  - Tab navigation and keyboard controls
+  - Logs view with buffered output
+  - Tab navigation and keyboard controls (Arrow keys, h/l, s to start, q/Esc to quit)
+  - Commands: `tui`, `status`, `validate-config`, `gen-config`
+- `agent-updater`: Placeholder for auto-update functionality
 
 ## Architecture Highlights
 
@@ -169,14 +172,15 @@
 
 ### Run Interactive CLI
 ```bash
-./agent-cli tui -c config.toml
-./agent-cli status -c config.toml
-./agent-cli validate-config -c config.toml
+./agent-cli -c config.toml tui
+./agent-cli -c config.toml status
+./agent-cli -c config.toml validate-config
 ```
 
-### Run Plugin Example
+### Run Plugin Examples
 ```bash
-./agent-plugin-example
+cargo run --example plugin
+cargo run --example heartbeat_demo
 ```
 
 ## Building
@@ -188,8 +192,11 @@ cargo build --release
 Binaries will be in `target/release/`:
 - `agent`
 - `agent-cli`
-- `agent-plugin-example`
 - `agent-updater`
+
+Example plugins in `examples/`:
+- `plugin` - HTTP monitoring plugin example
+- `heartbeat_demo` - Heartbeat system demonstration
 
 ## Notes
 

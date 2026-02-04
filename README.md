@@ -19,8 +19,9 @@ The agent is implemented as a library (`smotra_agent`) with multiple binary tool
 
 - `agent`: Main daemon for running the monitoring agent
 - `agent-cli`: Interactive TUI for monitoring and configuration
-- `agent-plugin-example`: Example plugin demonstrating extensibility
-- `agent-updater`: Auto-update tool (coming soon)
+- `agent-updater`: Auto-update tool (stub implementation)
+
+Plugin examples are available in the `examples/` directory.
 
 ## Installation
 
@@ -33,7 +34,6 @@ cargo build --release
 Binaries will be available in `target/release/`:
 - `agent`
 - `agent-cli`
-- `agent-plugin-example`
 - `agent-updater`
 
 ## Configuration
@@ -53,7 +53,9 @@ Or use the CLI:
 Example configuration:
 
 ```toml
+version = 1
 agent_id = "unique-agent-id"
+agent_name = "Production Agent 001"
 tags = ["production", "web-servers"]
 
 [monitoring]
@@ -68,6 +70,7 @@ traceroute_max_hops = 30
 url = "https://monitoring.example.com"
 api_key = "your-api-key"
 report_interval_secs = 300
+heartbeat_interval_secs = 300
 verify_tls = true
 timeout_secs = 30
 retry_attempts = 3
@@ -78,13 +81,17 @@ max_cached_results = 10000
 max_cache_age_secs = 86400
 
 [[endpoints]]
+id = "01931ab4-b278-7f64-a32f-dae3cabe1ff0"
 address = "8.8.8.8"
 tags = ["dns", "google"]
+enabled = true
 
 [[endpoints]]
+id = "01931ab4-b279-7f64-a32f-dae3cabe1ff1"
 address = "example.com"
 port = 443
 tags = ["web"]
+enabled = true
 ```
 
 ## Usage
@@ -186,7 +193,7 @@ impl MonitoringPlugin for MyPlugin {
 }
 ```
 
-See `agent-plugin-example` for a complete example.
+See `examples/plugin.rs` for a complete HTTP monitoring plugin example, and `examples/heartbeat_demo.rs` for a heartbeat demonstration.
 
 ## Development
 

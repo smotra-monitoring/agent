@@ -47,24 +47,26 @@ Agent implementation is a library that can be embedded into other Rust applicati
 Set of binaries
 - `agent`: Main binary to run the monitoring agent.
 - `agent-cli`: Command-line interface for managing and configuring the agent with Ratatui for TUI, will be used for debugging and local configuration.
-- `agent-plugin-example`: Example plugin demonstrating how to extend agent functionality.
-- `agent-updater`: Binary to handle auto-updates for the agent.
+- `agent-updater`: Binary to handle auto-updates for the agent (stub implementation).
 
 Files structure
 - `src/`: Source code for the agent library and binaries.
 - `Cargo.toml`: Cargo configuration file for the project.
 - `Dockerfile`: Dockerfile for building the agent container image.
 - `README.md`: Documentation for the project.
-- `examples/`: Example configurations and usage scenarios.
-- `plugins/`: Directory for agent plugins.
+- `examples/`: Example plugin implementations.
 - `tests/`: Unit and integration tests for the agent library and binaries.
+- `api/`: OpenAPI specification and related documentation.
 - `src/lib.rs`: Main library file for the agent.
 - `src/bin/`: Directory containing the main binaries for the agent.
 - `src/bin/agent.rs`: Main binary to run the monitoring agent.
 - `src/bin/agent_cli/`: Directory for the agent CLI with TUI implementation.
 - `src/bin/agent_cli/main.rs`: Main entry point for the agent CLI.
+- `src/bin/agent_cli/cli_args.rs`: Command-line argument definitions.
+- `src/bin/agent_cli/commands.rs`: Command handlers for status, validation, and config generation.
+- `src/bin/agent_cli/logging.rs`: Log buffer and initialization logic.
 - `src/bin/agent_cli/tui/`: TUI implementation with Ratatui (mod.rs, render.rs, runner.rs, ui_loop.rs).
-- `src/bin/agent_updater.rs`: Binary to handle auto-updates for the agent.
+- `src/bin/agent_updater.rs`: Binary to handle auto-updates for the agent (stub implementation).
 
 # Code organization
 
