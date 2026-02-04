@@ -1,6 +1,6 @@
 //! Server reporting functionality
 
-use crate::config::Config;
+use crate::agent_config::Config;
 use crate::core::AgentStatus;
 use crate::error::{Error, Result};
 use crate::reporter::HeartbeatReporter;

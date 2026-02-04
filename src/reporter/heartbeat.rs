@@ -1,6 +1,6 @@
 //! Heartbeat reporting to central server
 
-use crate::config::Config;
+use crate::agent_config::Config;
 use crate::core::{AgentHealthStatus, AgentHeartbeat};
 use crate::error::{Error, Result};
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
@@ -159,7 +159,7 @@ impl HeartbeatReporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{MonitoringConfig, ServerConfig, StorageConfig};
+    use crate::agent_config::{MonitoringConfig, ServerConfig, StorageConfig};
     use chrono::Utc;
 
     fn create_test_config() -> Config {

@@ -1,6 +1,6 @@
 //! Monitoring task coordination and execution
 
-use crate::config::Config;
+use crate::agent_config::Config;
 use crate::core::AgentStatus;
 use crate::error::Result;
 use crate::monitor::PingChecker;
