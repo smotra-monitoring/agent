@@ -135,4 +135,4 @@ The agent configuration includes a `version` field (unsigned integer) that track
 For detailed project structure, please refer to the [Project Structure](../PROJECT_STRUCTURE.md) document.
 
 ## OpenApi Specification
-For detailed OpenAPI specification, please refer to the [OpenAPI Specification](https://github.com/smotra-monitoring/openapi/blob/master/openapi/spec.yaml) document.
+For detailed OpenAPI specification, please refer to the [OpenAPI Specification](../api/openapi/api/spec.yaml) document.
