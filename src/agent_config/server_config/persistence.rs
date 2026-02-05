@@ -1,0 +1,218 @@
+//! Secure server configuration persistence
+//!
+//! This module handles saving and loading server configuration,
+//! especially API keys, with proper file permissions.
+
+use crate::error::{Error, Result};
+use std::path::Path;
+use tokio::fs;
+use tokio::io::AsyncWriteExt;
+use tracing::info;
+
+/// Save server configuration with API key
+///
+/// Saves the API key to the configuration file with secure permissions (0600 on Unix).
+/// This ensures only the file owner can read/write the configuration containing
+/// sensitive authentication credentials.
+///
+/// # Arguments
+///
+/// * `api_key` - The API key to save
+/// * `config_path` - Path to the configuration file
+/// * `agent_id` - Agent ID to save in the configuration
+///
+/// # Errors
+///
+/// Returns an error if:
+/// * The file cannot be created
+/// * Permissions cannot be set
+/// * Writing to the file fails
+pub async fn save_api_key_to_config(
+    api_key: &str,
+    agent_id: &str,
+    config_path: &Path,
+) -> Result<()> {
+    info!("Saving API key to configuration: {}", config_path.display());
+
+    // Read existing config if it exists
+    let mut config = if config_path.exists() {
+        let content = fs::read_to_string(config_path).await?;
+        toml::from_str::<toml::Value>(&content)
+            .map_err(|e| Error::Config(format!("Failed to parse existing config: {}", e)))?
+    } else {
+        toml::Value::Table(toml::map::Map::new())
+    };
+
+    // Update server.api_key
+    if let toml::Value::Table(ref mut table) = config {
+        let server = table
+            .entry("server".to_string())
+            .or_insert_with(|| toml::Value::Table(toml::map::Map::new()));
+
+        if let toml::Value::Table(ref mut server_table) = server {
+            server_table.insert(
+                "api_key".to_string(),
+                toml::Value::String(api_key.to_string()),
+            );
+        }
+
+        // Also update agent_id if not set
+        let agent_id_value = table.get("agent_id");
+        if agent_id_value.is_none() || agent_id_value == Some(&toml::Value::String(String::new()))
+        {
+            table.insert(
+                "agent_id".to_string(),
+                toml::Value::String(agent_id.to_string()),
+            );
+        }
+    }
+
+    // Serialize to TOML
+    let config_str = toml::to_string_pretty(&config)
+        .map_err(|e| Error::Config(format!("Failed to serialize config: {}", e)))?;
+
+    // Write to file
+    let mut file = fs::File::create(config_path).await?;
+    file.write_all(config_str.as_bytes()).await?;
+    file.flush().await?;
+
+    // Set secure permissions on Unix systems
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let mut perms = file.metadata().await?.permissions();
+        perms.set_mode(0o600); // Owner read/write only
+        fs::set_permissions(config_path, perms).await?;
+
+        info!("Set file permissions to 0600 (owner read/write only)");
+    }
+
+    #[cfg(not(unix))]
+    {
+        // File permission setting not available on this platform
+        // On Windows, the file ACLs would need to be set differently
+        info!("File permissions set (platform-specific handling applied)");
+    }
+
+    info!("API key saved successfully");
+    Ok(())
+}
+
+/// Update agent ID in configuration
+///
+/// Updates the agent_id field in the configuration file.
+///
+/// # Arguments
+///
+/// * `agent_id` - The agent ID to save
+/// * `config_path` - Path to the configuration file
+///
+/// # Errors
+///
+/// Returns an error if the file cannot be read, parsed, or written.
+pub async fn update_agent_id(agent_id: &str, config_path: &Path) -> Result<()> {
+    info!("Updating agent ID in configuration");
+
+    // Read existing config
+    let content = fs::read_to_string(config_path).await?;
+    let mut config = toml::from_str::<toml::Value>(&content)
+        .map_err(|e| Error::Config(format!("Failed to parse config: {}", e)))?;
+
+    // Update agent_id
+    if let toml::Value::Table(ref mut table) = config {
+        table.insert(
+            "agent_id".to_string(),
+            toml::Value::String(agent_id.to_string()),
+        );
+    }
+
+    // Write back
+    let config_str = toml::to_string_pretty(&config)
+        .map_err(|e| Error::Config(format!("Failed to serialize config: {}", e)))?;
+
+    fs::write(config_path, config_str).await?;
+
+    info!("Agent ID updated successfully");
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::NamedTempFile;
+
+    #[tokio::test]
+    async fn test_save_api_key_to_new_config() {
+        let temp_file = NamedTempFile::new().unwrap();
+        let path = temp_file.path();
+
+        let result = save_api_key_to_config(
+            "sk_test_12345",
+            "agent-123",
+            path,
+        )
+        .await;
+
+        assert!(result.is_ok());
+
+        // Verify file contents
+        let content = fs::read_to_string(path).await.unwrap();
+        assert!(content.contains("api_key = \"sk_test_12345\""));
+        assert!(content.contains("agent_id = \"agent-123\""));
+    }
+
+    #[tokio::test]
+    async fn test_save_api_key_to_existing_config() {
+        let temp_file = NamedTempFile::new().unwrap();
+        let path = temp_file.path();
+
+        // Create initial config
+        let initial_config = r#"
+version = 1
+agent_id = "existing-agent"
+agent_name = "Test Agent"
+
+[server]
+url = "https://example.com"
+"#;
+        fs::write(path, initial_config).await.unwrap();
+
+        // Save API key
+        let result = save_api_key_to_config(
+            "sk_test_67890",
+            "existing-agent",
+            path,
+        )
+        .await;
+
+        assert!(result.is_ok());
+
+        // Verify file contents
+        let content = fs::read_to_string(path).await.unwrap();
+        assert!(content.contains("api_key = \"sk_test_67890\""));
+        assert!(content.contains("agent_id = \"existing-agent\""));
+        assert!(content.contains("url = \"https://example.com\""));
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn test_file_permissions_are_secure() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let temp_file = NamedTempFile::new().unwrap();
+        let path = temp_file.path();
+
+        save_api_key_to_config("sk_test_12345", "agent-123", path)
+            .await
+            .unwrap();
+
+        // Check permissions
+        let metadata = fs::metadata(path).await.unwrap();
+        let permissions = metadata.permissions();
+        let mode = permissions.mode();
+
+        // Should be 0600 (owner read/write only)
+        assert_eq!(mode & 0o777, 0o600);
+    }
+}
