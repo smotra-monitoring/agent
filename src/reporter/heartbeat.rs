@@ -63,12 +63,7 @@ impl HeartbeatReporter {
 
     /// Send heartbeat to the server
     pub async fn send_heartbeat(&self) -> Result<()> {
-        let server_url = self
-            .config
-            .server
-            .url
-            .as_ref()
-            .ok_or_else(|| Error::Config("Server URL not configured".to_string()))?;
+        let server_url = &self.config.server.url;
 
         let heartbeat = self.collect_metrics().await;
         let heartbeat_url = format!(
@@ -169,11 +164,7 @@ mod tests {
             agent_name: "Test Agent".to_string(),
             tags: vec!["test".to_string()],
             monitoring: MonitoringConfig::default(),
-            server: ServerConfig {
-                url: Some("https://test.example.com".to_string()),
-                api_key: Some("test-key".to_string()),
-                ..Default::default()
-            },
+            server: ServerConfig::default(),
             storage: StorageConfig::default(),
             endpoints: vec![],
         }
