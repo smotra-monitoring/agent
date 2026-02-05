@@ -13,11 +13,7 @@ async fn main() {
         agent_name: "Demo Agent".to_string(),
         tags: vec!["demo".to_string()],
         monitoring: MonitoringConfig::default(),
-        server: ServerConfig {
-            url: Some("https://example.com".to_string()),
-            api_key: Some("demo-key".to_string()),
-            ..Default::default()
-        },
+        server: ServerConfig::default(),
         storage: StorageConfig::default(),
         endpoints: vec![],
     };
