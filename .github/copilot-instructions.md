@@ -53,7 +53,7 @@ Files structure
 - `src/`: Source code for the agent library and binaries.
 - `Cargo.toml`: Cargo configuration file for the project.
 - `Dockerfile`: Dockerfile for building the agent container image.
-- `README.md`: Documentation for the project.
+- `docs/`: Documentation for the project.
 - `examples/`: Example plugin implementations.
 - `tests/`: Unit and integration tests for the agent library and binaries.
 - `api/`: OpenAPI specification and related documentation.
@@ -251,9 +251,24 @@ The agent configuration includes a `version` field (unsigned integer) that track
 - Consider implementing exponential backoff for config polling failures
 
 
+# Documentation
+
+The project should include comprehensive documentation covering:
+- Project overview and architecture
+- Installation instructions (from source and using Docker)
+- Configuration options and examples
+- Usage instructions for the agent and CLI
+- Plugin development guide
+- API documentation for the agent library
+- OpenAPI specification for server API
+- Contribution guidelines for developers
+- Testing guidelines and requirements
+- Troubleshooting and FAQ section
+
+Documentation should be maintained in the `docs/` directory and linked from the main `README.md`. The `README.md` should provide a high-level overview and quick start guide, while detailed documentation can be organized in separate files within the `docs/` directory for better readability and maintenance.
 
 ## Project Structure
-For detailed project structure, please refer to the [Project Structure](../PROJECT_STRUCTURE.md) document.
+For detailed project structure, please refer to the [Project Structure](../docs/PROJECT_STRUCTURE.md) document.
 
 ## OpenApi Specification
 For detailed OpenAPI specification, please refer to the [OpenAPI Specification](../api/openapi/api/spec.yaml) document.
