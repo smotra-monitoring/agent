@@ -105,7 +105,7 @@ The agent supports a zero-configuration onboarding workflow that eliminates manu
 1. **Configure Server URL** in `config.toml`:
    ```toml
    [server]
-   url = "https://www.smotra.net"
+   url = "https://api.smotra.net"
    # api_key will be set automatically after claiming
    ```
 
@@ -124,7 +124,7 @@ The agent supports a zero-configuration onboarding workflow that eliminates manu
    ║  Claim Token: rT9xK2mP4vL8wQ3hN6jF5sD7cB1aE0yU...           ║
    ║                                                              ║
    ║  To claim this agent:                                        ║
-   ║  1. Go to: https://www.smotra.net/claim                     ║
+   ║  1. Go to: https://api.smotra.net/claim                     ║
    ║  2. Enter the Agent ID and Claim Token shown above          ║
    ║  3. This agent will start automatically once claimed        ║
    ║                                                              ║

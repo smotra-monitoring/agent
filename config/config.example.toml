@@ -12,7 +12,7 @@ traceroute_on_failure = false
 traceroute_max_hops = 30
 
 [server]
-url = "https://www.smotra.net"
+url = "https://api.smotra.net"
 # api_key = "your-api-key-here"
 report_interval_secs = 300
 heartbeat_interval_secs = 300  # Send lightweight heartbeat every 5 minutes

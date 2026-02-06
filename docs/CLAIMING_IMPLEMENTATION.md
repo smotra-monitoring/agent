@@ -168,7 +168,7 @@ Successfully implemented a complete agent self-registration and claiming workflo
 ```bash
 # 1. Configure server URL in config.toml
 [server]
-url = "https://www.smotra.net"
+url = "https://api.smotra.net"
 
 # 2. Start agent
 ./agent -c config.toml
@@ -194,7 +194,7 @@ url = "https://www.smotra.net"
 
 ```toml
 [server]
-url = "https://www.smotra.net"
+url = "https://api.smotra.net"
 # api_key automatically set after claiming
 
 [server.claiming]
