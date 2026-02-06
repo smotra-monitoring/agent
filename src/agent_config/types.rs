@@ -1,7 +1,7 @@
 //! Configuration types
 
+use super::server_config::ServerConfig;
 use crate::core::Endpoint;
-use crate::server_config::ServerConfig;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
