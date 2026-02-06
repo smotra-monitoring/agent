@@ -21,3 +21,4 @@
 
 - Move /api/v1/ to api.smotra.net/v1/
 
+- Generate README.md for git repository with usage examples.
