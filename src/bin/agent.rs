@@ -1,7 +1,7 @@
 //! Main agent daemon binary
 
 use clap::Parser;
-use smotra_agent::{Agent, Config, Endpoint, Result};
+use smotra_agent::{Agent, Claim, Config, Endpoint, Result};
 use std::path::PathBuf;
 use tracing::{error, info};
 
@@ -57,7 +57,7 @@ async fn main() -> Result<()> {
     }
 
     // Load configuration
-    let config = if cli.config.exists() {
+    let mut config = if cli.config.exists() {
         info!("Loading configuration from: {}", cli.config.display());
         match Config::from_file(&cli.config) {
             Ok(config) => config,
@@ -71,6 +71,33 @@ async fn main() -> Result<()> {
         error!("Run with --gen-config to generate a default configuration");
         std::process::exit(1);
     };
+
+    // Check if API key is configured
+    if !config.server.is_configured() {
+        if config.server.url.is_empty() {
+            error!("Server URL not configured. Please set 'server.url' in the configuration file.");
+            std::process::exit(1);
+        };
+
+        info!("Starting agent claiming workflow, due to missing API key ...");
+
+        // Run claiming workflow
+        let claim = Claim::new(&config, &cli.config);
+        match claim.run().await {
+            Ok(_api_key) => {
+                info!("Claiming workflow completed successfully");
+
+                // Reload config from file to get the updated values
+                config = Config::from_file(&cli.config)?;
+            }
+            Err(e) => {
+                error!("Claiming workflow failed: {}", e);
+                return Err(e);
+            }
+        }
+    } else {
+        info!("API key found in configuration");
+    }
 
     // Validate configuration
     if let Err(e) = config.validate() {

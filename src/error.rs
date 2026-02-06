@@ -35,6 +35,12 @@ pub enum Error {
     #[error("Join error: {0}")]
     JoinError(#[from] tokio::task::JoinError),
 
+    #[error("Claim error: {0}")]
+    Claim(String),
+
+    #[error("Registration expired")]
+    ClaimExpired,
+
     #[error("Unknown error: {0}")]
     Unknown(String),
 }
