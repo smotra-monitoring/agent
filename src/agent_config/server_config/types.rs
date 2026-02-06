@@ -34,7 +34,7 @@ pub struct ServerConfig {
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
-            url: "https://www.smotra.net".to_string(),
+            url: "https://api.smotra.net".to_string(),
             api_key: None,
             report_interval_secs: 300,
             heartbeat_interval_secs: 300,
