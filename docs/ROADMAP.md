@@ -23,4 +23,4 @@
 
 - Generate README.md for git repository with usage examples.
 
-- Replace authorization from Bearer to X-API-KEY header (it is incorrect in heatbeat.rs send_hearbeat, check ther places as well).
+- Replace authorization from Bearer to X-API-KEY header (it is incorrect in heatbeat.rs send_heartbeat, check ther places as well).
