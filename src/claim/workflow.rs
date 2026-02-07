@@ -1,12 +1,10 @@
 //! Agent claiming workflow orchestration
 
 use super::registration::register_with_retry;
-use crate::agent_config::server_config::save_api_key_to_config;
 use crate::claim::{
-    display::display_claim_info,
     polling::poll_claim_status,
     token::{generate_claim_token, hash_claim_token},
-    types::AgentRegistration,
+    types::{AgentRegistration, ClaimResult},
 };
 use crate::{Config, Error, Result};
 use std::path::Path;
@@ -44,7 +42,7 @@ impl<'a> Claim<'a> {
     ///
     /// # Returns
     ///
-    /// The API key once the agent is claimed
+    /// `ClaimResult` containing the API key and agent ID once claimed
     ///
     /// # Errors
     ///
@@ -52,20 +50,15 @@ impl<'a> Claim<'a> {
     /// - Server URL is not configured
     /// - Registration fails after all retries
     /// - Claim expires before being completed
-    /// - Failed to save API key to configuration
-    pub async fn run(&self) -> Result<String> {
+    pub async fn run(&self) -> Result<ClaimResult> {
         let server_url = &self.config.server.url;
 
-        // Generate agent ID if not set
-        let agent_id =
-            if self.config.agent_id.is_empty() || self.config.agent_id == Uuid::nil().to_string() {
-                Uuid::now_v7()
-            } else {
-                self.config
-                    .agent_id
-                    .parse()
-                    .unwrap_or_else(|_| Uuid::now_v7())
-            };
+        // Generate agent ID if not set (nil UUID means unregistered)
+        let agent_id = if self.config.agent_id == Uuid::nil() {
+            Uuid::now_v7()
+        } else {
+            self.config.agent_id
+        };
 
         info!("Agent ID: {}", agent_id);
 
@@ -103,12 +96,7 @@ impl<'a> Claim<'a> {
         info!("Registration successful");
 
         // Display claim information
-        display_claim_info(
-            agent_id,
-            &claim_token,
-            &registration_response.claim_url,
-            registration_response.expires_at,
-        );
+        registration_response.display_claim_info(agent_id, &claim_token);
 
         info!("Waiting for agent to be claimed...");
         info!(
@@ -128,10 +116,7 @@ impl<'a> Claim<'a> {
             Some(api_key) => {
                 info!("API key received");
 
-                // Save to configuration
-                save_api_key_to_config(&api_key, &agent_id.to_string(), self.config_path).await?;
-
-                Ok(api_key)
+                Ok(ClaimResult { api_key, agent_id })
             }
             None => {
                 error!("Claim expired or cancelled");
@@ -144,26 +129,40 @@ impl<'a> Claim<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent_config::{MonitoringConfig, ServerConfig, StorageConfig};
     use tempfile::NamedTempFile;
 
     #[test]
     fn test_claim_creation() {
+        let test_agent_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
         let config = Config {
-            version: 1,
-            agent_id: "test-agent-001".to_string(),
+            agent_id: test_agent_id,
             agent_name: "Test Agent".to_string(),
-            tags: vec![],
-            monitoring: MonitoringConfig::default(),
-            server: ServerConfig::default(),
-            storage: StorageConfig::default(),
-            endpoints: vec![],
+            ..Default::default()
         };
 
         let temp_file = NamedTempFile::new().unwrap();
         let claim = Claim::new(&config, temp_file.path());
 
         // Just verify we can create the struct
-        assert_eq!(claim.config.agent_id, "test-agent-001");
+        assert_eq!(claim.config.agent_id, test_agent_id);
+    }
+
+    #[test]
+    fn test_claim_generates_agent_id_when_nil() {
+        let config = Config {
+            agent_id: Uuid::nil(),
+            agent_name: "Test Agent".to_string(),
+            ..Default::default()
+        };
+
+        let temp_file = NamedTempFile::new().unwrap();
+        let claim = Claim::new(&config, temp_file.path());
+
+        // Verify config has nil UUID initially
+        assert_eq!(claim.config.agent_id, Uuid::nil());
+        
+        // Note: Full workflow test with agent ID generation would be in integration tests
+        // as it requires HTTP server mock. The run() method will generate a new UUID
+        // when agent_id is nil.
     }
 }

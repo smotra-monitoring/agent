@@ -160,7 +160,7 @@ mod tests {
     fn create_test_config() -> Config {
         Config {
             version: 1,
-            agent_id: "test-agent-001".to_string(),
+            agent_id: uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
             agent_name: "Test Agent".to_string(),
             tags: vec!["test".to_string()],
             monitoring: MonitoringConfig::default(),

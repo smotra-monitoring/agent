@@ -23,9 +23,7 @@ impl Agent {
     /// Create a new agent instance with the given configuration
     pub fn new(config: Config) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
-
-        let agent_id = &config.agent_id;
-        let status = AgentStatus::new(agent_id);
+        let status = AgentStatus::new(config.agent_id);
 
         Self {
             config: Arc::new(RwLock::new(config)),

@@ -1,6 +1,6 @@
 //! Integration tests for agent claiming workflow public API
 
-use smotra_agent::agent_config::server_config::save_api_key_to_config;
+use smotra_agent::save_api_key_to_config;
 use smotra_agent::{Claim, Config};
 use tempfile::NamedTempFile;
 use uuid::Uuid;
@@ -23,7 +23,7 @@ url = "https://example.com"
 
     // Save API key
     let agent_id = Uuid::now_v7();
-    save_api_key_to_config("sk_test_12345", &agent_id.to_string(), path)
+    save_api_key_to_config("sk_test_12345", agent_id, path)
         .await
         .expect("Should save API key");
 

@@ -8,6 +8,7 @@ use std::path::Path;
 use tokio::fs;
 use tokio::io::AsyncWriteExt;
 use tracing::info;
+use uuid::Uuid;
 
 /// Save server configuration with API key
 ///
@@ -29,7 +30,7 @@ use tracing::info;
 /// * Writing to the file fails
 pub async fn save_api_key_to_config(
     api_key: &str,
-    agent_id: &str,
+    agent_id: Uuid,
     config_path: &Path,
 ) -> Result<()> {
     info!("Saving API key to configuration: {}", config_path.display());
@@ -115,14 +116,15 @@ mod tests {
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
 
-        let result = save_api_key_to_config("sk_test_12345", "agent-123", path).await;
+        let agent_id = Uuid::parse_str("00000000-0000-0000-0000-000000000123").unwrap();
+        let result = save_api_key_to_config("sk_test_12345", agent_id, path).await;
 
         assert!(result.is_ok());
 
         // Verify file contents
         let content = fs::read_to_string(path).await.unwrap();
         assert!(content.contains("api_key = \"sk_test_12345\""));
-        assert!(content.contains("agent_id = \"agent-123\""));
+        assert!(content.contains(&format!("agent_id = \"{}\"", agent_id)));
     }
 
     #[tokio::test]
@@ -130,26 +132,30 @@ mod tests {
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
 
+        let existing_agent_id = Uuid::parse_str("00000000-0000-0000-0000-000000000456").unwrap();
         // Create initial config
-        let initial_config = r#"
+        let initial_config = format!(
+            r#"
 version = 1
-agent_id = "existing-agent"
+agent_id = "{}"
 agent_name = "Test Agent"
 
 [server]
 url = "https://example.com"
-"#;
+"#,
+            existing_agent_id
+        );
         fs::write(path, initial_config).await.unwrap();
 
         // Save API key
-        let result = save_api_key_to_config("sk_test_67890", "existing-agent", path).await;
+        let result = save_api_key_to_config("sk_test_67890", existing_agent_id, path).await;
 
         assert!(result.is_ok());
 
         // Verify file contents
         let content = fs::read_to_string(path).await.unwrap();
         assert!(content.contains("api_key = \"sk_test_67890\""));
-        assert!(content.contains("agent_id = \"existing-agent\""));
+        assert!(content.contains(&format!("agent_id = \"{}\"", existing_agent_id)));
         assert!(content.contains("url = \"https://example.com\""));
     }
 
@@ -158,25 +164,30 @@ url = "https://example.com"
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
 
+        let old_agent_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+        let new_agent_id = Uuid::parse_str("00000000-0000-0000-0000-000000000789").unwrap();
         // Create initial config
-        let initial_config = r#"
+        let initial_config = format!(
+            r#"
 version = 1
-agent_id = "old-agent"
+agent_id = "{}"
 
 [server]
 url = "https://example.com"
-"#;
+"#,
+            old_agent_id
+        );
         fs::write(path, initial_config).await.unwrap();
 
-        // Save API key
-        let result = save_api_key_to_config("sk_test_67890", "new-agent", path).await;
+        // Save API key with new agent_id
+        let result = save_api_key_to_config("sk_test_67890", new_agent_id, path).await;
 
         assert!(result.is_ok());
 
         // Verify file contents
         let content = fs::read_to_string(path).await.unwrap();
         assert!(content.contains("api_key = \"sk_test_67890\""));
-        assert!(content.contains("agent_id = \"new-agent\""));
+        assert!(content.contains(&format!("agent_id = \"{}\"", new_agent_id)));
         assert!(content.contains("url = \"https://example.com\""));
     }
 
@@ -188,7 +199,8 @@ url = "https://example.com"
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
 
-        save_api_key_to_config("sk_test_12345", "agent-123", path)
+        let agent_id = Uuid::parse_str("00000000-0000-0000-0000-000000000123").unwrap();
+        save_api_key_to_config("sk_test_12345", agent_id, path)
             .await
             .unwrap();
 

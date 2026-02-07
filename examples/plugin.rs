@@ -36,7 +36,7 @@ impl MonitoringPlugin for HttpPlugin {
 
     async fn check(
         &self,
-        agent_id: &str,
+        agent_id: &uuid::Uuid,
         endpoint: &Endpoint,
     ) -> smotra_agent::Result<MonitoringResult> {
         let url = if let Some(port) = endpoint.port {
@@ -76,7 +76,7 @@ impl MonitoringPlugin for HttpPlugin {
 
                 let result = MonitoringResult {
                     id: uuid::Uuid::new_v4(),
-                    agent_id: agent_id.to_string(),
+                    agent_id: *agent_id,
                     target: endpoint.clone(),
                     check_type: CheckType::Plugin(plugin_result),
                     timestamp: chrono::Utc::now(),
@@ -108,7 +108,8 @@ async fn main() -> Result<()> {
         endpoint.port.unwrap_or(80)
     );
 
-    let result = plugin.check("example-agent", &endpoint).await?;
+    let agent_id = uuid::Uuid::new_v4();
+    let result = plugin.check(&agent_id, &endpoint).await?;
 
     println!("\nResult:");
     println!("  Success: {}", result.is_successful());

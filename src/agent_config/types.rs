@@ -4,15 +4,17 @@ use super::server_config::ServerConfig;
 use crate::core::Endpoint;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
+use uuid::Uuid;
 
 /// Main configuration for the agent
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     /// Configuration version (used for syncing with server)
+    /// 0 means unregistered, will be set to 1+ after pulling registration from server
     pub version: u32,
 
     /// Unique identifier for this agent
-    pub agent_id: String,
+    pub agent_id: Uuid,
 
     /// Human-readable agent name
     pub agent_name: String,
@@ -37,7 +39,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             version: 0, // 0 means unregistered, will be set to 1+ after pulling registration from server
-            agent_id: uuid::Uuid::new_v4().to_string(),
+            agent_id: Uuid::nil(), // nil UUID means unregistered, will be set after registration
             agent_name: String::from("Unnamed Agent"),
             tags: Vec::new(),
             monitoring: MonitoringConfig::default(),

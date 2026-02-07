@@ -7,6 +7,7 @@ mod token;
 mod types;
 mod workflow;
 
-// Public API - only expose the Claim workflow orchestrator
+// Public API - expose the Claim workflow orchestrator and result type
+pub use types::ClaimResult;
 pub use workflow::Claim;
 

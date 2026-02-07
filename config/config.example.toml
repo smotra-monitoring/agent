@@ -1,5 +1,7 @@
 version = 1
-agent_id = "example-agent-001"
+# Agent ID must be a valid UUID. Use 00000000-0000-0000-0000-000000000000 (nil UUID) for unregistered agents
+# A new UUID will be generated during agent registration
+agent_id = "00000000-0000-0000-0000-000000000000"
 agent_name = "Production Agent 001"
 tags = ["production", "monitoring"]
 

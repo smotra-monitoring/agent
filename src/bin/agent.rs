@@ -84,11 +84,16 @@ async fn main() -> Result<()> {
         // Run claiming workflow
         let claim = Claim::new(&config, &cli.config);
         match claim.run().await {
-            Ok(_api_key) => {
+            Ok(claim_result) => {
                 info!("Claiming workflow completed successfully");
+                info!("Agent ID: {}", claim_result.agent_id);
 
-                // Reload config from file to get the updated values
-                config = Config::from_file(&cli.config)?;
+                // Apply claim result to config
+                config.apply_claim_result(claim_result);
+
+                // Save updated config securely
+                config.save_to_file_secure(&cli.config).await?;
+                info!("Configuration saved to: {}", cli.config.display());
             }
             Err(e) => {
                 error!("Claiming workflow failed: {}", e);
