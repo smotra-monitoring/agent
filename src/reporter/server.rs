@@ -76,7 +76,7 @@ async fn send_agent_report(config: &Config, agent_status: &Arc<RwLock<AgentStatu
     let mut request = client.post(&report_url).json(&status_data);
 
     if let Some(api_key) = &config.server.api_key {
-        request = request.header("Authorization", format!("Bearer {}", api_key));
+        request = request.header("X-Agent-API-Key", api_key);
     }
 
     let response = request.send().await?;

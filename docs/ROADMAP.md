@@ -12,7 +12,7 @@
   - plugin
   - reporter
 - [X] claim::AgentRegistration.agent_version should come from Cargo.toml at build time using env! macro. (double check other places where version string is used)
-
+- [X] Replace authorization from Bearer to X-API-KEY header (it is incorrect in heartbeat.rs send_heartbeat, check other places as well).
 
 
 ### In this PR
@@ -26,4 +26,4 @@
 
 - [ ] Generate README.md for git repository with usage examples.
 
-- [ ] Replace authorization from Bearer to X-API-KEY header (it is incorrect in heartbeat.rs send_heartbeat, check other places as well).
+- [ ] Update documentation in docs/ to reflect changes in API authentication from Bearer token to X-API-KEY header. 
