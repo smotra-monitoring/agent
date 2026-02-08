@@ -1,8 +1,8 @@
 ### Done
 - [X] Convert Config.agent_id from String to Uuid
 - [X] Look at run_claiming_workflow to remove redundant setting of config.agent_id
-- [X] Would it be more idiomatic to set default for Confg.agent_id to Uuid::now_v7() instead of Uuid::nil() ? This will avoid unnecessary check for nil UUID in the rest of the codebase. what are the pros and cons ? 
-- [X] Convert MonitorigResult.agent_id from String to Uuid
+- [X] Would it be more idiomatic to set default for Config.agent_id to Uuid::now_v7() instead of Uuid::nil() ? This will avoid unnecessary check for nil UUID in the rest of the codebase. what are the pros and cons ? 
+- [X] Convert MonitoringResult.agent_id from String to Uuid
 - [X] Sanity check for agent_id in PingChecker.check() and HeartbeatSender.send_heartbeat().
 - [X] Convert AgentStatus.agent_id from String to Uuid
 - [X] Refactor run_claiming_workflow. Create Claim object to encapsulate claiming logic.
