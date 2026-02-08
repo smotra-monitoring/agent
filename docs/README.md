@@ -4,6 +4,17 @@ A lightweight, distributed monitoring agent written in Rust for tracking reachab
 
 ## 🚀 Quick Start
 
+### Using Quick Install Script (Coming Soon)
+
+```bash
+# One-line install (when available)
+curl -fsSL https://install.smotra.net/agent.sh | sh
+```
+
+See [INSTALL_SCRIPT.md](INSTALL_SCRIPT.md) for implementation details and requirements.
+
+### Building from Source
+
 ```bash
 # Build from source
 cargo build --release
@@ -18,7 +29,7 @@ cargo build --release
 
 ## ✨ Key Features
 
-- **ICMP Ping Monitoring** ✅ - Check host reachability with detailed latency metrics
+- **ICMP Ping & Traceroute** - Check host reachability with detailed path analysis
 - **Zero-Config Onboarding** - Self-registration with secure claim-based workflow
 - **Heartbeat Reporting** - Automatic agent health status updates with system metrics
 - **Offline-First** - Caches results locally when server is unreachable

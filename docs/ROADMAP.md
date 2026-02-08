@@ -171,7 +171,7 @@ This document outlines the development roadmap for the Smotra monitoring agent, 
   - [ ] Windows service support
 
 - [ ] **Installation Automation**
-  - [ ] Quick install script (curl | sh)
+  - [ ] Quick install script (curl | sh) - See [INSTALL_SCRIPT.md](INSTALL_SCRIPT.md) for implementation details
   - [ ] Ansible playbooks
   - [ ] Terraform modules
   - [ ] Configuration management integration (Puppet, Chef)
