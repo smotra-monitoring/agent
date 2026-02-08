@@ -70,10 +70,116 @@ Files structure
 
 # Code organization
 
-- mod.rs files should not functional code should. The only mod definitions or re-export can be present in there. 
+- **Module Structure**: `mod.rs` files should contain only module declarations (`mod`) and re-exports (`pub use`). No functional code (implementations, functions, structs) should be placed in `mod.rs` files - these belong in dedicated files within the module directory.
+- **Visibility**: Make methods and functions private by default. Only mark items as `pub` when they are explicitly needed as part of the public API. Avoid proliferating `pub fn` unnecessarily - every public item increases the API surface and maintenance burden. Ask yourself: "Does this need to be public, or is it an implementation detail?"
 - "utilities" module can be used inside other modules to declare only private support functions for the module.
-- reserve "support" module for external functions that cna be used by other projects in cargo workspaces
+- reserve "support" module for external functions that can be used by other projects in cargo workspaces
 
+## Rust Design Patterns
+
+Follow idiomatic Rust design patterns where applicable to improve code quality, maintainability, and API ergonomics:
+
+### Builder Pattern
+Use the Builder pattern for complex types with many optional fields or configuration options:
+- Implement for structs with 4+ fields where some are optional
+- Provide a clean, fluent API for constructing complex objects
+- Example use cases: Configuration objects, request builders, test fixtures
+```rust
+// Example structure:
+struct Config {
+    // fields
+}
+
+impl Config {
+    pub fn builder() -> ConfigBuilder {
+        ConfigBuilder::default()
+    }
+}
+
+struct ConfigBuilder {
+    // same fields as Config, but all Option<T>
+}
+
+impl ConfigBuilder {
+    pub fn field_name(mut self, value: Type) -> Self {
+        self.field_name = Some(value);
+        self
+    }
+    
+    pub fn build(self) -> Result<Config, BuilderError> {
+        // validation and construction
+    }
+}
+```
+
+### Type State Pattern
+Use the Type State pattern to enforce correct API usage at compile time:
+- For objects with distinct lifecycle states (e.g., Unclaimed, Claimed, Running)
+- Prevents invalid state transitions through the type system
+- Makes illegal states unrepresentable
+```rust
+// Example structure:
+struct Agent<State> {
+    // common fields
+    state: PhantomData<State>,
+}
+
+struct Unclaimed;
+struct Claimed;
+struct Running;
+
+impl Agent<Unclaimed> {
+    pub fn claim(self) -> Result<Agent<Claimed>, Error> {
+        // transition logic
+    }
+}
+
+impl Agent<Claimed> {
+    pub fn start(self) -> Result<Agent<Running>, Error> {
+        // transition logic
+    }
+}
+```
+
+### Factory Pattern
+Use Factory functions or traits for creating related types with complex initialization:
+- When object creation requires coordination of multiple components
+- For creating different implementations of a trait based on configuration
+- To encapsulate creation logic and dependencies
+```rust
+// Example structure:
+trait CheckerFactory {
+    fn create(&self, config: &CheckConfig) -> Box<dyn Checker>;
+}
+
+// or simple factory function:
+pub fn create_checker(check_type: CheckType) -> Result<Box<dyn Checker>, Error> {
+    match check_type {
+        CheckType::Ping => Ok(Box::new(PingChecker::new())),
+        CheckType::Http => Ok(Box::new(HttpChecker::new())),
+        // ...
+    }
+}
+```
+
+### Newtype Pattern
+Use the Newtype pattern to provide type safety and semantic meaning:
+- Wrap primitive types to prevent mixing incompatible values
+- Add domain-specific methods and validation
+- Example: AgentId(Uuid), Timestamp(i64), ResponseTime(Duration)
+
+### RAII (Resource Acquisition Is Initialization)
+Leverage Rust's ownership system for resource management:
+- Acquire resources in constructors, release in Drop implementations
+- Use guard types to ensure cleanup (e.g., MutexGuard, temporary files)
+- Make resource lifetime explicit through type signatures
+
+### Guidelines for Pattern Usage
+- **Don't over-engineer**: Use patterns only when they provide clear value
+- **Start simple**: Begin with straightforward implementations, refactor to patterns when complexity grows
+- **Document patterns**: When using a pattern, add a comment explaining why it was chosen
+- **Consistency**: Use the same pattern for similar problems throughout the codebase
+- **Ergonomics**: Prioritize API usability and developer experience when applying patterns
 
 Tracing should be implemented using the "tracing" crate with support for different log levels and output formats. 
 
@@ -253,6 +359,19 @@ The agent configuration includes a `version` field (unsigned integer) that track
 
 # Documentation
 
+**IMPORTANT**: All project documentation MUST be maintained in the `docs/` folder. Do not create documentation files in the project root or other directories unless specifically required (e.g., README.md in root).
+
+## Documentation Location Requirements
+- **Primary Location**: All documentation files should be placed in the `docs/` directory
+- **Root README**: No `README.md` in the project root - the main README should be in `docs/README.md`
+- **Subdirectories**: Use subdirectories within `docs/` for different documentation categories if needed (e.g., `docs/api/`, `docs/guides/`, `docs/reference/`)
+- **Cross-References**: Link between documentation files using relative paths from the `docs/` directory (e.g., `[API Reference](reference/api.md)`)
+- **API Docs**: OpenAPI specifications belong in the `api/openapi/` directory, can be referenced from docs/ (e.g., `[OpenAPI Spec](../api/openapi/api/spec.yaml)`)
+- **Organized Structure**: Use subdirectories within `docs/` for different documentation categories if needed
+- **Cross-References**: Link between documentation files using relative paths from the `docs/` directory
+- **API Docs**: OpenAPI specifications belong in the `api/openapi/` directory, can be referenced from docs/
+
+## Required Documentation
 The project should include comprehensive documentation covering:
 - Project overview and architecture
 - Installation instructions (from source and using Docker)
@@ -266,6 +385,73 @@ The project should include comprehensive documentation covering:
 - Troubleshooting and FAQ section
 
 Documentation should be maintained in the `docs/` directory and linked from the main `README.md`. The `README.md` should provide a high-level overview and quick start guide, while detailed documentation can be organized in separate files within the `docs/` directory for better readability and maintenance.
+
+## Feature Documentation
+**CRITICAL**: All features implemented in the project MUST be documented in the `docs/` folder with practical examples.
+
+### Documentation Requirements for Features
+- **Create Dedicated Documentation**: For each major feature or module, create a corresponding documentation file in `docs/` (e.g., `docs/CLAIMING_IMPLEMENTATION.md`, `docs/HEARTBEAT_SYSTEM.md`)
+- **Include Examples**: Every feature documentation MUST include practical, runnable examples showing how to use the feature
+- **Code Snippets**: Provide clear code snippets demonstrating typical usage patterns
+- **Configuration Examples**: Show relevant configuration options and their effects
+- **Integration Examples**: Demonstrate how the feature integrates with other parts of the system
+- **Edge Cases**: Document edge cases, limitations, and common pitfalls
+- **API Examples**: For library features, show complete API usage examples including imports, setup, and cleanup
+- **Command-Line Examples**: For CLI features, provide example commands with expected output
+
+### Example Documentation Structure
+```markdown
+# Feature Name
+
+## Overview
+Brief description of what the feature does and why it exists.
+
+## Usage
+
+### Basic Example
+```rust
+// Complete, runnable code example
+use agent_library::feature;
+
+fn main() {
+    // Example code here
+}
+```
+
+### Configuration
+```toml
+# Example configuration
+[feature]
+option = "value"
+```
+
+### Advanced Usage
+// More complex examples, edge cases, integration scenarios
+
+## API Reference
+// Key types, functions, and their purposes
+
+## Common Pitfalls
+// Things to watch out for
+```
+
+### Guidelines
+- **Update on Change**: When modifying a feature, update its documentation and examples simultaneously
+- **Test Examples**: Ensure all code examples in documentation compile and run correctly
+- **Keep Current**: Documentation examples should reflect the current API and best practices
+- **Link from Code**: Add doc comments in code referencing the detailed documentation in `docs/`
+
+### Example Files
+Runnable example code demonstrating library features should be placed in the `examples/` directory:
+
+- **Location**: All example Rust files must be placed in the `examples/` directory at the project root
+- **Naming Convention**: Use the format `XXX_name.rs` where:
+  - `XXX` is a three-digit order number (e.g., `001`, `002`, `010`)
+  - `name` is a descriptive name for the example (e.g., `basic_usage`, `heartbeat_demo`, `plugin_example`)
+  - Examples: `001_basic_usage.rs`, `002_heartbeat_demo.rs`, `010_plugin_example.rs`
+- **Content**: Each example should be a complete, runnable program demonstrating a specific feature or use case
+- **Documentation**: Include comments in the example file explaining what it demonstrates
+- **Reference**: Link to examples from feature documentation in `docs/`
 
 ## Project Structure
 For detailed project structure, please refer to the [Project Structure](../docs/PROJECT_STRUCTURE.md) document.

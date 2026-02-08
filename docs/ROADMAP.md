@@ -13,17 +13,18 @@
   - reporter
 - [X] claim::AgentRegistration.agent_version should come from Cargo.toml at build time using env! macro. (double check other places where version string is used)
 - [X] Replace authorization from Bearer to X-API-KEY header (it is incorrect in heartbeat.rs send_heartbeat, check other places as well).
+- [X] Generate README.md for git repository with usage examples.
+- [X] Add copilot-instructions to follow Rust patterns (Builder, StateType, Factory, etc.) where applicable.
+- [X] Add to copilot-instructions to add module structure mod.rs files should contain only module re-exports.
+- [X] Add to copilot-instructions to make method public only if necessary, default must be private. Do not proliferate pub fn.
+- [X] Add to copilot-instructions to document all features in folder docs/ with examples.
+- [X] Add to copilot-instructions that example rust-files should be placed in folder "examples" with file naming XXX_name.rs
 
 
 ### In this PR
 
-- [ ] Add copilot-instructions to follow Rust patterns (Builder, StateType, Factory, etc.) where applicable.
-- [ ] Add copilot-instructions to add module structure mod.rs files should contain only module re-exports.
-- [ ] Add copilot-instructions to make method public only if necessary, default must be private. Do not proliferate pub fn.
-- [ ] Add copilot-instructions to document all features in folder docs/ with examples.
 
 - [ ] Move /api/v1/ to api.smotra.net/v1/
 
-- [ ] Generate README.md for git repository with usage examples.
 
 - [ ] Update documentation in docs/ to reflect changes in API authentication from Bearer token to X-API-KEY header. 
