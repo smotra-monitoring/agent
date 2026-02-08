@@ -3,8 +3,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use smotra_agent::{
-    plugin::MonitoringPlugin,
-    {CheckType, Endpoint, MonitoringResult, PluginResult},
+    MonitoringPlugin, {CheckType, Endpoint, MonitoringResult, PluginResult},
 };
 use std::collections::HashMap;
 

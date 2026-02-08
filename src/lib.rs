@@ -15,9 +15,9 @@ mod claim;
 mod core;
 mod error;
 
-pub mod monitor;
-pub mod plugin;
-pub mod reporter;
+mod monitor;
+mod plugin;
+mod reporter;
 
 pub use agent_config::{ClaimConfig, Config, MonitoringConfig, ServerConfig, StorageConfig};
 pub use claim::{Claim, ClaimResult};
@@ -28,3 +28,5 @@ pub use core::{
 };
 pub use error::{Error, Result};
 pub use reporter::HeartbeatReporter;
+
+pub use plugin::MonitoringPlugin;
