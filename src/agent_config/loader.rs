@@ -20,17 +20,6 @@ impl Config {
             .map_err(|e| Error::Config(format!("Failed to parse config: {}", e)))
     }
 
-    /// Save configuration to a TOML file
-    pub fn save_to_file(&self, path: impl AsRef<Path>) -> Result<()> {
-        let content = toml::to_string_pretty(self)
-            .map_err(|e| Error::Config(format!("Failed to serialize config: {}", e)))?;
-
-        fs::write(path.as_ref(), content)
-            .map_err(|e| Error::Config(format!("Failed to write config file: {}", e)))?;
-
-        Ok(())
-    }
-
     /// Save configuration to a TOML file asynchronously with secure permissions
     ///
     /// This method writes the configuration and sets file permissions to 0600
@@ -259,24 +248,5 @@ mod tests {
             Some("sk_integration_test".to_string())
         );
         assert_eq!(loaded_config.agent_name, "Integration Test Agent");
-    }
-
-    #[test]
-    fn test_save_to_file_sync() {
-        let temp_file = NamedTempFile::new().unwrap();
-        let path = temp_file.path();
-
-        let config = Config {
-            agent_id: Uuid::now_v7(),
-            agent_name: "Sync Save Test".to_string(),
-            ..Default::default()
-        };
-
-        let result = config.save_to_file(path);
-        assert!(result.is_ok());
-
-        let loaded = Config::from_file(path).unwrap();
-        assert_eq!(loaded.agent_id, config.agent_id);
-        assert_eq!(loaded.agent_name, "Sync Save Test");
     }
 }

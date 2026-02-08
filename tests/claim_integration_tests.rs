@@ -29,7 +29,7 @@ async fn test_claim_workflow_with_mock_server() {
     config.server.claiming.max_registration_retries = 1;
 
     // Save config to file
-    config.save_to_file(temp_file.path()).unwrap();
+    config.save_to_file_secure(temp_file.path()).await.unwrap();
 
     // Mock registration endpoint - return error to fail quickly
     let _mock_register = server

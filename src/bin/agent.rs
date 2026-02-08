@@ -48,7 +48,7 @@ async fn main() -> Result<()> {
             Endpoint::new("8.8.8.8").with_tags(vec!["DNS".to_string(), "google".to_string()]),
         );
 
-        config.save_to_file(&cli.config)?;
+        config.save_to_file_secure(&cli.config).await?;
         info!(
             "Generated default configuration at: {}",
             cli.config.display()
