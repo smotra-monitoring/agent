@@ -21,18 +21,18 @@ impl CacheManager {
     /// Cache a monitoring result
     pub async fn cache_result(&self, result: &MonitoringResult) -> Result<()> {
         // TODO: Implement caching to disk
-        Ok(())
+        unimplemented!("CacheManager::cache_result is not implemented yet");
     }
 
     /// Get all cached results
     pub async fn get_cached_results(&self) -> Result<Vec<MonitoringResult>> {
         // TODO: Implement reading from cache
-        Ok(Vec::new())
+        unimplemented!("CacheManager::get_cached_results is not implemented yet");
     }
 
     /// Clear old cached results
     pub async fn clear_old_results(&self, max_age: Duration) -> Result<usize> {
         // TODO: Implement cache cleanup
-        Ok(0)
+        unimplemented!("CacheManager::clear_old_results is not implemented yet");
     }
 }
