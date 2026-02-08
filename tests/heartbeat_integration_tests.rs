@@ -25,7 +25,7 @@ async fn test_heartbeat_collection() {
 #[tokio::test]
 async fn test_heartbeat_without_server() {
     let mut config = create_test_config();
-    config.server.url = None;
+    config.server.url = "".to_string(); // Clear server URL
 
     let reporter = HeartbeatReporter::new(config);
     // Should fail if server URL is not configured
@@ -37,12 +37,12 @@ fn create_test_config() -> Config {
 
     Config {
         version: 1,
-        agent_id: Uuid::now_v7().to_string(),
+        agent_id: Uuid::now_v7(),
         agent_name: "Test Agent".to_string(),
         tags: vec!["test".to_string()],
         monitoring: MonitoringConfig::default(),
         server: ServerConfig {
-            url: Some("https://test.example.com".to_string()),
+            url: "https://test.example.com".to_string(),
             api_key: Some("test-key".to_string()),
             heartbeat_interval_secs: 5,
             ..Default::default()

@@ -9,7 +9,7 @@ use tokio::sync::broadcast;
 use tracing::info;
 
 use super::AgentStatus;
-use crate::config::Config;
+use crate::agent_config::Config;
 use crate::error::Result;
 
 /// Main agent instance that coordinates all monitoring tasks
@@ -23,9 +23,7 @@ impl Agent {
     /// Create a new agent instance with the given configuration
     pub fn new(config: Config) -> Self {
         let (shutdown_tx, _) = broadcast::channel(1);
-
-        let agent_id = &config.agent_id;
-        let status = AgentStatus::new(agent_id);
+        let status = AgentStatus::new(config.agent_id);
 
         Self {
             config: Arc::new(RwLock::new(config)),
@@ -75,9 +73,7 @@ impl Agent {
             let config = config.clone();
             let shutdown_rx = self.shutdown_tx.subscribe();
 
-            tokio::spawn(async move {
-                crate::reporter::run_heartbeat(config, shutdown_rx).await
-            })
+            tokio::spawn(async move { crate::reporter::run_heartbeat(config, shutdown_rx).await })
         };
 
         // Wait for shutdown signal

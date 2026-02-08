@@ -10,19 +10,23 @@
 //! - Local caching for offline operation
 //! - Plugin system for extensibility
 
-mod config;
+mod agent_config;
+mod claim;
 mod core;
 mod error;
 
-pub mod monitor;
-pub mod plugin;
-pub mod reporter;
+mod monitor;
+mod plugin;
+mod reporter;
 
-pub use config::{Config, MonitoringConfig, ServerConfig, StorageConfig};
+pub use agent_config::{ClaimConfig, Config, MonitoringConfig, ServerConfig, StorageConfig};
+pub use claim::{Claim, ClaimResult};
 pub use core::{
     Agent, AgentHealthStatus, AgentHeartbeat, AgentStatus, CheckType, Endpoint, HttpGetResult,
-    MonitoringResult, PingResult, PluginResult, TcpConnectResult, TracerouteHop,
-    TracerouteResult, UdpConnectResult,
+    MonitoringResult, PingResult, PluginResult, TcpConnectResult, TracerouteHop, TracerouteResult,
+    UdpConnectResult,
 };
 pub use error::{Error, Result};
 pub use reporter::HeartbeatReporter;
+
+pub use plugin::MonitoringPlugin;

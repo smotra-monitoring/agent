@@ -1,6 +1,6 @@
 //! Server reporting functionality
 
-use crate::config::Config;
+use crate::agent_config::Config;
 use crate::core::AgentStatus;
 use crate::error::{Error, Result};
 use crate::reporter::HeartbeatReporter;
@@ -63,11 +63,7 @@ pub async fn run_reporter(
 
 /// Send an agent report to the server
 async fn send_agent_report(config: &Config, agent_status: &Arc<RwLock<AgentStatus>>) -> Result<()> {
-    let server_url = config
-        .server
-        .url
-        .as_ref()
-        .ok_or_else(|| Error::Config("Server URL not configured".to_string()))?;
+    let server_url = &config.server.url;
 
     let client = reqwest::Client::builder()
         .timeout(config.server.timeout())

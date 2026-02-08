@@ -6,10 +6,10 @@
 - `src/lib.rs` - Main library entry point with Agent struct and public exports
 - `src/error.rs` - Error types and Result aliases
 
-### Configuration Module (`src/config/`)
-- `src/config/mod.rs` - Module exports for configuration
-- `src/config/loader.rs` - Configuration loading and validation logic
-- `src/config/types.rs` - Configuration data structures (Config, MonitoringConfig, ServerConfig, etc.)
+### Configuration Module (`src/agent_config/`)
+- `src/agent_config/mod.rs` - Module exports for configuration
+- `src/agent_config/loader.rs` - Configuration loading and validation logic
+- `src/agent_config/types.rs` - Configuration data structures (Config, MonitoringConfig, ServerConfig, etc.)
 
 ### Core Module (`src/core/`)
 - `src/core/mod.rs` - Module exports for core types
@@ -32,8 +32,22 @@
 - `src/plugin/trait_def.rs` - MonitoringPlugin trait definition
 - `src/plugin/registry.rs` - Plugin registry for managing plugins
 
+### Claiming Workflow Module (`src/claim/`)
+- `src/claim/mod.rs` - Module exports for claiming workflow
+- `src/claim/types.rs` - Data structures for registration and claim status
+- `src/claim/token.rs` - Claim token generation and hashing (SHA-256)
+- `src/claim/registration.rs` - Agent self-registration with retry logic
+- `src/claim/polling.rs` - Claim status polling with exponential backoff
+- `src/claim/display.rs` - User-friendly claim information display
+
+### Server Configuration Persistence (`src/server_config.rs`)
+- Secure API key storage with file permissions (0600 on Unix)
+- Configuration file updates with TOML serialization
+- Atomic writes to prevent corruption
+- Agent ID persistence
+
 ### Binaries (`src/bin/`)
-- `src/bin/agent.rs` - Main daemon for running the agent
+- `src/bin/agent.rs` - Main daemon with integrated claiming workflow
 - `src/bin/agent_updater.rs` - Auto-updater stub
 
 ### Binary - Interactive agent TUI with Ratatui
@@ -53,6 +67,7 @@
 
 ### Tests (`tests/`)
 - `tests/heartbeat_integration_tests.rs` - Integration tests for heartbeat functionality
+- `tests/claim_integration_tests.rs` - Integration tests for claiming workflow with mock server
 
 ### Configuration & Documentation
 - `Cargo.toml` - Rust project configuration with dependencies
@@ -78,6 +93,7 @@
 - Support for multiple endpoints with UUIDs, tags, and enabled flag
 - Server connection configuration with heartbeat intervals
 - Local storage settings for caching
+- Claiming workflow configuration (poll interval, max retries)
 
 ### Monitoring System
 - ICMP ping checks using surge-ping
@@ -94,6 +110,19 @@
 - Cache manager stub (disk persistence to be implemented)
 - Heartbeat reporting with system metrics (CPU, memory, uptime) using sysinfo crate
 - Agent health status monitoring (Healthy, Degraded, Critical, Unknown)
+
+### Agent Self-Registration and Claiming Workflow
+- **Zero-configuration onboarding**: Agents can self-register without manual API key distribution
+- **Secure token generation**: Cryptographically secure 64-character claim tokens
+- **Token hashing**: SHA-256 hashing before network transmission (defense in depth)
+- **Agent self-registration**: POST to `/api/v1/agent/register` with agent ID and token hash
+- **Polling mechanism**: Periodic status checks with configurable interval
+- **API key delivery**: One-time delivery when administrator claims agent
+- **Secure persistence**: API key saved with 0600 permissions on Unix systems
+- **Retry logic**: Exponential backoff for registration failures
+- **User-friendly display**: Formatted claim information box with instructions
+- **Idempotent registration**: Multiple registration attempts don't create duplicates
+- **Time-limited tokens**: Claims expire after 24 hours (server-side)
 
 ### Plugin System
 - MonitoringPlugin trait for custom checks

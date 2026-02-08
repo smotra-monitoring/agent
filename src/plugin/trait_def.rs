@@ -14,7 +14,7 @@ pub trait MonitoringPlugin: Send + Sync {
     fn version(&self) -> &str;
 
     /// Perform a monitoring check
-    async fn check(&self, agent_id: &str, endpoint: &Endpoint) -> Result<MonitoringResult>;
+    async fn check(&self, agent_id: &uuid::Uuid, endpoint: &Endpoint) -> Result<MonitoringResult>;
 
     /// Initialize the plugin
     async fn initialize(&mut self) -> Result<()> {

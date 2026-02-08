@@ -103,6 +103,7 @@ jobs:
         extra_dictionaries:
           cspell:software-terms/dict/softwareTerms.txt
           cspell:golang/dict/go.txt
+          cspell:rust/dict/rust.txt
 
   comment-push:
     name: Report (Push)

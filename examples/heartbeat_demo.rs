@@ -1,6 +1,7 @@
 //! Example demonstrating heartbeat metrics collection
 
 use smotra_agent::{Config, HeartbeatReporter, MonitoringConfig, ServerConfig, StorageConfig};
+use uuid::Uuid;
 
 #[tokio::main]
 async fn main() {
@@ -9,15 +10,11 @@ async fn main() {
     // Create a test configuration
     let config = Config {
         version: 1,
-        agent_id: "demo-agent-001".to_string(),
+        agent_id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
         agent_name: "Demo Agent".to_string(),
         tags: vec!["demo".to_string()],
         monitoring: MonitoringConfig::default(),
-        server: ServerConfig {
-            url: Some("https://example.com".to_string()),
-            api_key: Some("demo-key".to_string()),
-            ..Default::default()
-        },
+        server: ServerConfig::default(),
         storage: StorageConfig::default(),
         endpoints: vec![],
     };

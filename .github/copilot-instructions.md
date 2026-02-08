@@ -53,7 +53,7 @@ Files structure
 - `src/`: Source code for the agent library and binaries.
 - `Cargo.toml`: Cargo configuration file for the project.
 - `Dockerfile`: Dockerfile for building the agent container image.
-- `README.md`: Documentation for the project.
+- `docs/`: Documentation for the project.
 - `examples/`: Example plugin implementations.
 - `tests/`: Unit and integration tests for the agent library and binaries.
 - `api/`: OpenAPI specification and related documentation.
@@ -76,6 +76,125 @@ Files structure
 
 
 Tracing should be implemented using the "tracing" crate with support for different log levels and output formats. 
+
+# Testing Requirements
+
+**CRITICAL**: For every piece of code generated, unit tests and integration tests MUST be created.
+
+## Unit Tests
+Unit tests should be placed in the same file as the code being tested, in a `#[cfg(test)]` module at the bottom of the file.
+
+Requirements for unit tests:
+- **Coverage**: Every public function, method, and struct must have corresponding unit tests
+- **Edge Cases**: Test edge cases, error conditions, and boundary values
+- **Mocking**: Use appropriate mocking techniques (e.g., `mockall` crate) for external dependencies
+- **Async Testing**: Use `#[tokio::test]` for async functions
+- **Assertions**: Use clear, descriptive assertions with helpful failure messages
+- **Test Organization**: Group related tests using nested modules within the test module
+- **Documentation**: Add doc comments to test functions explaining what is being tested and why
+
+Example structure:
+```rust
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    mod function_name_tests {
+        use super::*;
+        
+        #[test]
+        fn test_normal_case() {
+            // Test implementation
+        }
+        
+        #[test]
+        fn test_edge_case() {
+            // Test implementation
+        }
+        
+        #[test]
+        fn test_error_condition() {
+            // Test implementation
+        }
+    }
+    
+    #[tokio::test]
+    async fn test_async_function() {
+        // Async test implementation
+    }
+}
+```
+
+## Integration Tests
+Integration tests should be placed in the `tests/` directory at the project root. Each integration test file tests a complete feature or workflow.
+
+Requirements for integration tests:
+- **Real Scenarios**: Test real-world usage scenarios and workflows
+- **End-to-End**: Test complete feature flows from start to finish
+- **File Naming**: Use descriptive names like `heartbeat_integration_tests.rs`, `config_loading_tests.rs`
+- **Setup/Teardown**: Include proper setup and cleanup in tests
+- **External Dependencies**: Mock external services (servers, databases) appropriately
+- **Async Runtime**: Use tokio runtime for async integration tests
+- **Timeouts**: Include reasonable timeouts for long-running tests
+- **Isolation**: Tests should be isolated and not depend on each other
+
+Example structure:
+```rust
+// tests/feature_integration_tests.rs
+use agent_library::*;
+
+#[tokio::test]
+async fn test_complete_workflow() {
+    // Setup
+    let config = setup_test_config();
+    
+    // Execute
+    let result = run_complete_workflow(config).await;
+    
+    // Assert
+    assert!(result.is_ok());
+    
+    // Cleanup
+    cleanup_test_resources();
+}
+```
+
+## Test Data and Fixtures
+- Use the `tests/fixtures/` directory for test data files (configs, sample data, etc.)
+- Create helper functions for common test setup in `tests/common/mod.rs`
+- Use builders or factory patterns for creating test objects
+
+## Testing Tools and Crates
+- **tokio**: For async testing with `#[tokio::test]`
+- **mockall**: For creating mock objects
+- **proptest** or **quickcheck**: For property-based testing (when appropriate)
+- **rstest**: For parameterized tests
+- **assert_matches**: For pattern matching in assertions
+- **tempfile**: For temporary file/directory creation in tests
+
+## When Generating Code
+1. **Write the implementation code**
+2. **Immediately write unit tests** in the same file
+3. **Create or update integration tests** in the `tests/` directory
+4. **Run tests** to verify they pass
+5. **Document any test assumptions or requirements**
+
+## Test Coverage Goals
+- **Minimum**: 80% code coverage for all modules
+- **Critical Code**: 95%+ coverage for core functionality (monitoring, reporting, configuration)
+- **Error Paths**: All error paths and edge cases must be tested
+
+## Example Test Scenarios to Always Include
+- ✅ Normal/happy path
+- ✅ Invalid input handling
+- ✅ Null/empty values
+- ✅ Boundary conditions (min/max values)
+- ✅ Concurrent access (for shared state)
+- ✅ Resource exhaustion scenarios
+- ✅ Network failures (for I/O operations)
+- ✅ Timeout scenarios
+- ✅ Configuration errors
+- ✅ State transitions
 
 
 # Check types
@@ -132,9 +251,24 @@ The agent configuration includes a `version` field (unsigned integer) that track
 - Consider implementing exponential backoff for config polling failures
 
 
+# Documentation
+
+The project should include comprehensive documentation covering:
+- Project overview and architecture
+- Installation instructions (from source and using Docker)
+- Configuration options and examples
+- Usage instructions for the agent and CLI
+- Plugin development guide
+- API documentation for the agent library
+- OpenAPI specification for server API
+- Contribution guidelines for developers
+- Testing guidelines and requirements
+- Troubleshooting and FAQ section
+
+Documentation should be maintained in the `docs/` directory and linked from the main `README.md`. The `README.md` should provide a high-level overview and quick start guide, while detailed documentation can be organized in separate files within the `docs/` directory for better readability and maintenance.
 
 ## Project Structure
-For detailed project structure, please refer to the [Project Structure](../PROJECT_STRUCTURE.md) document.
+For detailed project structure, please refer to the [Project Structure](../docs/PROJECT_STRUCTURE.md) document.
 
 ## OpenApi Specification
 For detailed OpenAPI specification, please refer to the [OpenAPI Specification](../api/openapi/api/spec.yaml) document.

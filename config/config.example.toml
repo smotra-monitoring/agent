@@ -1,5 +1,7 @@
 version = 1
-agent_id = "example-agent-001"
+# Agent ID must be a valid UUID. Use 00000000-0000-0000-0000-000000000000 (nil UUID) for unregistered agents
+# A new UUID will be generated during agent registration
+agent_id = "00000000-0000-0000-0000-000000000000"
 agent_name = "Production Agent 001"
 tags = ["production", "monitoring"]
 
@@ -12,13 +14,18 @@ traceroute_on_failure = false
 traceroute_max_hops = 30
 
 [server]
-# url = "https://monitoring.example.com"
+url = "https://api.smotra.net"
 # api_key = "your-api-key-here"
 report_interval_secs = 300
 heartbeat_interval_secs = 300  # Send lightweight heartbeat every 5 minutes
 verify_tls = true
 timeout_secs = 30
 retry_attempts = 3
+
+# Claiming workflow configuration (for agent self-registration)
+[server.claiming]
+poll_interval_secs = 30  # Poll for claim status every 30 seconds
+max_registration_retries = 5  # Maximum retry attempts for registration
 
 [storage]
 cache_dir = "./cache"

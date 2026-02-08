@@ -11,7 +11,7 @@ pub struct MonitoringResult {
     /// Unique ID for this result
     pub id: Uuid,
     /// ID of the agent that performed the check
-    pub agent_id: String,
+    pub agent_id: Uuid,
     /// Target endpoint that was checked
     pub target: Endpoint,
     /// Type of check performed with detailed results
@@ -293,7 +293,7 @@ impl Default for AgentHeartbeat {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AgentStatus {
     /// Unique identifier for this agent
-    pub agent_id: String,
+    pub agent_id: Uuid,
     /// Whether the agent is currently running
     pub is_running: bool,
     /// When the agent was started
@@ -317,9 +317,9 @@ pub struct AgentStatus {
 }
 
 impl AgentStatus {
-    pub fn new(agent_id: impl Into<String>) -> Self {
+    pub fn new(agent_id: Uuid) -> Self {
         Self {
-            agent_id: agent_id.into(),
+            agent_id,
             ..Default::default()
         }
     }
@@ -372,6 +372,40 @@ mod tests {
         assert!(
             json.contains(r#""enabled":false"#),
             "Serialized JSON should contain enabled field"
+        );
+    }
+
+    #[test]
+    fn test_agent_status_new_with_uuid() {
+        let agent_id = Uuid::new_v4();
+        let status = AgentStatus::new(agent_id);
+        assert_eq!(status.agent_id, agent_id, "Agent ID should match");
+        assert!(!status.is_running, "Agent should not be running by default");
+        assert_eq!(status.checks_performed, 0, "Checks performed should be 0");
+    }
+
+    #[test]
+    fn test_agent_status_serialization() {
+        let agent_id = Uuid::new_v4();
+        let status = AgentStatus::new(agent_id);
+        let json = serde_json::to_string(&status).unwrap();
+        assert!(
+            json.contains(&agent_id.to_string()),
+            "Serialized JSON should contain agent_id as UUID string"
+        );
+    }
+
+    #[test]
+    fn test_agent_status_deserialization() {
+        let agent_id = Uuid::new_v4();
+        let json = format!(
+            r#"{{"agent_id":"{}","is_running":false,"started_at":null,"stopped_at":null,"checks_performed":0,"checks_successful":0,"checks_failed":0,"last_report_at":null,"failed_report_count":0,"server_connected":false,"cached_reports":0}}"#,
+            agent_id
+        );
+        let status: AgentStatus = serde_json::from_str(&json).unwrap();
+        assert_eq!(
+            status.agent_id, agent_id,
+            "Deserialized agent_id should match"
         );
     }
 }

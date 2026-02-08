@@ -96,6 +96,88 @@ enabled = true
 
 ## Usage
 
+### Agent Self-Registration and Claiming
+
+The agent supports a zero-configuration onboarding workflow that eliminates manual API key distribution:
+
+#### First-Time Setup
+
+1. **Configure Server URL** in `config.toml`:
+   ```toml
+   [server]
+   url = "https://api.smotra.net"
+   # api_key will be set automatically after claiming
+   ```
+
+2. **Start the Agent**:
+   ```bash
+   ./agent -c config.toml
+   ```
+
+3. **Agent Displays Claim Information**:
+   ```
+   ╔══════════════════════════════════════════════════════════════╗
+   ║              Agent Registration Required                     ║
+   ╠══════════════════════════════════════════════════════════════╣
+   ║                                                              ║
+   ║  Agent ID:    019c1234-5678-7abc-def0-123456789abc          ║
+   ║  Claim Token: rT9xK2mP4vL8wQ3hN6jF5sD7cB1aE0yU...           ║
+   ║                                                              ║
+   ║  To claim this agent:                                        ║
+   ║  1. Go to: https://api.smotra.net/claim                     ║
+   ║  2. Enter the Agent ID and Claim Token shown above          ║
+   ║  3. This agent will start automatically once claimed        ║
+   ║                                                              ║
+   ║  Claim expires: 2026-02-02 12:00:00 UTC (in 24 hours)      ║
+   ║                                                              ║
+   ╚══════════════════════════════════════════════════════════════╝
+   
+   [INFO] Waiting for agent to be claimed...
+   [INFO] Polling claim status every 30 seconds (press Ctrl+C to cancel)
+   ```
+
+4. **Administrator Claims Agent** via web interface at the claim URL
+
+5. **Agent Receives API Key** and automatically:
+   - Saves the API key to configuration file with secure permissions (0600)
+   - Transitions to normal operation
+   - Begins monitoring endpoints
+
+#### Security Features
+
+- **Claim Token Hashing**: Only SHA-256 hash sent to server, never plain token
+- **Secure Storage**: API key saved with owner-only permissions (Unix: 0600)
+- **Time-Limited Claims**: Tokens expire after 24 hours
+- **One-Time Use**: Each claim token can only be used once
+
+#### Claiming Configuration
+
+Customize claiming behavior in `config.toml`:
+
+```toml
+[server.claiming]
+poll_interval_secs = 30           # How often to check claim status
+max_registration_retries = 5      # Max retries if registration fails
+```
+
+#### Workflow Details
+
+1. **Agent Self-Registration**:
+   - Generates UUIDv7 for unique agent identifier
+   - Creates cryptographically secure 64-character claim token
+   - Hashes token with SHA-256 before sending to server
+   - Displays plain token only in local logs for administrator
+
+2. **Polling Phase**:
+   - Agent polls server every 30 seconds (configurable)
+   - Continues until claimed or token expires
+   - Can be cancelled with Ctrl+C and restarted later
+
+3. **API Key Delivery**:
+   - Server provides API key when administrator claims agent
+   - Agent saves to config file with restrictive permissions
+   - Configuration automatically reloaded
+
 ### Running the Agent
 
 Start the monitoring agent:

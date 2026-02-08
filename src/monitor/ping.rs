@@ -31,7 +31,7 @@ impl PingChecker {
     }
 
     /// Perform a ping check on the given endpoint
-    pub async fn check(&self, agent_id: &str, endpoint: &Endpoint) -> MonitoringResult {
+    pub async fn check(&self, agent_id: Uuid, endpoint: &Endpoint) -> MonitoringResult {
         // Resolve the address
         let addr = match self.resolve_address(&endpoint.address).await {
             Ok(addr) => addr,
@@ -47,7 +47,7 @@ impl PingChecker {
 
                 return MonitoringResult {
                     id: Uuid::new_v4(),
-                    agent_id: agent_id.to_string(),
+                    agent_id,
                     target: endpoint.clone(),
                     check_type: CheckType::Ping(ping_result),
                     timestamp: Utc::now(),
@@ -90,14 +90,14 @@ impl PingChecker {
             resolved_ip: Some(addr.to_string()),
             successes,
             failures,
-            success_latencies: success_latencies.clone(),
+            success_latencies,
             avg_response_time_ms,
             errors: errors.clone(),
         };
 
         MonitoringResult {
             id: Uuid::new_v4(),
-            agent_id: agent_id.to_string(),
+            agent_id,
             target: endpoint.clone(),
             check_type: CheckType::Ping(ping_result),
             timestamp: Utc::now(),

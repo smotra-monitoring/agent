@@ -42,7 +42,7 @@ pub async fn validate_config(config_path: PathBuf) -> Result<()> {
 /// Generate default configuration
 pub async fn generate_config(output: PathBuf) -> Result<()> {
     let config = Config::default();
-    config.save_to_file(&output)?;
+    config.save_to_file_secure(&output).await?;
     println!("Generated default configuration at: {}", output.display());
     Ok(())
 }
