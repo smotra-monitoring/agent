@@ -52,13 +52,16 @@ impl Config {
             .map_err(|e| Error::Config(format!("Failed to serialize config: {}", e)))?;
 
         // Write to file
-        let mut file = async_fs::File::create(path).await
+        let mut file = async_fs::File::create(path)
+            .await
             .map_err(|e| Error::Config(format!("Failed to create config file: {}", e)))?;
-        
-        file.write_all(content.as_bytes()).await
+
+        file.write_all(content.as_bytes())
+            .await
             .map_err(|e| Error::Config(format!("Failed to write config file: {}", e)))?;
-        
-        file.flush().await
+
+        file.flush()
+            .await
             .map_err(|e| Error::Config(format!("Failed to flush config file: {}", e)))?;
 
         // Set secure permissions on Unix systems
@@ -66,11 +69,14 @@ impl Config {
         {
             use std::os::unix::fs::PermissionsExt;
 
-            let mut perms = file.metadata().await
+            let mut perms = file
+                .metadata()
+                .await
                 .map_err(|e| Error::Config(format!("Failed to read file metadata: {}", e)))?
                 .permissions();
             perms.set_mode(0o600); // Owner read/write only
-            async_fs::set_permissions(path, perms).await
+            async_fs::set_permissions(path, perms)
+                .await
                 .map_err(|e| Error::Config(format!("Failed to set file permissions: {}", e)))?;
         }
 
@@ -184,14 +190,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_save_to_file_secure() {
+        use crate::agent_config::server_config::ServerConfig;
+
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
 
         let agent_id = Uuid::now_v7();
-        let mut config = Config::default();
-        config.agent_id = agent_id;
-        config.agent_name = "Test Agent".to_string();
-        config.server.api_key = Some("sk_test_secure".to_string());
+        let config = Config {
+            agent_id,
+            agent_name: "Test Agent".to_string(),
+            server: ServerConfig {
+                api_key: Some("sk_test_secure".to_string()),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
 
         let result = config.save_to_file_secure(path).await;
         assert!(result.is_ok(), "Failed to save config: {:?}", result);
@@ -208,7 +221,11 @@ mod tests {
             use std::os::unix::fs::PermissionsExt;
             let metadata = std::fs::metadata(path).unwrap();
             let permissions = metadata.permissions();
-            assert_eq!(permissions.mode() & 0o777, 0o600, "File permissions should be 0600");
+            assert_eq!(
+                permissions.mode() & 0o777,
+                0o600,
+                "File permissions should be 0600"
+            );
         }
     }
 
@@ -218,8 +235,10 @@ mod tests {
         let path = temp_file.path();
 
         // Start with default config
-        let mut config = Config::default();
-        config.agent_name = "Integration Test Agent".to_string();
+        let mut config = Config {
+            agent_name: "Integration Test Agent".to_string(),
+            ..Default::default()
+        };
 
         // Apply claim result
         let agent_id = Uuid::now_v7();
@@ -235,7 +254,10 @@ mod tests {
         // Reload and verify
         let loaded_config = Config::from_file(path).unwrap();
         assert_eq!(loaded_config.agent_id, agent_id);
-        assert_eq!(loaded_config.server.api_key, Some("sk_integration_test".to_string()));
+        assert_eq!(
+            loaded_config.server.api_key,
+            Some("sk_integration_test".to_string())
+        );
         assert_eq!(loaded_config.agent_name, "Integration Test Agent");
     }
 

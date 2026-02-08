@@ -21,7 +21,6 @@ use uuid::Uuid;
 /// 5. Save API key when claimed
 pub struct Claim<'a> {
     config: &'a Config,
-    config_path: &'a Path,
 }
 
 impl<'a> Claim<'a> {
@@ -31,11 +30,8 @@ impl<'a> Claim<'a> {
     ///
     /// * `config` - Current agent configuration
     /// * `config_path` - Path to the configuration file
-    pub fn new(config: &'a Config, config_path: &'a Path) -> Self {
-        Self {
-            config,
-            config_path,
-        }
+    pub fn new(config: &'a Config) -> Self {
+        Self { config }
     }
 
     /// Run the claiming workflow
@@ -129,7 +125,6 @@ impl<'a> Claim<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::NamedTempFile;
 
     #[test]
     fn test_claim_creation() {
@@ -140,8 +135,7 @@ mod tests {
             ..Default::default()
         };
 
-        let temp_file = NamedTempFile::new().unwrap();
-        let claim = Claim::new(&config, temp_file.path());
+        let claim = Claim::new(&config);
 
         // Just verify we can create the struct
         assert_eq!(claim.config.agent_id, test_agent_id);
@@ -155,12 +149,11 @@ mod tests {
             ..Default::default()
         };
 
-        let temp_file = NamedTempFile::new().unwrap();
-        let claim = Claim::new(&config, temp_file.path());
+        let claim = Claim::new(&config);
 
         // Verify config has nil UUID initially
         assert_eq!(claim.config.agent_id, Uuid::nil());
-        
+
         // Note: Full workflow test with agent ID generation would be in integration tests
         // as it requires HTTP server mock. The run() method will generate a new UUID
         // when agent_id is nil.

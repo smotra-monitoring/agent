@@ -17,13 +17,11 @@ fn test_claim_public_api() {
 #[test]
 fn test_claim_workflow_via_public_api() {
     use smotra_agent::{Claim, Config};
-    use tempfile::NamedTempFile;
 
     let config = Config::default();
-    let temp_file = NamedTempFile::new().unwrap();
 
     // This is the only public way to use the claiming workflow
-    let _claim = Claim::new(&config, temp_file.path());
+    let _claim = Claim::new(&config);
 
     // Users would call: claim.run().await
 }

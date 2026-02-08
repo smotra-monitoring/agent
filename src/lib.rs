@@ -19,7 +19,6 @@ pub mod monitor;
 pub mod plugin;
 pub mod reporter;
 
-pub use agent_config::server_config::save_api_key_to_config;
 pub use agent_config::{ClaimConfig, Config, MonitoringConfig, ServerConfig, StorageConfig};
 pub use claim::{Claim, ClaimResult};
 pub use core::{

@@ -82,7 +82,7 @@ async fn main() -> Result<()> {
         info!("Starting agent claiming workflow, due to missing API key ...");
 
         // Run claiming workflow
-        let claim = Claim::new(&config, &cli.config);
+        let claim = Claim::new(&config);
         match claim.run().await {
             Ok(claim_result) => {
                 info!("Claiming workflow completed successfully");
