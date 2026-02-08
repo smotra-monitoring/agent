@@ -772,12 +772,59 @@ on:
   push:
     tags:
       - 'v*'
+  release:
+    types: ['published']
 
 jobs:
+  release-pre-checks:
+    name:  Test, lint and attempt to build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: checkout code
+      uses: actions/checkout@latest
+
+    # - name: Run clippy
+    #   run: cargo clippy --verbose -- -D warnings
+
+    - name: Run tests
+      run: cargo test --verbose
+
+    - name: Run fmt
+      run: cargo fmt -- --check
+
+    - name: Install dependencies
+      run: cargo build
+
+  create-release:
+    name: create-release
+    needs: ['release-pre-checks']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@latest
+      
+      - name: Get the release version from the tag
+        if: env.VERSION == ''
+        run: echo "VERSION=${{ github.ref_name }}" >> $GITHUB_ENV
+        
+      - name: Show the version
+        run: |
+          echo "version is: $VERSION"
+          
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create $VERSION --draft --verify-tag --title $VERSION
+
+    outputs:
+      version: ${{ env.VERSION }}
+
+
   build:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
@@ -790,20 +837,30 @@ jobs:
             target: x86_64-apple-darwin
           - os: macos-latest
             target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@latest
       
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@latest
         with:
           toolchain: stable
           target: ${{ matrix.target }}
           
+      - name: Update version in Cargo.toml to match release tag
+        run: |
+          TAG_VERSION="${{ github.ref_name#v }}"
+          sed -i.bak "s/^version = \".*\"/version = \"${TAG_VERSION}\"/" Cargo.toml
+
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
         
       - name: Package
+        if: matrix.os != 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
           tar czf smotra-agent-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
@@ -819,7 +876,15 @@ jobs:
             target/${{ matrix.target }}/release/smotra-agent-*.tar.gz
             target/${{ matrix.target }}/release/smotra-agent-*.tar.gz.sha256
 
-  deploy:
+  deploy-release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: release
+  deploy-gh-pages:
     needs: build
     runs-on: ubuntu-latest
     permissions:
