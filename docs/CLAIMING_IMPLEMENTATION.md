@@ -38,7 +38,19 @@ Successfully implemented a complete agent self-registration and claiming workflo
   - Expiration time display
   - Professional, easy-to-read output
 
-#### `src/server_config.rs` - Secure Configuration Persistence
+- **workflow.rs**: Main claiming orchestrator
+  - `Claim` struct coordinating entire workflow
+  - Agent ID generation (UUIDv7)
+  - Token generation and hashing
+  - Registration with retry logic
+  - Polling coordination
+  - Returns ClaimResult with API key and agent ID
+
+#### `src/agent_config/loader.rs` - Configuration Persistence
+- `from_file()`: Load configuration from TOML
+- `save_to_file_secure()`: Async save with 0600 permissions on Unix  
+- `apply_claim_result()`: Apply ClaimResult to update agent_id and api_key
+- `validate()`: Configuration validation
 - API key storage with secure file permissions (0600 on Unix)
 - TOML configuration file updates
 - Atomic writes to prevent corruption
@@ -110,10 +122,11 @@ Successfully implemented a complete agent self-registration and claiming workflo
   - Claimed status deserialization
   - API key extraction
 
-- **Server config persistence** (src/server_config.rs):
+- **Server config persistence** (src/agent_config/loader.rs):
   - New config file creation
-  - Existing config file updates
+  - Existing config file updates  
   - File permissions verification (Unix)
+  - Async operations with secure file writes
 
 #### Integration Tests (tests/claim_integration_tests.rs)
 - **Full claiming workflow**: End-to-end test with mock server

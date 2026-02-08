@@ -4,7 +4,9 @@ A distributed monitoring agent for tracking reachability and performance of netw
 
 ## Features
 
-- **ICMP Ping Monitoring**: Check host reachability using ICMP echo requests
+- **ICMP Ping Monitoring**: Check host reachability using ICMP echo requests (✅ Implemented)
+- **Traceroute**: Path analysis for network troubleshooting (⏳ Types defined, implementation pending)
+- **TCP/UDP/HTTP Checks**: Additional connectivity check types (⏳ Types defined, implementation pending)
 - **Configurable Intervals**: Set custom monitoring intervals and timeouts
 - **Concurrent Checks**: Perform multiple checks simultaneously with configurable limits
 - **Central Reporting**: Send monitoring data to a central server
@@ -12,6 +14,7 @@ A distributed monitoring agent for tracking reachability and performance of netw
 - **Plugin System**: Extend functionality with custom monitoring plugins
 - **Interactive TUI**: Monitor status with an interactive terminal interface
 - **Low Resource Usage**: Built with Rust and async/await for efficiency
+- **Zero-Config Claiming**: Self-registration workflow with secure claim tokens
 
 ## Architecture
 
@@ -292,7 +295,7 @@ impl MonitoringPlugin for MyPlugin {
 }
 ```
 
-See `examples/plugin.rs` for a complete HTTP monitoring plugin example, and `examples/heartbeat_demo.rs` for a heartbeat demonstration.
+See `examples/010_plugin.rs` for a complete HTTP monitoring plugin example, and `examples/002_heartbeat_demo.rs` for a heartbeat demonstration.
 
 ## Development
 

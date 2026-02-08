@@ -18,14 +18,18 @@ cargo build --release
 
 ## ✨ Key Features
 
-- **ICMP Ping & Traceroute** - Check host reachability with detailed path analysis
+- **ICMP Ping Monitoring** ✅ - Check host reachability with detailed latency metrics
 - **Zero-Config Onboarding** - Self-registration with secure claim-based workflow
+- **Heartbeat Reporting** - Automatic agent health status updates with system metrics
 - **Offline-First** - Caches results locally when server is unreachable
 - **Low Resource Usage** - Built with Rust async/await for efficiency
 - **Plugin System** - Extend monitoring capabilities with custom plugins
 - **Interactive TUI** - Real-time monitoring dashboard with `agent-cli`
 - **Concurrent Checks** - Perform multiple checks simultaneously
-- **Heartbeat Reporting** - Automatic agent health status updates
+
+### Coming Soon
+- Traceroute analysis (types defined, implementation pending)
+- TCP/UDP/HTTP connectivity checks (types defined, implementation pending)
 
 ## 📋 Requirements
 
@@ -72,8 +76,9 @@ enabled = true
 
 - **[Complete User Guide](GUIDE.md)** - Detailed installation, configuration, and usage
 - **[Project Structure](PROJECT_STRUCTURE.md)** - Code organization and architecture
-- **[Roadmap](ROADMAP.md)** - Development plans and upcoming features
+- **[Implementation Status](IMPLEMENTATION_STATUS.md)** - Current implementation status and roadmap
 - **[Claiming Implementation](CLAIMING_IMPLEMENTATION.md)** - Agent registration details
+- **[Development Roadmap](ROADMAP.md)** - Development plans and upcoming features
 
 ## 🔐 Agent Registration & Claiming
 
@@ -109,7 +114,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## 🔌 Plugin Development
 
-Create custom monitoring plugins - see [examples/plugin.rs](../examples/plugin.rs):
+Create custom monitoring plugins - see [examples/010_plugin.rs](../examples/010_plugin.rs):
 
 ```rust
 use async_trait::async_trait;
@@ -146,7 +151,7 @@ RUST_LOG=debug cargo run --bin agent -- -c config.toml
 
 ## 📦 API Specification
 
-OpenAPI specification available at [api/openapi/api/spec.yaml](../api/openapi/api/spec.yaml).
+OpenAPI specification will be available at `api/openapi/` (currently in development).
 
 ## 📄 License
 

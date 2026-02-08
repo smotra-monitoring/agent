@@ -10,6 +10,7 @@ interval_secs = 60
 timeout_secs = 5
 ping_count = 3
 max_concurrent = 10
+# Note: Traceroute types are defined but implementation is pending
 traceroute_on_failure = false
 traceroute_max_hops = 30
 

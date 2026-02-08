@@ -457,4 +457,4 @@ Runnable example code demonstrating library features should be placed in the `ex
 For detailed project structure, please refer to the [Project Structure](../docs/PROJECT_STRUCTURE.md) document.
 
 ## OpenApi Specification
-For detailed OpenAPI specification, please refer to the [OpenAPI Specification](../api/openapi/api/spec.yaml) document.
+OpenAPI specification will be created in the `api/openapi/` directory (currently in development).

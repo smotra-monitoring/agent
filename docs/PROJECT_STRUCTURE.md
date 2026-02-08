@@ -8,8 +8,11 @@
 
 ### Configuration Module (`src/agent_config/`)
 - `src/agent_config/mod.rs` - Module exports for configuration
-- `src/agent_config/loader.rs` - Configuration loading and validation logic
-- `src/agent_config/types.rs` - Configuration data structures (Config, MonitoringConfig, ServerConfig, etc.)
+- `src/agent_config/loader.rs` - Configuration loading, validation, and secure saving logic
+- `src/agent_config/types.rs` - Configuration data structures (Config, MonitoringConfig, StorageConfig)
+- `src/agent_config/server_config/` - Server configuration submodule
+  - `src/agent_config/server_config/mod.rs` - Server config module exports
+  - `src/agent_config/server_config/types.rs` - ServerConfig and ClaimConfig structures
 
 ### Core Module (`src/core/`)
 - `src/core/mod.rs` - Module exports for core types
@@ -34,17 +37,19 @@
 
 ### Claiming Workflow Module (`src/claim/`)
 - `src/claim/mod.rs` - Module exports for claiming workflow
-- `src/claim/types.rs` - Data structures for registration and claim status
+- `src/claim/types.rs` - Data structures for registration and claim status (AgentRegistration, ClaimResult, ClaimStatus)
 - `src/claim/token.rs` - Claim token generation and hashing (SHA-256)
 - `src/claim/registration.rs` - Agent self-registration with retry logic
-- `src/claim/polling.rs` - Claim status polling with exponential backoff
+- `src/claim/polling.rs` - Claim status polling with configurable interval
 - `src/claim/display.rs` - User-friendly claim information display
+- `src/claim/workflow.rs` - Main Claim orchestrator struct coordinating the complete workflow
 
-### Server Configuration Persistence (`src/server_config.rs`)
+### Configuration Persistence (`src/agent_config/loader.rs`)
 - Secure API key storage with file permissions (0600 on Unix)
 - Configuration file updates with TOML serialization
-- Atomic writes to prevent corruption
-- Agent ID persistence
+- Atomic file writes to prevent corruption
+- Agent ID persistence via `apply_claim_result()` method
+- Async save operations with `save_to_file_secure()`
 
 ### Binaries (`src/bin/`)
 - `src/bin/agent.rs` - Main daemon with integrated claiming workflow
@@ -61,8 +66,8 @@
 - `src/bin/agent_cli/tui/runner.rs` - TUI-related functionality initializing and starting event loop
 
 ### Examples (`examples/`)
-- `examples/plugin.rs` - HTTP monitoring plugin example
-- `examples/heartbeat_demo.rs` - Heartbeat demonstration example
+- `examples/010_plugin.rs` - HTTP monitoring plugin example
+- `examples/002_heartbeat_demo.rs` - Heartbeat demonstration example
 
 
 ### Tests (`tests/`)
@@ -75,7 +80,7 @@
 - `config.example.toml` - Example configuration file
 - `PROJECT_STRUCTURE.md` - This file
 - `.gitignore` - Git ignore patterns
-- `api/openapi/api/spec.yaml` - OpenAPI specification for the monitoring API
+- `api/openapi/` - OpenAPI specification directory (specification to be created)
 
 ## Key Features Implemented
 
@@ -96,7 +101,11 @@
 - Claiming workflow configuration (poll interval, max retries)
 
 ### Monitoring System
-- ICMP ping checks using surge-ping
+- **ICMP Ping** (✅ Implemented): surge-ping based ping checks with concurrent execution
+- **Traceroute** (⏳ Pending): Types defined (TracerouteResult, TracerouteHop) but checker not yet implemented
+- **TCP Connect** (⏳ Pending): Types defined (TcpConnectResult) but checker not yet implemented
+- **UDP Connect** (⏳ Pending): Types defined (UdpConnectResult) but checker not yet implemented
+- **HTTP GET** (⏳ Pending): Types defined (HttpGetResult) but checker not yet implemented
 - Concurrent checking with semaphore limits
 - Configurable intervals and timeouts
 - Multiple pings per check with average calculation
@@ -165,13 +174,14 @@
 ## Next Steps for Implementation
 
 ### High Priority
-1. **Testing**: Add unit and integration tests
-2. **Traceroute**: Implement traceroute functionality
-3. **Cache Implementation**: Complete local caching to disk
+1. **Traceroute**: Implement TracerouteChecker (types already defined)
+2. **TCP/UDP/HTTP Checks**: Implement TcpConnectChecker, UdpConnectChecker, HttpGetChecker (types already defined)
+3. **Cache Implementation**: Complete local caching to disk (stub currently in place)
 4. **Result Processing**: Connect monitoring results to reporter
+5. **OpenAPI Specification**: Create complete API specification in api/openapi/
 
 ### Medium Priority
-1. **TCP/UDP Checks**: Add TCP and UDP connectivity checks
+1. **Enhanced Testing**: Expand unit and integration test coverage
 2. **Plugin Loading**: Dynamic plugin loading from shared libraries
 3. **Auto-updates**: Implement update checking and installation
 4. **Log Viewer**: Add real-time log viewing in TUI
@@ -208,8 +218,8 @@
 
 ### Run Plugin Examples
 ```bash
-cargo run --example plugin
-cargo run --example heartbeat_demo
+cargo run --example 010_plugin
+cargo run --example 002_heartbeat_demo
 ```
 
 ## Building
@@ -224,8 +234,8 @@ Binaries will be in `target/release/`:
 - `agent-updater`
 
 Example plugins in `examples/`:
-- `plugin` - HTTP monitoring plugin example
-- `heartbeat_demo` - Heartbeat system demonstration
+- `010_plugin` - HTTP monitoring plugin example
+- `002_heartbeat_demo` - Heartbeat system demonstration
 
 ## Notes
 
