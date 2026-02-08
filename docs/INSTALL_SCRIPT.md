@@ -736,7 +736,6 @@ curl -fsSL -o agent.sh https://install.smotra.net/agent.sh
 less agent.sh  # Review the script
 sh agent.sh
 ```
-```
 
 ## Hosting Options
 
