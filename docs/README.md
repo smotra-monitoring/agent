@@ -1,271 +1,127 @@
 # Smotra Agent
 
-A distributed monitoring agent for tracking reachability and performance of networked hosts.
+A lightweight, distributed monitoring agent written in Rust for tracking reachability and performance of networked hosts. Part of the Smotra monitoring system.
 
-## Features
-
-- **ICMP Ping Monitoring**: Check host reachability using ICMP echo requests
-- **Configurable Intervals**: Set custom monitoring intervals and timeouts
-- **Concurrent Checks**: Perform multiple checks simultaneously with configurable limits
-- **Central Reporting**: Send monitoring data to a central server
-- **Offline Operation**: Cache results locally when server is unreachable
-- **Plugin System**: Extend functionality with custom monitoring plugins
-- **Interactive TUI**: Monitor status with an interactive terminal interface
-- **Low Resource Usage**: Built with Rust and async/await for efficiency
-
-## Architecture
-
-The agent is implemented as a library (`smotra_agent`) with multiple binary tools:
-
-- `agent`: Main daemon for running the monitoring agent
-- `agent-cli`: Interactive TUI for monitoring and configuration
-- `agent-updater`: Auto-update tool (stub implementation)
-
-Plugin examples are available in the `examples/` directory.
-
-## Installation
-
-### From Source
+## 🚀 Quick Start
 
 ```bash
+# Build from source
 cargo build --release
+
+# Generate configuration
+./target/release/agent --gen-config
+
+# Edit config.toml with your settings
+# Then start the agent
+./target/release/agent -c config.toml
 ```
 
-Binaries will be available in `target/release/`:
-- `agent`
-- `agent-cli`
-- `agent-updater`
+## ✨ Key Features
 
-## Configuration
+- **ICMP Ping & Traceroute** - Check host reachability with detailed path analysis
+- **Zero-Config Onboarding** - Self-registration with secure claim-based workflow
+- **Offline-First** - Caches results locally when server is unreachable
+- **Low Resource Usage** - Built with Rust async/await for efficiency
+- **Plugin System** - Extend monitoring capabilities with custom plugins
+- **Interactive TUI** - Real-time monitoring dashboard with `agent-cli`
+- **Concurrent Checks** - Perform multiple checks simultaneously
+- **Heartbeat Reporting** - Automatic agent health status updates
 
-Generate a default configuration file:
+## 📋 Requirements
 
-```bash
-./agent --gen-config
-```
+- Rust 1.70 or later
+- Administrator/root privileges for ICMP operations
+- Linux, macOS, or Windows
 
-Or use the CLI:
+## 🏗️ Architecture
 
-```bash
-./agent-cli gen-config -o config.toml
-```
+The agent consists of:
 
-Example configuration:
+- **`smotra_agent`** - Core monitoring library
+- **`agent`** - Main daemon process
+- **`agent-cli`** - Interactive TUI for monitoring and configuration
+- **`agent-updater`** - Auto-update tool (stub)
+
+## 🔧 Basic Configuration
 
 ```toml
 version = 1
-agent_id = "unique-agent-id"
-agent_name = "Production Agent 001"
-tags = ["production", "web-servers"]
+agent_id = "00000000-0000-0000-0000-000000000000" # Will be set automatically after claiming
+agent_name = "Production Agent"
+tags = ["production", "datacenter-1"]
 
 [monitoring]
 interval_secs = 60
 timeout_secs = 5
 ping_count = 3
-max_concurrent = 10
-traceroute_on_failure = false
-traceroute_max_hops = 30
 
 [server]
-url = "https://monitoring.example.com"
-api_key = "your-api-key"
+url = "https://api.smotra.net"
+# api_key will be set automatically after claiming
 report_interval_secs = 300
 heartbeat_interval_secs = 300
-verify_tls = true
-timeout_secs = 30
-retry_attempts = 3
-
-[storage]
-cache_dir = "./cache"
-max_cached_results = 10000
-max_cache_age_secs = 86400
 
 [[endpoints]]
 id = "01931ab4-b278-7f64-a32f-dae3cabe1ff0"
 address = "8.8.8.8"
-tags = ["dns", "google"]
-enabled = true
-
-[[endpoints]]
-id = "01931ab4-b279-7f64-a32f-dae3cabe1ff1"
-address = "example.com"
-port = 443
-tags = ["web"]
+tags = ["dns"]
 enabled = true
 ```
 
-## Usage
+## 📖 Documentation
 
-### Agent Self-Registration and Claiming
+- **[Complete User Guide](GUIDE.md)** - Detailed installation, configuration, and usage
+- **[Project Structure](PROJECT_STRUCTURE.md)** - Code organization and architecture
+- **[Roadmap](ROADMAP.md)** - Development plans and upcoming features
+- **[Claiming Implementation](CLAIMING_IMPLEMENTATION.md)** - Agent registration details
 
-The agent supports a zero-configuration onboarding workflow that eliminates manual API key distribution:
+## 🔐 Agent Registration & Claiming
 
-#### First-Time Setup
+The agent supports zero-configuration onboarding:
 
-1. **Configure Server URL** in `config.toml`:
-   ```toml
-   [server]
-   url = "https://api.smotra.net"
-   # api_key will be set automatically after claiming
-   ```
+1. Configure server URL in `config.toml`
+2. Start the agent - it displays a claim token
+3. Admin claims the agent via web interface
+4. Agent automatically receives API key and starts monitoring
 
-2. **Start the Agent**:
-   ```bash
-   ./agent -c config.toml
-   ```
+See the [User Guide](GUIDE.md#agent-self-registration-and-claiming) for complete details.
 
-3. **Agent Displays Claim Information**:
-   ```
-   ╔══════════════════════════════════════════════════════════════╗
-   ║              Agent Registration Required                     ║
-   ╠══════════════════════════════════════════════════════════════╣
-   ║                                                              ║
-   ║  Agent ID:    019c1234-5678-7abc-def0-123456789abc          ║
-   ║  Claim Token: rT9xK2mP4vL8wQ3hN6jF5sD7cB1aE0yU...           ║
-   ║                                                              ║
-   ║  To claim this agent:                                        ║
-   ║  1. Go to: https://api.smotra.net/claim                     ║
-   ║  2. Enter the Agent ID and Claim Token shown above          ║
-   ║  3. This agent will start automatically once claimed        ║
-   ║                                                              ║
-   ║  Claim expires: 2026-02-02 12:00:00 UTC (in 24 hours)      ║
-   ║                                                              ║
-   ╚══════════════════════════════════════════════════════════════╝
-   
-   [INFO] Waiting for agent to be claimed...
-   [INFO] Polling claim status every 30 seconds (press Ctrl+C to cancel)
-   ```
+## 🧩 Library Usage
 
-4. **Administrator Claims Agent** via web interface at the claim URL
-
-5. **Agent Receives API Key** and automatically:
-   - Saves the API key to configuration file with secure permissions (0600)
-   - Transitions to normal operation
-   - Begins monitoring endpoints
-
-#### Security Features
-
-- **Claim Token Hashing**: Only SHA-256 hash sent to server, never plain token
-- **Secure Storage**: API key saved with owner-only permissions (Unix: 0600)
-- **Time-Limited Claims**: Tokens expire after 24 hours
-- **One-Time Use**: Each claim token can only be used once
-
-#### Claiming Configuration
-
-Customize claiming behavior in `config.toml`:
-
-```toml
-[server.claiming]
-poll_interval_secs = 30           # How often to check claim status
-max_registration_retries = 5      # Max retries if registration fails
-```
-
-#### Workflow Details
-
-1. **Agent Self-Registration**:
-   - Generates UUIDv7 for unique agent identifier
-   - Creates cryptographically secure 64-character claim token
-   - Hashes token with SHA-256 before sending to server
-   - Displays plain token only in local logs for administrator
-
-2. **Polling Phase**:
-   - Agent polls server every 30 seconds (configurable)
-   - Continues until claimed or token expires
-   - Can be cancelled with Ctrl+C and restarted later
-
-3. **API Key Delivery**:
-   - Server provides API key when administrator claims agent
-   - Agent saves to config file with restrictive permissions
-   - Configuration automatically reloaded
-
-### Running the Agent
-
-Start the monitoring agent:
-
-```bash
-./agent -c config.toml
-```
-
-With custom log level:
-
-```bash
-./agent -c config.toml --log-level debug
-```
-
-### Using the CLI
-
-Interactive TUI:
-
-```bash
-./agent-cli -c config.toml tui
-```
-
-Show current status:
-
-```bash
-./agent-cli -c config.toml status
-```
-
-Validate configuration:
-
-```bash
-./agent-cli -c config.toml validate-config
-```
-
-### TUI Controls
-
-- **Arrow Keys / h/l**: Navigate between tabs
-- **s**: Start monitoring
-- **q / Esc**: Quit
-- **Ctrl+C**: Force quit
-
-## Library Usage
-
-The agent can also be embedded in other Rust applications:
+Embed the agent in your Rust applications:
 
 ```rust
 use smotra_agent::{Agent, Config, Endpoint};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Create configuration
     let mut config = Config::default();
-    config.agent_id = "my-agent".to_string();
+    config.agent_id = "00000000-0000-0000-0000-000000000000".to_string();
+    config.endpoints.push(
+        Endpoint::new("8.8.8.8").with_tags(vec!["dns".to_string()])
+    );
     
-    // Add endpoints
-    config.endpoints.push(Endpoint::new("8.8.8.8").with_tags(vec!["dns".to_string()]));
-    
-    // Create and start agent
     let agent = Agent::new(config);
     agent.start().await?;
-    
     Ok(())
 }
 ```
 
-## Plugin Development
+## 🔌 Plugin Development
 
-Create custom monitoring plugins by implementing the `MonitoringPlugin` trait:
+Create custom monitoring plugins - see [examples/plugin.rs](../examples/plugin.rs):
 
 ```rust
 use async_trait::async_trait;
-use smotra_agent::{
-    plugin::MonitoringPlugin,
-    types::{Endpoint, MonitoringResult},
-};
+use smotra_agent::plugin::MonitoringPlugin;
 
 struct MyPlugin;
 
 #[async_trait]
 impl MonitoringPlugin for MyPlugin {
-    fn name(&self) -> &str {
-        "my_plugin"
-    }
-
-    fn version(&self) -> &str {
-        "0.1.0"
-    }
-
+    fn name(&self) -> &str { "my_plugin" }
+    fn version(&self) -> &str { "0.1.0" }
+    
     async fn check(&self, agent_id: &str, endpoint: &Endpoint) 
         -> smotra_agent::error::Result<MonitoringResult> 
     {
@@ -275,38 +131,38 @@ impl MonitoringPlugin for MyPlugin {
 }
 ```
 
-See `examples/plugin.rs` for a complete HTTP monitoring plugin example, and `examples/heartbeat_demo.rs` for a heartbeat demonstration.
-
-## Development
-
-### Prerequisites
-
-- Rust 1.70 or later
-- Linux, macOS, or Windows
-- Administrator/root privileges for ICMP operations
-
-### Building
+## 🧪 Development
 
 ```bash
+# Build
 cargo build
-```
 
-### Running Tests
-
-```bash
+# Run tests
 cargo test
+
+# Run with debug logging
+RUST_LOG=debug cargo run --bin agent -- -c config.toml
 ```
 
-### Running with Debug Logging
+## 📦 API Specification
 
-```bash
-RUST_LOG=debug cargo run --bin agent -- -c config.toml --log-level debug
-```
+OpenAPI specification available at [api/openapi/api/spec.yaml](../api/openapi/api/spec.yaml).
 
-## License
+## 📄 License
 
-MIT
+MIT License - see [LICENSE](../LICENSE) for details.
 
-## Contributing
+## 🤝 Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request.
+Contributions welcome! Please:
+1. Check existing issues or create one
+2. Fork the repository
+3. Create a feature branch
+4. Add tests for new functionality
+5. Submit a pull request
+
+See the [User Guide](GUIDE.md) for testing requirements and code standards.
+
+---
+
+**Need help?** See the [Complete User Guide](GUIDE.md) for detailed documentation.
