@@ -1,6 +1,5 @@
 //! Display claim information to the user
 
-use chrono::{DateTime, Utc};
 use tracing::info;
 use uuid::Uuid;
 
@@ -58,13 +57,12 @@ impl RegistrationResponse {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::Duration;
 
     #[test]
     fn test_display_claim_info_does_not_panic() {
         let agent_id = Uuid::now_v7();
         let claim_token = "test_token_123";
-        let expires_at = Utc::now() + Duration::hours(24);
+        let expires_at = chrono::Utc::now() + chrono::Duration::hours(24);
 
         let registration_response = RegistrationResponse {
             status: "pending".to_string(),

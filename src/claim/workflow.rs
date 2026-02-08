@@ -7,7 +7,6 @@ use crate::claim::{
     types::{AgentRegistration, ClaimResult},
 };
 use crate::{Config, Error, Result};
-use std::path::Path;
 use tracing::{error, info};
 use uuid::Uuid;
 
