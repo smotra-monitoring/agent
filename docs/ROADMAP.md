@@ -19,12 +19,9 @@
 - [X] Add to copilot-instructions to make method public only if necessary, default must be private. Do not proliferate pub fn.
 - [X] Add to copilot-instructions to document all features in folder docs/ with examples.
 - [X] Add to copilot-instructions that example rust-files should be placed in folder "examples" with file naming XXX_name.rs
+- [X] Update documentation in docs/ to reflect changes in API authentication from Bearer token to X-API-KEY header.
 
 
 ### In this PR
 
-
-- [ ] Move /api/v1/ to api.smotra.net/v1/
-
-
-- [ ] Update documentation in docs/ to reflect changes in API authentication from Bearer token to X-API-KEY header. 
+- [ ] Move /api/v1/ to api.smotra.net/v1/ 

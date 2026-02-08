@@ -105,7 +105,7 @@
 
 ### Reporting System
 - Periodic reporting to central server
-- HTTP client with authentication (reqwest with rustls-tls)
+- HTTP client with X-API-KEY header authentication (reqwest with rustls-tls)
 - Connection status tracking
 - Cache manager stub (disk persistence to be implemented)
 - Heartbeat reporting with system metrics (CPU, memory, uptime) using sysinfo crate

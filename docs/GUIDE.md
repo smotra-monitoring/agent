@@ -178,6 +178,23 @@ max_registration_retries = 5      # Max retries if registration fails
    - Agent saves to config file with restrictive permissions
    - Configuration automatically reloaded
 
+### API Authentication
+
+After the claiming workflow completes, the agent authenticates all API requests using the **X-API-KEY** header:
+
+```
+X-API-KEY: <your-api-key>
+```
+
+This header is automatically added to all requests by the agent when submitting:
+- Monitoring results to `/api/v1/monitoring/results`
+- Heartbeat status to `/api/v1/agent/heartbeat`
+- Any other authenticated endpoints
+
+The API key is stored securely in the configuration file with restricted file permissions (0600 on Unix systems) and loaded automatically when the agent starts.
+
+**Security Note**: The agent uses X-API-KEY header authentication instead of Bearer tokens for improved security and simplicity. Never share your API key or commit it to version control.
+
 ### Running the Agent
 
 Start the monitoring agent:

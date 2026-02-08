@@ -204,13 +204,31 @@ max_registration_retries = 5      # Retry up to 5 times
 
 ## API Endpoints Used
 
-1. **POST /api/v1/agent/register**
+### Authentication
+
+The agent uses the **X-API-KEY** header for API authentication. After the claiming workflow completes and the agent receives an API key, all subsequent API requests include this header:
+
+```
+X-API-KEY: <api-key-received-during-claiming>
+```
+
+### Endpoints
+
+1. **POST /api/v1/agent/register** (No authentication required)
    - Request: `{ agentId, claimTokenHash, hostname, agentVersion }`
    - Response: `{ status, pollUrl, claimUrl, expiresAt }`
 
-2. **GET /api/v1/agent/{agentId}/claim-status**
+2. **GET /api/v1/agent/{agentId}/claim-status** (No authentication required during claiming)
    - Pending: `{ status: "pending_claim", expiresAt }`
    - Claimed: `{ status: "claimed", apiKey, configUrl }`
+
+3. **POST /api/v1/monitoring/results** (Requires X-API-KEY header)
+   - Used to submit monitoring results after claiming
+   - Header: `X-API-KEY: <api-key>`
+
+4. **POST /api/v1/agent/heartbeat** (Requires X-API-KEY header)
+   - Used to send agent health status
+   - Header: `X-API-KEY: <api-key>`
 
 ## Implementation Statistics
 
