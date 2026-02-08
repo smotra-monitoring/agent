@@ -81,9 +81,9 @@ impl HeartbeatReporter {
         // Add agent version header
         request = request.header("X-Agent-Version", self.config.version.to_string());
 
-        // Use Bearer header as specified in OpenAPI spec (AgentApiKey security scheme)
+        // Use X-Agent-API-Key header as specified in OpenAPI spec (AgentApiKey security scheme)
         if let Some(api_key) = &self.config.server.api_key {
-            request = request.header("Authorization", format!("Bearer {}", api_key));
+            request = request.header("X-Agent-API-Key", api_key);
         }
 
         let response = request.send().await?;
