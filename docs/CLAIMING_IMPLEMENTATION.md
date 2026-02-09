@@ -38,7 +38,19 @@ Successfully implemented a complete agent self-registration and claiming workflo
   - Expiration time display
   - Professional, easy-to-read output
 
-#### `src/server_config.rs` - Secure Configuration Persistence
+- **workflow.rs**: Main claiming orchestrator
+  - `Claim` struct coordinating entire workflow
+  - Agent ID generation (UUIDv7)
+  - Token generation and hashing
+  - Registration with retry logic
+  - Polling coordination
+  - Returns ClaimResult with API key and agent ID
+
+#### `src/agent_config/loader.rs` - Configuration Persistence
+- `from_file()`: Load configuration from TOML
+- `save_to_file_secure()`: Async save with 0600 permissions on Unix  
+- `apply_claim_result()`: Apply ClaimResult to update agent_id and api_key
+- `validate()`: Configuration validation
 - API key storage with secure file permissions (0600 on Unix)
 - TOML configuration file updates
 - Atomic writes to prevent corruption
@@ -110,10 +122,11 @@ Successfully implemented a complete agent self-registration and claiming workflo
   - Claimed status deserialization
   - API key extraction
 
-- **Server config persistence** (src/server_config.rs):
+- **Server config persistence** (src/agent_config/loader.rs):
   - New config file creation
-  - Existing config file updates
+  - Existing config file updates  
   - File permissions verification (Unix)
+  - Async operations with secure file writes
 
 #### Integration Tests (tests/claim_integration_tests.rs)
 - **Full claiming workflow**: End-to-end test with mock server
@@ -204,13 +217,31 @@ max_registration_retries = 5      # Retry up to 5 times
 
 ## API Endpoints Used
 
-1. **POST /api/v1/agent/register**
+### Authentication
+
+The agent uses the **X-API-KEY** header for API authentication. After the claiming workflow completes and the agent receives an API key, all subsequent API requests include this header:
+
+```
+X-API-KEY: <api-key-received-during-claiming>
+```
+
+### Endpoints
+
+1. **POST /api/v1/agent/register** (No authentication required)
    - Request: `{ agentId, claimTokenHash, hostname, agentVersion }`
    - Response: `{ status, pollUrl, claimUrl, expiresAt }`
 
-2. **GET /api/v1/agent/{agentId}/claim-status**
+2. **GET /api/v1/agent/{agentId}/claim-status** (No authentication required during claiming)
    - Pending: `{ status: "pending_claim", expiresAt }`
    - Claimed: `{ status: "claimed", apiKey, configUrl }`
+
+3. **POST /api/v1/monitoring/results** (Requires X-API-KEY header)
+   - Used to submit monitoring results after claiming
+   - Header: `X-API-KEY: <api-key>`
+
+4. **POST /api/v1/agent/heartbeat** (Requires X-API-KEY header)
+   - Used to send agent health status
+   - Header: `X-API-KEY: <api-key>`
 
 ## Implementation Statistics
 
