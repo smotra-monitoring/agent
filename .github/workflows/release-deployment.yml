@@ -87,19 +87,31 @@ jobs:
           target: ${{ matrix.target }}
           
       - name: Update version in Cargo.toml to match release tag
+        if: matrix.os != 'windows-latest'
         run: |
           TAG_VERSION="${{ github.ref_name }}"
           TAG_VERSION="${TAG_VERSION#v}"
           sed -i.bak "s/^version = \".*\"/version = \"${TAG_VERSION}\"/" Cargo.toml
 
+      - name: Update version in Cargo.toml to match release tag
+        if: matrix.os == 'windows-latest'
+        run: |
+          TAG_VERSION="${{ github.ref_name }}"
+          TAG_VERSION="${TAG_VERSION#v}"
+          powershell -Command "(Get-Content Cargo.toml) -replace '^version = \".*\"', 'version = \"${TAG_VERSION}\"' | Set-Content Cargo.toml
+          
       - name: Debug info
         run: |
           cat Cargo.toml
+          rustc --version
+          cargo --version
+          cargo target list | grep "${{ matrix.target }}" || echo "Target not found"
+          rustup target list --installed
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
         
-      - name: Package
+      - name: Package (Unix)
         if: matrix.os != 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
@@ -107,14 +119,35 @@ jobs:
             agent agent-cli agent-updater
           sha256sum ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
             > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
-            
-      - name: Upload artifacts
+
+      - name: Package (Windows)
+        shell: bash
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          zip ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip \
+            agent.exe agent-cli.exe agent-updater.exe
+          certutil -hashfile "${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip" SHA256 > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip.sha256
+          sha256sum ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip \
+            > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip.sha256
+
+      - name: Upload artifacts (Unix)
         uses: actions/upload-artifact@v6
+        if: matrix.os != 'windows-latest'
         with:
           name: release-${{ matrix.target }}
           path: |
             target/${{ matrix.target }}/release/${{ github.event.repository.name }}-*.tar.gz
             target/${{ matrix.target }}/release/${{ github.event.repository.name }}-*.tar.gz.sha256
+
+      - name: Upload artifacts (Windows)
+        uses: actions/upload-artifact@v6
+        if: matrix.os == 'windows-latest'
+        with:
+          name: release-${{ matrix.target }}
+          path: |
+            target/${{ matrix.target }}/release/${{ github.event.repository.name }}-*.zip
+            target/${{ matrix.target }}/release/${{ github.event.repository.name }}-*.zip.sha256
 
   deploy-release:
     needs: build
