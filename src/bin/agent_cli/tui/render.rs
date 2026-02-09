@@ -40,7 +40,12 @@ pub fn render_header(f: &mut Frame, area: Rect, tabs: &[&str], selected: usize) 
     f.render_widget(header, area);
 }
 
-pub fn render_status(f: &mut Frame, area: Rect, status: &smotra_agent::AgentStatus, config: &Config) {
+pub fn render_status(
+    f: &mut Frame,
+    area: Rect,
+    status: &smotra_agent::AgentStatus,
+    config: &Config,
+) {
     use ratatui::layout::{Constraint, Direction, Layout};
 
     let chunks = Layout::default()

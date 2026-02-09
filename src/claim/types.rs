@@ -83,7 +83,7 @@ pub enum ClaimStatus {
 pub struct ClaimResult {
     /// API key for server authentication
     pub api_key: String,
-    
+
     /// Agent ID (newly generated or existing)
     pub agent_id: Uuid,
 }
