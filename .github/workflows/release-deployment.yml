@@ -170,6 +170,8 @@ jobs:
   deploy-release:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v7
@@ -265,7 +267,7 @@ jobs:
           cp "releases/${VERSION}/manifest.json" "releases/latest/manifest.json"
           
           # Copy install script from main branch
-          cp ../main/scripts/install.sh agent.sh
+          cp ../deployments/install-script/install.sh agent.sh
           chmod +x agent.sh
           
           # Create index.html for documentation
