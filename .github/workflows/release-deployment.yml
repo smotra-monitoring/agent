@@ -85,6 +85,22 @@ jobs:
         with:
           toolchain: stable
           target: ${{ matrix.target }}
+          override: true
+      
+      - name: Install musl tools
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      
+      - name: Install aarch64 cross-compilation tools
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      
+      - name: Configure linker for aarch64
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          mkdir -p .cargo
+          echo '[target.aarch64-unknown-linux-gnu]' >> .cargo/config.toml
+          echo 'linker = "aarch64-linux-gnu-gcc"' >> .cargo/config.toml
           
       - name: Update version in Cargo.toml to match release tag
         if: matrix.os != 'windows-latest'
@@ -127,7 +143,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
-          zip ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip \
+          7z a ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip \
             agent.exe agent-cli.exe agent-updater.exe
           certutil -hashfile "${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip" SHA256 > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip.sha256
           sha256sum ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip \
