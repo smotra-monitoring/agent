@@ -66,16 +66,16 @@ jobs:
             target: x86_64-unknown-linux-gnu
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-          - os: ubuntu-latest
-            target: aarch64-unknown-linux-gnu
-          - os: macos-latest
-            target: x86_64-apple-darwin
-          - os: macos-latest
-            target: aarch64-apple-darwin
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-          - os: windows-latest
-            target: x86_64-pc-windows-gnu
+          # - os: ubuntu-latest
+          #   target: aarch64-unknown-linux-gnu
+          # - os: macos-latest
+          #   target: x86_64-apple-darwin
+          # - os: macos-latest
+          #   target: aarch64-apple-darwin
+          # - os: windows-latest
+          #   target: x86_64-pc-windows-msvc
+          # - os: windows-latest
+          #   target: x86_64-pc-windows-gnu
 
     steps:
       - uses: actions/checkout@v4
@@ -174,7 +174,9 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v7
         with:
-          name: release
+          path: artifacts
+          pattern: release-*
+          merge-multiple: true
 
       - name: start deployment
         uses: bobheadxi/deployments@v1
@@ -228,6 +230,8 @@ jobs:
         uses: actions/download-artifact@v7
         with:
           path: artifacts
+          pattern: release-*
+          merge-multiple: true
         
       - name: Checkout main branch for install script
         uses: actions/checkout@v3
