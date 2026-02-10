@@ -197,15 +197,27 @@ jobs:
           tree -a -L 2 . 
           ls -la artifacts
 
-      - name: Upload release assets
+      - name: Upload release assets (without sha256 files)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
             ASSET_DIR="artifacts"
-            for file in $(ls ${ASSET_DIR}); do
+            for file in $(ls ${ASSET_DIR}/*.tar.gz); do
               gh release upload ${RELEASE_TAG} "${ASSET_DIR}/${file}" --clobber
             done
+
+      - name: Create checksums.txt
+        run: |
+          cd artifacts
+          find . -name "*.sha256" -exec cat {} \; >> checksums.txt
+
+      - name: Upload checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release upload ${RELEASE_TAG} "artifacts/checksums.txt" --clobber
 
       - name: finish deployment
         uses: bobheadxi/deployments@v1
@@ -292,7 +304,7 @@ jobs:
               <p>Latest Version: <strong>${VERSION}</strong></p>
               
               <h2>Quick Install</h2>
-              <pre><code>curl -fsSL https://\$(YOUR_DOMAIN)/agent.sh | sh</code></pre>
+              <pre><code>curl -fsSL https://install.smotra.net/agent.sh | sh</code></pre>
               
               <h2>Available Releases</h2>
               <ul>
@@ -327,7 +339,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: gh-pages/releases/${{ github.ref_name }}/*
+          files: gh-pages/releases/vv${{ github.ref_name }}/*
 
       - name: finish deployment
         uses: bobheadxi/deployments@v1
