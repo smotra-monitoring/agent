@@ -204,7 +204,7 @@ jobs:
         run: |
             ASSET_DIR="artifacts"
             for file in $(ls ${ASSET_DIR}/*.tar.gz); do
-              gh release upload ${RELEASE_TAG} "${ASSET_DIR}/${file}" --clobber
+              gh release upload ${RELEASE_TAG} "${file}" --clobber
             done
 
       - name: Create checksums.txt
@@ -336,10 +336,10 @@ jobs:
           git commit -m "Release ${{ github.ref_name }}" || echo "No changes to commit"
           git push origin gh-pages
         
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: gh-pages/releases/vv${{ github.ref_name }}/*
+      # - name: Create GitHub Release
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     files: gh-pages/releases/${{ github.ref_name }}/*
 
       - name: finish deployment
         uses: bobheadxi/deployments@v1
