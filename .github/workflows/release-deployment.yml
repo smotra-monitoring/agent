@@ -172,6 +172,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      deployments: write
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v7
@@ -220,6 +221,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write  # Required for GitHub Pages deployment
+      deployments: write
     steps:
       - name: Checkout gh-pages branch
         uses: actions/checkout@v3
@@ -267,7 +269,7 @@ jobs:
           cp "releases/${VERSION}/manifest.json" "releases/latest/manifest.json"
           
           # Copy install script from main branch
-          cp ../deployments/install-script/install.sh agent.sh
+          cp ../main/deployments/install-script/install.sh agent.sh
           chmod +x agent.sh
           
           # Create index.html for documentation
