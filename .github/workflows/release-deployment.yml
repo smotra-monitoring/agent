@@ -45,10 +45,17 @@ jobs:
         run: |
           echo "version is: ${{ github.ref_name }}"
           
-      - name: Create GitHub release
+      - name: Publish existing draft release or create if not exists
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create ${{ github.ref_name }} --draft --verify-tag --title ${{ github.ref_name }}
+        run: |
+          # Check if a draft release already exists
+          if gh release view ${{ github.ref_name }} &>/dev/null; then
+            echo "Draft release exists, no need to create"
+          else
+            echo "No release found, creating one"
+            gh release create ${{ github.ref_name }} --draft --verify-tag --title ${{ github.ref_name }}
+          fi
 
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
@@ -306,14 +313,8 @@ jobs:
               <h2>Quick Install</h2>
               <pre><code>curl -fsSL https://install.smotra.net/agent.sh | sh</code></pre>
               
-              <h2>Available Releases</h2>
-              <ul>
-                  <li><a href="releases/${VERSION}/">Version ${VERSION}</a></li>
-                  <li><a href="releases/latest/">Latest</a></li>
-              </ul>
-              
               <h2>Documentation</h2>
-              <p>Visit <a href="https://github.com/your-org/${{ github.event.repository.name }}">GitHub Repository</a> for full documentation.</p>
+              <p>Visit <a href="https://github.com/${{ github.event.repository.owner.login }}/${{ github.event.repository.name }}">GitHub Repository</a> for full documentation.</p>
           </body>
           </html>
           EOF
