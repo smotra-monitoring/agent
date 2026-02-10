@@ -192,15 +192,15 @@ jobs:
 
       - name: Debug info
         run: |
-          tree -a -L 2 release 
-          ls -la release
+          tree -a -L 2 . 
+          ls -la artifacts
 
       - name: Upload release assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-            ASSET_DIR="release"
+            ASSET_DIR="artifacts"
             for file in $(ls ${ASSET_DIR}); do
               gh release upload ${RELEASE_TAG} "${ASSET_DIR}/${file}" --clobber
             done
