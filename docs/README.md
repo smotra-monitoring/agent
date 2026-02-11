@@ -1,5 +1,8 @@
 # Smotra Agent
 
+[![CLA](https://img.shields.io/badge/CLA-signed-brightgreen)](../LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](../LICENSE)
+
 A lightweight, distributed monitoring agent written in Rust for tracking reachability and performance of networked hosts. Part of the Smotra monitoring system.
 
 ## 🚀 Quick Start
@@ -166,7 +169,7 @@ OpenAPI specification will be available at `api/openapi/` (currently in developm
 
 ## 📄 License
 
-MIT License - see [LICENSE](../LICENSE) for details.
+Apache 2.0 License - see [LICENSE](../LICENSE) for details.
 
 ## 🤝 Contributing
 
@@ -175,7 +178,8 @@ Contributions welcome! Please:
 2. Fork the repository
 3. Create a feature branch
 4. Add tests for new functionality
-5. Submit a pull request
+5. Sign the Contributor License Agreement (CLA) - required for all pull requests
+6. Submit a pull request
 
 See the [User Guide](GUIDE.md) for testing requirements and code standards.
 

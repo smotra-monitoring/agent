@@ -325,8 +325,16 @@ RUST_LOG=debug cargo run --bin agent -- -c config.toml --log-level debug
 
 ## License
 
-MIT
+Apache 2.0
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request.
+Contributions are welcome! Please:
+1. Check existing issues or create one
+2. Fork the repository
+3. Create a feature branch
+4. Add tests for new functionality
+5. Sign the Contributor License Agreement (CLA) - required for all pull requests
+6. Submit a pull request
+
+For detailed testing requirements and code standards, see the project documentation.

@@ -1,6 +1,7 @@
 aarch
 aws
 Bulima
+CLA
 cloudfront
 czf
 datacenter
