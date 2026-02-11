@@ -1,6 +1,6 @@
 # Smotra Agent
 
-[![CLA](https://img.shields.io/badge/CLA-signed-brightgreen)](../LICENSE)
+[![CLA](https://img.shields.io/badge/CLA-signed-brightgreen)](https://cla-assistant.io/smotra/smotra-agent)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](../LICENSE)
 
 A lightweight, distributed monitoring agent written in Rust for tracking reachability and performance of networked hosts. Part of the Smotra monitoring system.
