@@ -89,7 +89,7 @@ https://install.smotra.net/
 
 ## Install Script Implementation
 
-Here's the complete [agnet.sh](../deployments/install/agent.sh) 
+Here's the complete [agent.sh](../deployments/install/agent.sh) 
 
 
 ## Build Pipeline Requirements
