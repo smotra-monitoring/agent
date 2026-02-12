@@ -290,8 +290,8 @@ jobs:
           cp "releases/${VERSION}/manifest.json" "releases/latest/manifest.json"
           
           # Copy install script from main branch
-          cp ../main/deployments/install-script/install.sh agent.sh
-          chmod +x agent.sh
+          cp ../main/deployments/install-script/install.sh install.sh
+          chmod +x install.sh
           
           # Create index.html for documentation
           cat > index.html <<EOF
@@ -311,7 +311,7 @@ jobs:
               <p>Latest Version: <strong>${VERSION}</strong></p>
               
               <h2>Quick Install</h2>
-              <pre><code>curl -fsSL https://install.smotra.net/agent.sh | sh</code></pre>
+              <pre><code>curl -fsSL https://install.smotra.net/install.sh | sh</code></pre>
               
               <h2>Documentation</h2>
               <p>Visit <a href="https://github.com/${{ github.event.repository.owner.login }}/${{ github.event.repository.name }}">GitHub Repository</a> for full documentation.</p>
