@@ -2,6 +2,7 @@ aarch
 aws
 bak
 Bulima
+CLA
 cloudfront
 czf
 datacenter

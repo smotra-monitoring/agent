@@ -1,0 +1,353 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  release:
+    types: ['published']
+
+jobs:
+  release-pre-checks:
+    name:  Test, lint and attempt to build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v4
+
+    # - name: Run clippy
+    #   run: cargo clippy --verbose -- -D warnings
+
+    - name: Run tests
+      run: cargo test --verbose
+
+    - name: Run fmt
+      run: cargo fmt -- --check
+
+    - name: Install dependencies
+      run: cargo build
+
+  create-release:
+    name: create-release
+    needs: ['release-pre-checks']
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Get the release version from the tag
+        id: version
+        run: echo "VERSION=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+        
+      - name: Show the version
+        run: |
+          echo "version is: ${{ github.ref_name }}"
+          
+      - name: Publish existing draft release or create if not exists
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Check if a draft release already exists
+          if gh release view ${{ github.ref_name }} &>/dev/null; then
+            echo "Draft release exists, no need to create"
+          else
+            echo "No release found, creating one"
+            gh release create ${{ github.ref_name }} --draft --verify-tag --title ${{ github.ref_name }}
+          fi
+
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+
+
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+      
+      - name: Install musl tools
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+      
+      - name: Install aarch64 cross-compilation tools
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      
+      - name: Configure linker for aarch64
+        if: matrix.target == 'aarch64-unknown-linux-gnu'
+        run: |
+          mkdir -p .cargo
+          echo '[target.aarch64-unknown-linux-gnu]' >> .cargo/config.toml
+          echo 'linker = "aarch64-linux-gnu-gcc"' >> .cargo/config.toml
+          
+      - name: Update version in Cargo.toml to match release tag
+        if: matrix.os != 'windows-latest'
+        run: |
+          TAG_VERSION="${{ github.ref_name }}"
+          TAG_VERSION="${TAG_VERSION#v}"
+          sed -i.bak "s/^version = \".*\"/version = \"${TAG_VERSION}\"/" Cargo.toml
+
+      - name: Update version in Cargo.toml to match release tag
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $TAG_VERSION = "${{ github.ref_name }}" -replace '^v', ''
+          (Get-Content Cargo.toml) -replace '^version = ".*"', "version = `"$TAG_VERSION`"" | Set-Content Cargo.toml
+          
+      - name: Debug info
+        run: |
+          cat Cargo.toml
+          rustc --version
+          cargo --version
+          echo rustup target list --installed
+          rustup target list --installed
+          echo rustup toolchain list
+          rustup toolchain list
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
+        
+      - name: Package (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          tar czf ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
+            agent agent-cli agent-updater
+          sha256sum ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
+            > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
+
+      - name: Package (Windows)
+        shell: bash
+        if: matrix.os == 'windows-latest'
+        run: |
+          cd target/${{ matrix.target }}/release
+          7z a ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip \
+            agent.exe agent-cli.exe agent-updater.exe
+          certutil -hashfile "${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip" SHA256 > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip.sha256
+          sha256sum ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip \
+            > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip.sha256
+
+      - name: Upload artifacts (Unix)
+        uses: actions/upload-artifact@v6
+        if: matrix.os != 'windows-latest'
+        with:
+          name: release-${{ matrix.target }}
+          path: |
+            target/${{ matrix.target }}/release/${{ github.event.repository.name }}-*.tar.gz
+            target/${{ matrix.target }}/release/${{ github.event.repository.name }}-*.tar.gz.sha256
+
+      - name: Upload artifacts (Windows)
+        uses: actions/upload-artifact@v6
+        if: matrix.os == 'windows-latest'
+        with:
+          name: release-${{ matrix.target }}
+          path: |
+            target/${{ matrix.target }}/release/${{ github.event.repository.name }}-*.zip
+            target/${{ matrix.target }}/release/${{ github.event.repository.name }}-*.zip.sha256
+
+  deploy-release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+          pattern: release-*
+          merge-multiple: true
+
+      - name: start deployment
+        uses: bobheadxi/deployments@v1
+        id: deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: release
+          desc: "run_id: ${{ github.run_id }}, ref: ${{ github.ref }}"
+
+      - name: Debug info
+        run: |
+          tree -a -L 2 . 
+          ls -la artifacts
+
+      - name: Upload release assets (without sha256 files)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+            ASSET_DIR="artifacts"
+            for file in $(ls ${ASSET_DIR}/*.tar.gz); do
+              gh release upload ${RELEASE_TAG} "${file}" --clobber
+            done
+
+      - name: Create checksums.txt
+        run: |
+          cd artifacts
+          find . -name "*.sha256" -exec cat {} \; >> checksums.txt
+
+      - name: Upload checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          gh release upload ${RELEASE_TAG} "artifacts/checksums.txt" --clobber
+
+      - name: finish deployment
+        uses: bobheadxi/deployments@v1
+        if: always()
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          env: ${{ steps.deployment.outputs.env }}
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+
+
+  deploy-gh-pages:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Required for GitHub Pages deployment
+      deployments: write
+    steps:
+      - name: Checkout gh-pages branch
+        uses: actions/checkout@v3
+        with:
+          ref: gh-pages
+          path: gh-pages
+        # If gh-pages doesn't exist, create it manually first
+        
+      - name: Download artifacts
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+          pattern: release-*
+          merge-multiple: true
+        
+      - name: Checkout main branch for install script
+        uses: actions/checkout@v3
+        with:
+          path: main
+        
+      - name: Organize release files
+        run: |
+          VERSION="${{ github.ref_name }}"
+          cd gh-pages
+          
+          # Create release directory
+          mkdir -p "releases/${VERSION}"
+          
+          # Move all artifacts to release directory
+          find ../artifacts -name "*.tar.gz*" -exec mv {} "releases/${VERSION}/" \;
+          
+          # Create manifest.json
+          cat > "releases/${VERSION}/manifest.json" <<EOF
+          {
+            "version": "${VERSION#v}",
+            "released_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "checksums": {},
+            "targets": []
+          }
+          EOF
+          
+          # Update latest directory
+          mkdir -p "releases/latest"
+          echo "${VERSION}" > "releases/latest/version.txt"
+          cp "releases/${VERSION}/manifest.json" "releases/latest/manifest.json"
+          
+          # Copy install script from main branch
+          cp ../main/deployments/install-script/install.sh install.sh
+          chmod +x install.sh
+          
+          # Create index.html for documentation
+          cat > index.html <<EOF
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>Smotra Agent Install</title>
+              <meta charset="utf-8">
+              <style>
+                  body { font-family: sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+                  pre { background: #f4f4f4; padding: 15px; border-radius: 5px; overflow-x: auto; }
+                  code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+              </style>
+          </head>
+          <body>
+              <h1>Smotra Agent Installation</h1>
+              <p>Latest Version: <strong>${VERSION}</strong></p>
+              
+              <h2>Quick Install</h2>
+              <pre><code>curl -fsSL https://install.smotra.net/install.sh | sh</code></pre>
+              
+              <h2>Documentation</h2>
+              <p>Visit <a href="https://github.com/${{ github.event.repository.owner.login }}/${{ github.event.repository.name }}">GitHub Repository</a> for full documentation.</p>
+          </body>
+          </html>
+          EOF
+        
+      - name: start deployment
+        uses: bobheadxi/deployments@v1
+        id: deployment
+        with:
+          step: start
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: gh-pages
+          desc: "run_id: ${{ github.run_id }}, ref: ${{ github.ref }}"
+
+      - name: Commit and push to gh-pages
+        run: |
+          cd gh-pages
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add .
+          git commit -m "Release ${{ github.ref_name }}" || echo "No changes to commit"
+          git push origin gh-pages
+        
+      # - name: Create GitHub Release
+      #   uses: softprops/action-gh-release@v1
+      #   with:
+      #     files: gh-pages/releases/${{ github.ref_name }}/*
+
+      - name: finish deployment
+        uses: bobheadxi/deployments@v1
+        if: always()
+        with:
+          step: finish
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          env: ${{ steps.deployment.outputs.env }}
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
