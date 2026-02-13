@@ -1,6 +1,5 @@
 //! Data reporting to central server with local caching
 
-mod cache;
 mod heartbeat;
 mod server;
 
