@@ -34,8 +34,6 @@ impl AgentRegistration {
 /// Response from agent registration
 #[derive(Debug, Clone, Deserialize)]
 pub struct RegistrationResponse {
-    pub status: String,
-
     #[serde(rename = "pollUrl")]
     pub poll_url: String,
 
@@ -62,9 +60,6 @@ pub struct ClaimStatusClaimed {
 
     #[serde(rename = "apiKey")]
     pub api_key: String,
-
-    #[serde(rename = "configUrl")]
-    pub config_url: String,
 }
 
 /// Claim status enum

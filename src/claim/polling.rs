@@ -166,7 +166,6 @@ mod tests {
 
         assert_eq!(claimed.status, "claimed");
         assert_eq!(claimed.api_key, "sk_live_abc123");
-        assert_eq!(claimed.config_url, "/agent/123/configuration");
     }
 
     #[tokio::test]

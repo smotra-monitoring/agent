@@ -29,4 +29,4 @@ pub use core::{
 pub use error::{Error, Result};
 pub use reporter::HeartbeatReporter;
 
-pub use plugin::MonitoringPlugin;
+pub use plugin::{MonitoringPlugin, PluginRegistry};

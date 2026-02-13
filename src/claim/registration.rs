@@ -133,7 +133,6 @@ mod tests {
 
         let response: RegistrationResponse = serde_json::from_str(json).unwrap();
 
-        assert_eq!(response.status, "pending_claim");
         assert_eq!(response.poll_url, "/agent/123/claim-status");
         assert_eq!(response.claim_url, "https://example.com/claim");
         assert_eq!(
@@ -227,10 +226,6 @@ mod tests {
         assert_eq!(
             result1.as_ref().unwrap().poll_url,
             result2.as_ref().unwrap().poll_url
-        );
-        assert_eq!(
-            result1.as_ref().unwrap().status,
-            result2.as_ref().unwrap().status
         );
     }
 }
