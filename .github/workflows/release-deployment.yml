@@ -65,6 +65,8 @@ jobs:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     needs: create-release
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
