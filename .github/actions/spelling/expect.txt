@@ -1,5 +1,6 @@
 aarch
 aws
+bak
 Bulima
 CLA
 cloudfront
@@ -20,6 +21,7 @@ mktemp
 mockall
 modelcontextprotocol
 MQTT
+msvc
 Newtype
 OAuth
 openapi
