@@ -1,7 +1,7 @@
 //! Main agent daemon binary
 
 use clap::Parser;
-use smotra_agent::{Agent, Claim, Config, Endpoint, Result};
+use smotra::{Agent, Claim, Config, Endpoint, Result};
 use std::path::PathBuf;
 use tracing::{error, info};
 

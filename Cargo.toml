@@ -1,5 +1,5 @@
 [package]
-name = "smotra-agent"
+name = "smotra"
 version = "0.1.0"
 edition = "2021"
 authors = ["Smotra Team"]
@@ -7,20 +7,20 @@ description = "Distributed monitoring agent for tracking reachability and perfor
 license = "MIT"
 
 [lib]
-name = "smotra_agent"
+name = "smotra"
 path = "src/lib.rs"
 
 [[bin]]
-name = "agent"
-path = "src/bin/agent.rs"
+name = "smotra"
+path = "src/bin/smotra.rs"
 
 [[bin]]
-name = "agent-cli"
-path = "src/bin/agent_cli/main.rs"
+name = "smotra-cli"
+path = "src/bin/smotra_cli/main.rs"
 
 [[bin]]
-name = "agent-updater"
-path = "src/bin/agent_updater.rs"
+name = "smotra-updater"
+path = "src/bin/smotra_updater.rs"
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }

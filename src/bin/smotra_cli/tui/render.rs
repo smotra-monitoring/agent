@@ -8,7 +8,7 @@ use ratatui::{
     widgets::{Block, Borders, Gauge, List, ListItem, Paragraph},
     Frame,
 };
-use smotra_agent::Config;
+use smotra::Config;
 use tracing::Level;
 
 pub fn render_header(f: &mut Frame, area: Rect, tabs: &[&str], selected: usize) {
@@ -40,12 +40,7 @@ pub fn render_header(f: &mut Frame, area: Rect, tabs: &[&str], selected: usize) 
     f.render_widget(header, area);
 }
 
-pub fn render_status(
-    f: &mut Frame,
-    area: Rect,
-    status: &smotra_agent::AgentStatus,
-    config: &Config,
-) {
+pub fn render_status(f: &mut Frame, area: Rect, status: &smotra::AgentStatus, config: &Config) {
     use ratatui::layout::{Constraint, Direction, Layout};
 
     let chunks = Layout::default()

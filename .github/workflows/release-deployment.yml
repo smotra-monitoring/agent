@@ -141,7 +141,7 @@ jobs:
         run: |
           cd target/${{ matrix.target }}/release
           tar czf ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
-            agent agent-cli agent-updater
+            smotra smotra-cli smotra-updater
           sha256sum ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
             > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
 
@@ -151,7 +151,7 @@ jobs:
         run: |
           cd target/${{ matrix.target }}/release
           7z a ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip \
-            agent.exe agent-cli.exe agent-updater.exe
+            smotra.exe smotra-cli.exe smotra-updater.exe
           certutil -hashfile "${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip" SHA256 > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip.sha256
           sha256sum ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip \
             > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip.sha256

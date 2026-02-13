@@ -1,6 +1,6 @@
 //! Integration tests for agent claiming workflow public API
 
-use smotra_agent::{Claim, Config};
+use smotra::{Claim, Config};
 use tempfile::NamedTempFile;
 
 #[test]

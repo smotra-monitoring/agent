@@ -1,6 +1,6 @@
 //! Command handlers for CLI operations
 
-use smotra_agent::{Agent, Config, Result};
+use smotra::{Agent, Config, Result};
 use std::path::PathBuf;
 
 /// Show current status

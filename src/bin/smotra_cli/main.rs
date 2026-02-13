@@ -7,7 +7,7 @@ mod tui;
 
 use clap::Parser;
 use cli_args::{Cli, Commands};
-use smotra_agent::Result;
+use smotra::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {

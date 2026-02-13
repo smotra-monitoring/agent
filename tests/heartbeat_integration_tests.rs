@@ -1,6 +1,6 @@
 //! Integration tests for heartbeat functionality
 
-use smotra_agent::{Config, HeartbeatReporter};
+use smotra::{Config, HeartbeatReporter};
 use uuid::Uuid;
 
 #[tokio::test]
@@ -33,7 +33,7 @@ async fn test_heartbeat_without_server() {
 }
 
 fn create_test_config() -> Config {
-    use smotra_agent::{MonitoringConfig, ServerConfig, StorageConfig};
+    use smotra::{MonitoringConfig, ServerConfig, StorageConfig};
 
     Config {
         version: 1,

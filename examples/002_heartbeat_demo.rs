@@ -1,6 +1,6 @@
 //! Example demonstrating heartbeat metrics collection
 
-use smotra_agent::{Config, HeartbeatReporter, MonitoringConfig, ServerConfig, StorageConfig};
+use smotra::{Config, HeartbeatReporter, MonitoringConfig, ServerConfig, StorageConfig};
 use uuid::Uuid;
 
 #[tokio::main]

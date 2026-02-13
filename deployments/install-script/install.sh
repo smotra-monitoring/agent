@@ -217,17 +217,15 @@ download_agent() {
 install_binaries() {
     info "Installing binaries to $INSTALL_DIR..."
     
-    mkdir -p "$INSTALL_DIR"
-    
     # Install binaries
-    install -m 755 "$TMPDIR/agent" "$INSTALL_DIR/smotra-agent"
-    install -m 755 "$TMPDIR/agent-cli" "$INSTALL_DIR/smotra-agent-cli"
-    install -m 755 "$TMPDIR/agent-updater" "$INSTALL_DIR/smotra-agent-updater"
+    install -D -m 755 "$TMPDIR/smotra" "$INSTALL_DIR/smotra"
+    install -D -m 755 "$TMPDIR/smotra-cli" "$INSTALL_DIR/smotra-cli"
+    install -D -m 755 "$TMPDIR/smotra-updater" "$INSTALL_DIR/smotra-updater"
 
     # Set capabilities for ICMP (Linux only)
     if [ "$OS" = "linux" ] && command -v setcap >/dev/null 2>&1 && [ "$(id -u)" -eq 0 ]; then
         info "Setting ICMP capabilities..."
-        setcap cap_net_raw+ep "$INSTALL_DIR/smotra-agent" || warn "Failed to set capabilities. You may need to run as root."
+        setcap cap_net_raw+ep "$INSTALL_DIR/smotra" || warn "Failed to set capabilities. You may need to run as root."
     fi
 
     info "Binaries installed successfully"
@@ -246,7 +244,7 @@ generate_config() {
         return
     fi
 
-    smotra-agent --gen-config
+    smotra --gen-config
     mv config.toml "$CONFIG_DIR/config.toml"
     chmod 640 "$CONFIG_DIR/config.toml"
     info "Configuration file created at $CONFIG_DIR/config.toml"
@@ -265,7 +263,7 @@ install_systemd_service() {
 
     info "Installing systemd service..."
     
-    cat > /etc/systemd/system/smotra-agent.service <<EOF
+    cat > /etc/systemd/system/smotra.service <<EOF
 [Unit]
 Description=Smotra Monitoring Agent
 After=network.target
@@ -274,7 +272,7 @@ Documentation=https://github.com/smotra/agent
 [Service]
 Type=simple
 User=root
-ExecStart=$INSTALL_DIR/smotra-agent -c $CONFIG_DIR/config.toml
+ExecStart=$INSTALL_DIR/smotra -c $CONFIG_DIR/config.toml
 Restart=always
 RestartSec=5
 StandardOutput=journal
@@ -286,7 +284,7 @@ EOF
 
     systemctl daemon-reload
     info "Systemd service installed"
-    info "Enable and start with: systemctl enable --now smotra-agent"
+    info "Enable and start with: systemctl enable --now smotra"
 }
 
 # Install launchd service (macOS)
@@ -308,7 +306,7 @@ install_launchd_service() {
     <string>net.smotra.agent</string>
     <key>ProgramArguments</key>
     <array>
-        <string>$INSTALL_DIR/smotra-agent</string>
+        <string>$INSTALL_DIR/smotra</string>
         <string>-c</string>
         <string>$CONFIG_DIR/config.toml</string>
     </array>
@@ -317,9 +315,9 @@ install_launchd_service() {
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/tmp/smotra-agent.log</string>
+    <string>/tmp/smotra.log</string>
     <key>StandardErrorPath</key>
-    <string>/tmp/smotra-agent.error.log</string>
+    <string>/tmp/smotra.error.log</string>
 </dict>
 </plist>
 EOF
@@ -335,9 +333,9 @@ print_instructions() {
 ${GREEN}✓ Smotra Agent installed successfully!${NC}
 
 Binaries installed:
-  - $INSTALL_DIR/smotra-agent
-  - $INSTALL_DIR/smotra-agent-cli
-  - $INSTALL_DIR/smotra-agent-updater
+  - $INSTALL_DIR/smotra
+  - $INSTALL_DIR/smotra-cli
+  - $INSTALL_DIR/smotra-updater
 
 Configuration:
   - Config file: $CONFIG_DIR/config.toml
@@ -350,9 +348,9 @@ Next steps:
 EOF
 
     if [ "$OS" = "linux" ] && command -v systemctl >/dev/null 2>&1 && [ "$(id -u)" -eq 0 ]; then
-        echo "     sudo systemctl enable --now smotra-agent"
+        echo "     sudo systemctl enable --now smotra"
     else
-        echo "     sudo $INSTALL_DIR/smotra-agent -c $CONFIG_DIR/config.toml"
+        echo "     sudo $INSTALL_DIR/smotra -c $CONFIG_DIR/config.toml"
     fi
 
     cat <<EOF
@@ -362,8 +360,8 @@ EOF
 
 For more information:
   - Documentation: https://github.com/smotra/agent/docs
-  - Run interactive TUI: $INSTALL_DIR/smotra-agent-cli -c $CONFIG_DIR/config.toml tui
-  - Get help: $INSTALL_DIR/smotra-agent --help
+  - Run interactive TUI: $INSTALL_DIR/smotra-cli -c $CONFIG_DIR/config.toml tui
+  - Get help: $INSTALL_DIR/smotra --help
 
 EOF
 }

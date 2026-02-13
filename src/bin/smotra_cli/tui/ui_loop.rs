@@ -9,7 +9,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     Terminal,
 };
-use smotra_agent::{Agent, Result};
+use smotra::{Agent, Result};
 use std::collections::VecDeque;
 use std::io;
 use std::sync::Arc;

@@ -2,8 +2,8 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use smotra_agent::{
-    MonitoringPlugin, {CheckType, Endpoint, MonitoringResult, PluginResult},
+use smotra::{
+    Error, MonitoringPlugin, {CheckType, Endpoint, MonitoringResult, PluginResult},
 };
 use std::collections::HashMap;
 
@@ -37,7 +37,7 @@ impl MonitoringPlugin for HttpPlugin {
         &self,
         agent_id: &uuid::Uuid,
         endpoint: &Endpoint,
-    ) -> smotra_agent::Result<MonitoringResult> {
+    ) -> smotra::Result<MonitoringResult> {
         let url = if let Some(port) = endpoint.port {
             format!("http://{}:{}", endpoint.address, port)
         } else {
@@ -82,7 +82,7 @@ impl MonitoringPlugin for HttpPlugin {
                 };
                 Ok(result)
             }
-            Err(e) => Err(smotra_agent::Error::Http(e)),
+            Err(e) => Err(Error::Http(e)),
         };
 
         result

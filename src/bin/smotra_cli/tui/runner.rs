@@ -9,7 +9,7 @@ use crossterm::{
 };
 use parking_lot::Mutex;
 use ratatui::{backend::CrosstermBackend, Terminal};
-use smotra_agent::{Agent, Config, Result};
+use smotra::{Agent, Config, Result};
 use std::collections::VecDeque;
 use std::io;
 use std::path::PathBuf;
@@ -25,7 +25,7 @@ pub async fn run_tui(
         Config::from_file(&config_path)?
     } else {
         tracing::error!("Config file not found at: {}", config_path.display());
-        return Err(smotra_agent::Error::Config(format!(
+        return Err(smotra::Error::Config(format!(
             "Configuration file {} not found",
             config_path.display()
         )));
