@@ -16,8 +16,8 @@ jobs:
     - name: checkout code
       uses: actions/checkout@v4
 
-    # - name: Run clippy
-    #   run: cargo clippy --verbose -- -D warnings
+    - name: Run clippy
+      run: cargo clippy --verbose -- -D warnings
 
     - name: Run tests
       run: cargo test --verbose
