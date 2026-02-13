@@ -7,6 +7,9 @@ on:
   release:
     types: ['published']
 
+permissions:
+  contents: read
+
 jobs:
   release-pre-checks:
     name:  Test, lint and attempt to build
