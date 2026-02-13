@@ -325,16 +325,27 @@ RUST_LOG=debug cargo run --bin agent -- -c config.toml --log-level debug
 
 ## License
 
-Apache 2.0
+Apache 2.0 License - see [LICENSE](../LICENSE) for details.
 
-## Contributing
+## 🤝 Contributing
+This is an open-source project, and we deeply value the community's interest. However, due to the high volume of automated and machine-generated code currently being submitted, we are significantly narrowing our intake process to maintain code quality and project stability.
 
-Contributions are welcome! Please:
-1. Check existing issues or create one
-2. Fork the repository
-3. Create a feature branch
-4. Add tests for new functionality
-5. Sign the Contributor License Agreement (CLA) - required for all pull requests
-6. Submit a pull request
+### Current PR Policy
+To ensure our maintainers can focus on meaningful improvements:
+
+- **General Pull Requests:** We are currently not accepting unsolicited PRs, particularly those containing generated code.
+
+- **Exceptions:** Critical bug fixes or major feature enhancements are still considered on a case-by-case basis.
+
+- **CLA Requirement:** If an exception is made for your contribution, you must sign our Contributor License Agreement (CLA) before any code can be reviewed or merged.
+
+### How to Help
+If you’ve found a bug or have a great idea:
+
+- **Open an Issue:** Please start by searching existing issues or creating a new one to discuss your proposal.
+
+- **Wait for Feedback:** Do not spend time on a PR until a maintainer has greenlit the approach in the issue comments.
+
+- **Follow the Workflow:** Once approved, you may fork the repo, work in a feature branch, and submit your PR (with tests!) for final review.
 
 For detailed testing requirements and code standards, see the project documentation.
