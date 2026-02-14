@@ -1,8 +1,20 @@
 //! Types for agent claiming workflow
 
+use crate::openapi::AgentSelfRegistration;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+
+impl AgentSelfRegistration {
+    /// Convert to AgentRegistration for API request
+    pub fn to_registration(&self) -> AgentRegistration {
+        AgentRegistration::new(
+            self.agent_id,
+            self.claim_token_hash.clone(),
+            self.hostname.clone(),
+        )
+    }
+}
 
 /// Agent self-registration request
 #[derive(Debug, Clone, Serialize)]

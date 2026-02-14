@@ -10,6 +10,8 @@
 //! - Local caching for offline operation
 //! - Plugin system for extensibility
 
+mod openapi;
+
 mod agent_config;
 mod claim;
 mod core;
