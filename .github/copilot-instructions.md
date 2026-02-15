@@ -456,5 +456,110 @@ Runnable example code demonstrating library features should be placed in the `ex
 ## Project Structure
 For detailed project structure, please refer to the [Project Structure](../docs/PROJECT_STRUCTURE.md) document.
 
-## OpenApi Specification
-OpenAPI specification will be created in the `api/openapi/` directory (currently in development).
+## OpenAPI Specification and Type Generation
+
+### OpenAPI Specification Location
+The OpenAPI specification is maintained in `api/openapi/api/spec.yaml`. This specification defines the API contract between the agent and the central server.
+
+### Type Generation with OMG
+
+**CRITICAL**: All types related to the OpenAPI API model MUST be generated from the specification using the OMG (OpenAPI Model Generator) tool. Do NOT manually create types that are defined in the OpenAPI spec.
+
+#### Generated Code Location
+- **Specification**: `./api/openapi/api/spec.yaml`
+- **Generated Types**: `./src/openapi/omg/generated/` module
+- **Manual Extensions**: `./src/openapi/omg/responses.rs` (for reusable response components)
+- **Module Entry**: Types are re-exported through `./src/openapi/mod.rs`
+
+#### Using Generated Types
+
+When referencing OpenAPI-generated types in code:
+
+```rust
+// Import from the openapi module
+use crate::openapi;
+
+// Use with openapi prefix for clarity
+let registration = openapi::AgentRegistration {
+    agent_id: agent_id.to_string(),
+    claim_token_hash: hashed_token,
+};
+
+let response: openapi::ClaimAgentResponse201 = ...
+```
+
+**Guidelines for OpenAPI Types**:
+- **Always use the `openapi` prefix**: This makes it immediately clear that a type comes from the API specification
+- **Never create manual types**: If a type is in the OpenAPI spec, use the generated version
+- **Import pattern**: Use `use crate::openapi;` and reference types as `openapi::TypeName`
+- **Readability**: The `openapi::` prefix improves code readability by distinguishing API types from domain types
+- **Documentation**: When the OpenAPI spec defines a type, that becomes the source of truth
+
+#### When to Regenerate Types
+
+Regenerate types after:
+1. Modifying the OpenAPI specification (`api/openapi/api/spec.yaml`)
+2. Adding new endpoints or response types
+3. Changing existing schema definitions
+4. Updating request/response structures
+
+Use the provided regeneration script:
+```bash
+just generate-omg
+```
+
+Or manually:
+```bash
+omg --input ./api/openapi/api/spec.yaml -o ./src/openapi/omg/generated/
+echo "pub mod responses;" >> ./src/openapi/omg/mod.rs
+```
+
+#### Manual Response Wrappers
+
+Some response types must be manually maintained in `responses.rs` because OMG doesn't generate wrappers for reusable response components (`$ref: '#/components/responses/...'`). See [OPENAPI_CODE_GENERATION.md](../docs/OPENAPI_CODE_GENERATION.md) for details.
+
+#### Example Workflow
+
+1. **Define the API** in `api/openapi/api/spec.yaml`:
+   ```yaml
+   components:
+     schemas:
+       AgentHeartbeat:
+         type: object
+         properties:
+           agent_id:
+             type: string
+           timestamp:
+             type: integer
+   ```
+
+2. **Regenerate types**:
+   ```bash
+   just generate-omg
+   ```
+
+3. **Use in code**:
+   ```rust
+   use crate::openapi;
+   
+   let heartbeat = openapi::AgentHeartbeat {
+       agent_id: self.agent_id.clone(),
+       timestamp: Utc::now().timestamp(),
+       // ... other fields
+   };
+   ```
+
+4. **Never create parallel types**:
+   ```rust
+   // ❌ WRONG - Don't create this if it's in the OpenAPI spec
+   struct AgentHeartbeat {
+       agent_id: String,
+       timestamp: i64,
+   }
+   
+   // ✅ CORRECT - Use the generated type
+   use crate::openapi;
+   let heartbeat = openapi::AgentHeartbeat { ... };
+   ```
+
+For comprehensive information about OpenAPI type generation, regeneration workflows, and manual response wrappers, see [OPENAPI_CODE_GENERATION.md](../docs/OPENAPI_CODE_GENERATION.md).

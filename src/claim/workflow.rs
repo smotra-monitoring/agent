@@ -4,8 +4,9 @@ use super::registration::register_with_retry;
 use crate::claim::{
     polling::poll_claim_status,
     token::{generate_claim_token, hash_claim_token},
-    types::{AgentRegistration, ClaimResult},
+    types::ClaimResult,
 };
+use crate::openapi::AgentSelfRegistration;
 use crate::{Config, Error, Result};
 use tracing::{error, info};
 use uuid::Uuid;
@@ -69,7 +70,7 @@ impl<'a> Claim<'a> {
             .unwrap_or_else(|_| "unknown".to_string());
 
         // Create registration
-        let registration = AgentRegistration::new(agent_id, claim_token_hash, hostname);
+        let registration = AgentSelfRegistration::new(agent_id, claim_token_hash, hostname);
 
         // Create HTTP client
         let client = reqwest::Client::builder()

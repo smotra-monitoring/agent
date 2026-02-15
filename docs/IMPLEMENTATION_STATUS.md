@@ -123,11 +123,12 @@ Interactive TUI with Ratatui:
 - ✅ [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) - Code organization
 - ✅ [CLAIMING_IMPLEMENTATION.md](CLAIMING_IMPLEMENTATION.md) - Registration details
 - ✅ [ROADMAP.md](ROADMAP.md) - Development plans
+- ✅ [OPENAPI_CODE_GENERATION.md](OPENAPI_CODE_GENERATION.md) - Type generation workflow
+- ✅ OpenAPI specification (api/openapi/api/spec.yaml) with OMG type generation
 - ✅ Configuration examples (config.example.toml)
 - ✅ Example code (examples/010_plugin.rs, examples/002_heartbeat_demo.rs)
 
 ### ⏳ Pending
-- ⏳ OpenAPI specification (api/openapi/ directory exists but is empty)
 - ⏳ Plugin development guide (detailed)
 - ⏳ Deployment guide
 - ⏳ Performance tuning guide
@@ -140,7 +141,6 @@ Interactive TUI with Ratatui:
 3. **Implement UdpConnectChecker** - UDP connection monitoring
 4. **Implement HttpGetChecker** - HTTP endpoint monitoring
 5. **Complete cache disk persistence** - CacheManager currently has stub implementation
-6. **Create OpenAPI specification** - Document server API endpoints
 
 ### Medium Priority
 1. **Expand test coverage** - More unit and integration tests

@@ -1,37 +1,11 @@
 //! Types for agent claiming workflow
 
-use crate::openapi::AgentSelfRegistration;
+use crate::openapi;
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use uuid::Uuid;
 
-impl AgentSelfRegistration {
-    /// Convert to AgentRegistration for API request
-    pub fn to_registration(&self) -> AgentRegistration {
-        AgentRegistration::new(
-            self.agent_id,
-            self.claim_token_hash.clone(),
-            self.hostname.clone(),
-        )
-    }
-}
-
-/// Agent self-registration request
-#[derive(Debug, Clone, Serialize)]
-pub struct AgentRegistration {
-    #[serde(rename = "agentId")]
-    pub agent_id: Uuid,
-
-    #[serde(rename = "claimTokenHash")]
-    pub claim_token_hash: String,
-
-    pub hostname: String,
-
-    #[serde(rename = "agentVersion")]
-    pub agent_version: String,
-}
-
-impl AgentRegistration {
+impl openapi::AgentSelfRegistration {
     /// Create a new agent registration
     pub fn new(agent_id: Uuid, claim_token_hash: String, hostname: String) -> Self {
         Self {
@@ -41,19 +15,6 @@ impl AgentRegistration {
             agent_version: env!("CARGO_PKG_VERSION").to_string(),
         }
     }
-}
-
-/// Response from agent registration
-#[derive(Debug, Clone, Deserialize)]
-pub struct RegistrationResponse {
-    #[serde(rename = "pollUrl")]
-    pub poll_url: String,
-
-    #[serde(rename = "claimUrl")]
-    pub claim_url: String,
-
-    #[serde(rename = "expiresAt")]
-    pub expires_at: DateTime<Utc>,
 }
 
 /// Claim status response (pending)
@@ -132,7 +93,8 @@ mod tests {
         let token_hash = "hash123".to_string();
         let hostname = "test-host".to_string();
 
-        let registration = AgentRegistration::new(agent_id, token_hash.clone(), hostname.clone());
+        let registration =
+            openapi::AgentSelfRegistration::new(agent_id, token_hash.clone(), hostname.clone());
 
         assert_eq!(registration.agent_id, agent_id);
         assert_eq!(registration.claim_token_hash, token_hash);

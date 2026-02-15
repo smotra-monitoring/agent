@@ -165,7 +165,7 @@ RUST_LOG=debug cargo run --bin agent -- -c config.toml
 
 ## 📦 API Specification
 
-OpenAPI specification will be available at `api/openapi/` (currently in development).
+OpenAPI specification is maintained at [api/openapi/api/spec.yaml](../api/openapi/api/spec.yaml). Rust types are automatically generated from this specification using the OMG (OpenAPI Model Generator) tool. See [OPENAPI_CODE_GENERATION.md](OPENAPI_CODE_GENERATION.md) for details on the type generation workflow.
 
 ## 📄 License
 
