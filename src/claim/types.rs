@@ -1,8 +1,6 @@
 //! Types for agent claiming workflow
 
 use crate::openapi;
-use chrono::{DateTime, Utc};
-use serde::Deserialize;
 use uuid::Uuid;
 
 impl openapi::AgentSelfRegistration {
@@ -17,29 +15,11 @@ impl openapi::AgentSelfRegistration {
     }
 }
 
-/// Claim status response (pending)
-#[derive(Debug, Clone, Deserialize)]
-pub struct ClaimStatusPending {
-    pub status: String,
-
-    #[serde(rename = "expiresAt")]
-    pub expires_at: DateTime<Utc>,
-}
-
-/// Claim status response (claimed)
-#[derive(Debug, Clone, Deserialize)]
-pub struct ClaimStatusClaimed {
-    pub status: String,
-
-    #[serde(rename = "apiKey")]
-    pub api_key: String,
-}
-
 /// Claim status enum
 #[derive(Debug, Clone)]
 pub enum ClaimStatus {
-    Pending(ClaimStatusPending),
-    Claimed(ClaimStatusClaimed),
+    Pending(openapi::ClaimStatusPending),
+    Claimed(openapi::ClaimStatusClaimed),
 }
 
 /// Result of successful agent claiming workflow
@@ -48,7 +28,7 @@ pub enum ClaimStatus {
 /// - API key for server authentication
 /// - Agent ID (may be newly generated or existing)
 #[derive(Debug, Clone)]
-pub struct ClaimResult {
+pub struct AgentCredentials {
     /// API key for server authentication
     pub api_key: String,
 
@@ -65,7 +45,7 @@ mod tests {
         let agent_id = Uuid::now_v7();
         let api_key = "sk_test_claim_result_123".to_string();
 
-        let result = ClaimResult {
+        let result = AgentCredentials {
             api_key: api_key.clone(),
             agent_id,
         };
@@ -77,7 +57,7 @@ mod tests {
     #[test]
     fn test_claim_result_clone() {
         let agent_id = Uuid::now_v7();
-        let result = ClaimResult {
+        let result = AgentCredentials {
             api_key: "test_key".to_string(),
             agent_id,
         };

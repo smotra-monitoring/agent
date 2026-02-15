@@ -3,7 +3,7 @@
 use uuid::Uuid;
 
 use super::Config;
-use crate::claim::ClaimResult;
+use crate::claim::AgentCredentials;
 use crate::error::{Error, Result};
 use std::fs;
 use std::path::Path;
@@ -81,7 +81,7 @@ impl Config {
     /// # Arguments
     ///
     /// * `claim_result` - Result from the claiming workflow containing API key and agent ID
-    pub fn apply_claim_result(&mut self, claim_result: ClaimResult) {
+    pub fn apply_claim_result(&mut self, claim_result: AgentCredentials) {
         self.agent_id = claim_result.agent_id;
         self.server.api_key = Some(claim_result.api_key);
     }
@@ -132,7 +132,7 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::claim::ClaimResult;
+    use crate::claim::AgentCredentials;
     use tempfile::NamedTempFile;
 
     #[test]
@@ -142,7 +142,7 @@ mod tests {
         assert_eq!(config.server.api_key, None);
 
         let new_agent_id = Uuid::now_v7();
-        let claim_result = ClaimResult {
+        let claim_result = AgentCredentials {
             api_key: "sk_test_123456".to_string(),
             agent_id: new_agent_id,
         };
@@ -166,7 +166,7 @@ mod tests {
         };
 
         let new_agent_id = Uuid::now_v7();
-        let claim_result = ClaimResult {
+        let claim_result = AgentCredentials {
             api_key: "new_key".to_string(),
             agent_id: new_agent_id,
         };
@@ -231,7 +231,7 @@ mod tests {
 
         // Apply claim result
         let agent_id = Uuid::now_v7();
-        let claim_result = ClaimResult {
+        let claim_result = AgentCredentials {
             api_key: "sk_integration_test".to_string(),
             agent_id,
         };

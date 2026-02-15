@@ -306,15 +306,6 @@ pub struct AgentRegistration {
     pub tags: Option<std::collections::HashMap<String, String>>,
 }
 
-/// AgentCredentials
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AgentCredentials {
-    pub agent_id: UUIDv7,
-    /// API key for agent authentication
-    pub api_key: String,
-    pub configuration_url: Option<String>,
-}
-
 /// AgentSelfRegistration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentSelfRegistration {

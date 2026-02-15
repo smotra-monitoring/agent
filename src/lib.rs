@@ -22,7 +22,7 @@ mod plugin;
 mod reporter;
 
 pub use agent_config::{ClaimConfig, Config, MonitoringConfig, ServerConfig, StorageConfig};
-pub use claim::{Claim, ClaimResult};
+pub use claim::{AgentCredentials, Claim};
 pub use core::{
     Agent, AgentHealthStatus, AgentHeartbeat, AgentStatus, CheckType, Endpoint, HttpGetResult,
     MonitoringResult, PingResult, PluginResult, TcpConnectResult, TracerouteHop, TracerouteResult,

@@ -4,7 +4,7 @@ use super::registration::register_with_retry;
 use crate::claim::{
     polling::poll_claim_status,
     token::{generate_claim_token, hash_claim_token},
-    types::ClaimResult,
+    types::AgentCredentials,
 };
 use crate::openapi::AgentSelfRegistration;
 use crate::{Config, Error, Result};
@@ -46,7 +46,7 @@ impl<'a> Claim<'a> {
     /// - Server URL is not configured
     /// - Registration fails after all retries
     /// - Claim expires before being completed
-    pub async fn run(&self) -> Result<ClaimResult> {
+    pub async fn run(&self) -> Result<AgentCredentials> {
         let server_url = &self.config.server.url;
 
         // Generate agent ID if not set (nil UUID means unregistered)
@@ -112,7 +112,7 @@ impl<'a> Claim<'a> {
             Some(api_key) => {
                 info!("API key received");
 
-                Ok(ClaimResult { api_key, agent_id })
+                Ok(AgentCredentials { api_key, agent_id })
             }
             None => {
                 error!("Claim expired or cancelled");
