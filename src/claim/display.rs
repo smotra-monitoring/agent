@@ -3,9 +3,9 @@
 use tracing::info;
 use uuid::Uuid;
 
-use crate::claim::types::RegistrationResponse;
+use crate::openapi;
 
-impl RegistrationResponse {
+impl openapi::AgentRegistrationResponse {
     /// Display claim information in a formatted box
     ///
     /// Shows the agent ID, claim token, and instructions for claiming the agent
@@ -64,10 +64,11 @@ mod tests {
         let claim_token = "test_token_123";
         let expires_at = chrono::Utc::now() + chrono::Duration::hours(24);
 
-        let registration_response = RegistrationResponse {
+        let registration_response = openapi::AgentRegistrationResponse {
             poll_url: "/v1/agent/poll".to_string(),
             claim_url: "https://smotra.example.com/claim".to_string(),
             expires_at,
+            status: openapi::RegistrationStatus::PendingClaim,
         };
 
         // Should not panic

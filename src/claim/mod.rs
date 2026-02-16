@@ -8,5 +8,5 @@ mod types;
 mod workflow;
 
 // Public API - expose the Claim workflow orchestrator and result type
-pub use types::ClaimResult;
+pub use types::AgentCredentials;
 pub use workflow::Claim;

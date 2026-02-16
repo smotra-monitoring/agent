@@ -1,7 +1,7 @@
 //! Agent registration logic
 
-use crate::claim::types::{AgentRegistration, RegistrationResponse};
 use crate::error::{Error, Result};
+use crate::openapi::{AgentRegistrationResponse, AgentSelfRegistration};
 use reqwest::Client;
 use std::time::Duration;
 use tracing::{info, warn};
@@ -24,9 +24,9 @@ use tracing::{info, warn};
 pub async fn register_with_retry(
     client: &Client,
     base_url: &str,
-    registration: AgentRegistration,
+    registration: AgentSelfRegistration,
     max_retries: u32,
-) -> Result<RegistrationResponse> {
+) -> Result<AgentRegistrationResponse> {
     let mut delay = Duration::from_secs(1);
 
     for attempt in 0..max_retries {
@@ -67,8 +67,8 @@ pub async fn register_with_retry(
 async fn register_agent(
     client: &Client,
     base_url: &str,
-    registration: AgentRegistration,
-) -> Result<RegistrationResponse> {
+    registration: AgentSelfRegistration,
+) -> Result<AgentRegistrationResponse> {
     let url = format!("{}/v1/agent/register", base_url);
 
     info!("Registering agent with server: {}", url);
@@ -84,7 +84,7 @@ async fn register_agent(
 
     if status.is_success() {
         let registration_response = response
-            .json::<RegistrationResponse>()
+            .json::<AgentRegistrationResponse>()
             .await
             .map_err(|e| Error::Network(format!("Failed to parse registration response: {}", e)))?;
 
@@ -112,7 +112,7 @@ mod tests {
     fn test_agent_registration_serialization() {
         let agent_id = Uuid::now_v7();
         let registration =
-            AgentRegistration::new(agent_id, "abc123".to_string(), "test-host".to_string());
+            AgentSelfRegistration::new(agent_id, "abc123".to_string(), "test-host".to_string());
 
         let json = serde_json::to_value(&registration).unwrap();
 
@@ -131,7 +131,7 @@ mod tests {
             "expiresAt": "2026-02-01T12:00:00Z"
         }"#;
 
-        let response: RegistrationResponse = serde_json::from_str(json).unwrap();
+        let response: AgentRegistrationResponse = serde_json::from_str(json).unwrap();
 
         assert_eq!(response.poll_url, "/agent/123/claim-status");
         assert_eq!(response.claim_url, "https://example.com/claim");
@@ -175,7 +175,7 @@ mod tests {
 
         let client = reqwest::Client::new();
         let registration =
-            AgentRegistration::new(agent_id, "test_hash".to_string(), "test-host".to_string());
+            AgentSelfRegistration::new(agent_id, "test_hash".to_string(), "test-host".to_string());
 
         let result = register_with_retry(&client, &server.url(), registration, 3).await;
 
@@ -209,7 +209,7 @@ mod tests {
 
         let client = reqwest::Client::new();
         let registration =
-            AgentRegistration::new(agent_id, "test_hash".to_string(), "test-host".to_string());
+            AgentSelfRegistration::new(agent_id, "test_hash".to_string(), "test-host".to_string());
 
         // First registration
         let result1 = register_agent(&client, &server.url(), registration.clone()).await;

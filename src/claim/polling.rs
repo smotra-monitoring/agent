@@ -1,7 +1,8 @@
 //! Polling for claim status
 
-use crate::claim::types::{ClaimStatus, ClaimStatusClaimed, ClaimStatusPending};
+use crate::claim::types::ClaimStatus;
 use crate::error::{Error, Result};
+use crate::openapi;
 use reqwest::{Client, StatusCode};
 use std::time::Duration;
 use tracing::{error, info};
@@ -40,7 +41,7 @@ pub async fn poll_claim_status(
                 let expires_in = pending.expires_at.signed_duration_since(now);
 
                 if expires_in.num_seconds() <= 0 {
-                    error!("Claim has expired (status: {})", pending.status);
+                    error!("Claim has expired (status: {:?})", pending.status);
                     return Ok(None);
                 }
 
@@ -49,14 +50,17 @@ pub async fn poll_claim_status(
                 let seconds = (expires_in.num_seconds() % 60).abs();
 
                 info!(
-                    "Status: {} (expires in {}:{:02}:{:02})",
+                    "Status: {:?} (expires in {}:{:02}:{:02})",
                     pending.status, hours, minutes, seconds
                 );
 
                 tokio::time::sleep(poll_interval).await;
             }
             ClaimStatus::Claimed(claimed) => {
-                info!("Agent claimed successfully (status: {}) !", claimed.status);
+                info!(
+                    "Agent claimed successfully (status: {:?}) !",
+                    claimed.status
+                );
                 return Ok(Some(claimed.api_key));
             }
         }
@@ -99,12 +103,12 @@ async fn check_claim_status(client: &Client, url: &str) -> Result<ClaimStatus> {
 
             match json.get("status").and_then(|s| s.as_str()) {
                 Some("pending_claim") => {
-                    let pending: ClaimStatusPending =
+                    let pending: openapi::ClaimStatusPending =
                         serde_json::from_str(&text).map_err(Error::Serialization)?;
                     Ok(ClaimStatus::Pending(pending))
                 }
                 Some("claimed") => {
-                    let claimed: ClaimStatusClaimed =
+                    let claimed: openapi::ClaimStatusClaimed =
                         serde_json::from_str(&text).map_err(Error::Serialization)?;
                     Ok(ClaimStatus::Claimed(claimed))
                 }
@@ -149,9 +153,15 @@ mod tests {
             "expiresAt": "2026-02-01T12:00:00Z"
         }"#;
 
-        let pending: ClaimStatusPending = serde_json::from_str(json).unwrap();
+        let pending: openapi::ClaimStatusPending = serde_json::from_str(json).unwrap();
 
-        assert_eq!(pending.status, "pending_claim");
+        assert!(
+            matches!(
+                pending.status,
+                openapi::ClaimStatusPendingEnum::PendingClaim
+            ),
+            "expected status to be PendingClaim"
+        );
     }
 
     #[test]
@@ -162,9 +172,12 @@ mod tests {
             "configUrl": "/agent/123/configuration"
         }"#;
 
-        let claimed: ClaimStatusClaimed = serde_json::from_str(json).unwrap();
+        let claimed: openapi::ClaimStatusClaimed = serde_json::from_str(json).unwrap();
 
-        assert_eq!(claimed.status, "claimed");
+        assert!(
+            matches!(claimed.status, openapi::ClaimStatusClaimedEnum::Claimed),
+            "expected status to be Claimed"
+        );
         assert_eq!(claimed.api_key, "sk_live_abc123");
     }
 

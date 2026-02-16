@@ -74,13 +74,24 @@
 - `tests/heartbeat_integration_tests.rs` - Integration tests for heartbeat functionality
 - `tests/claim_integration_tests.rs` - Integration tests for claiming workflow with mock server
 
+### OpenAPI Module (`src/openapi/`)
+- `src/openapi/mod.rs` - Module entry point, re-exports types from omg
+- `src/openapi/omg/mod.rs` - OMG-generated module with manual response extensions
+- `src/openapi/omg/generated/` - Auto-generated types from OpenAPI spec (DO NOT EDIT MANUALLY)
+  - `src/openapi/omg/generated/mod.rs` - Generated module structure
+  - `src/openapi/omg/generated/models.rs` - Generated schema and response types
+- `src/openapi/omg/responses.rs` - Manually maintained response wrappers for reusable components
+
+**Important**: All API model types are generated from the OpenAPI specification at `api/openapi/api/spec.yaml` using the OMG tool. Never manually create types that are defined in the spec. Use `use crate::openapi;` and reference types with the `openapi::` prefix for clarity.
+
 ### Configuration & Documentation
 - `Cargo.toml` - Rust project configuration with dependencies
 - `README.md` - Comprehensive documentation
 - `config.example.toml` - Example configuration file
 - `PROJECT_STRUCTURE.md` - This file
 - `.gitignore` - Git ignore patterns
-- `api/openapi/` - OpenAPI specification directory (specification to be created)
+- `api/openapi/api/spec.yaml` - OpenAPI specification defining the server API
+- `docs/OPENAPI_CODE_GENERATION.md` - Documentation for type generation workflow
 
 ## Key Features Implemented
 

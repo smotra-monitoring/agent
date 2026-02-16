@@ -4,6 +4,18 @@
 
 Successfully implemented a complete agent self-registration and claiming workflow for the Smotra monitoring agent. This zero-configuration onboarding system eliminates manual API key distribution and provides a secure, user-friendly way to register new agents.
 
+## Type Generation from OpenAPI Specification
+
+**IMPORTANT**: All API-related types (request/response structures) are generated from the OpenAPI specification at `api/openapi/api/spec.yaml` using the OMG (OpenAPI Model Generator) tool. These types include:
+
+- `AgentRegistration`: Request payload for agent registration
+- `ClaimAgentResponse201`: Successful registration response
+- `ClaimAgentResponse400`, `ClaimAgentResponse401`, etc.: Error responses
+- `AgentHeartbeat`: Heartbeat payload structure
+- And all other API model types
+
+These generated types are available through `use crate::openapi;` and should be referenced with the `openapi::` prefix (e.g., `openapi::AgentRegistration`). **Never manually create types that are defined in the OpenAPI spec.** For details on type generation and regeneration workflows, see [OPENAPI_CODE_GENERATION.md](OPENAPI_CODE_GENERATION.md).
+
 ## Implemented Components
 
 ### 1. Core Modules

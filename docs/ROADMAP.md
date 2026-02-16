@@ -88,14 +88,15 @@ This document outlines the development roadmap for the Smotra monitoring agent, 
 ### Priority 3: API Documentation
 **Goal**: Complete server API specification
 
-- [ ] **OpenAPI Specification** (Week 6-7)
-  - [ ] Document agent registration endpoints
-  - [ ] Document claiming workflow endpoints
-  - [ ] Document monitoring result submission
-  - [ ] Document heartbeat reporting
+- [✓] **OpenAPI Specification** (Week 6-7)
+  - [✓] Document agent registration endpoints
+  - [✓] Document claiming workflow endpoints
+  - [✓] Document monitoring result submission
+  - [✓] Document heartbeat reporting
   - [ ] Document configuration polling (future feature)
-  - [ ] Add request/response examples
-  - [ ] Generate API documentation from spec
+  - [✓] Add request/response examples
+  - [✓] Set up OMG type generation from OpenAPI spec
+  - [✓] Document type generation workflow in OPENAPI_CODE_GENERATION.md
 
 ### Priority 4: Enhanced Testing
 **Goal**: Achieve 85%+ test coverage

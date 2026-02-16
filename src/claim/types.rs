@@ -1,25 +1,9 @@
 //! Types for agent claiming workflow
 
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use crate::openapi;
 use uuid::Uuid;
 
-/// Agent self-registration request
-#[derive(Debug, Clone, Serialize)]
-pub struct AgentRegistration {
-    #[serde(rename = "agentId")]
-    pub agent_id: Uuid,
-
-    #[serde(rename = "claimTokenHash")]
-    pub claim_token_hash: String,
-
-    pub hostname: String,
-
-    #[serde(rename = "agentVersion")]
-    pub agent_version: String,
-}
-
-impl AgentRegistration {
+impl openapi::AgentSelfRegistration {
     /// Create a new agent registration
     pub fn new(agent_id: Uuid, claim_token_hash: String, hostname: String) -> Self {
         Self {
@@ -31,42 +15,11 @@ impl AgentRegistration {
     }
 }
 
-/// Response from agent registration
-#[derive(Debug, Clone, Deserialize)]
-pub struct RegistrationResponse {
-    #[serde(rename = "pollUrl")]
-    pub poll_url: String,
-
-    #[serde(rename = "claimUrl")]
-    pub claim_url: String,
-
-    #[serde(rename = "expiresAt")]
-    pub expires_at: DateTime<Utc>,
-}
-
-/// Claim status response (pending)
-#[derive(Debug, Clone, Deserialize)]
-pub struct ClaimStatusPending {
-    pub status: String,
-
-    #[serde(rename = "expiresAt")]
-    pub expires_at: DateTime<Utc>,
-}
-
-/// Claim status response (claimed)
-#[derive(Debug, Clone, Deserialize)]
-pub struct ClaimStatusClaimed {
-    pub status: String,
-
-    #[serde(rename = "apiKey")]
-    pub api_key: String,
-}
-
 /// Claim status enum
 #[derive(Debug, Clone)]
 pub enum ClaimStatus {
-    Pending(ClaimStatusPending),
-    Claimed(ClaimStatusClaimed),
+    Pending(openapi::ClaimStatusPending),
+    Claimed(openapi::ClaimStatusClaimed),
 }
 
 /// Result of successful agent claiming workflow
@@ -75,7 +28,7 @@ pub enum ClaimStatus {
 /// - API key for server authentication
 /// - Agent ID (may be newly generated or existing)
 #[derive(Debug, Clone)]
-pub struct ClaimResult {
+pub struct AgentCredentials {
     /// API key for server authentication
     pub api_key: String,
 
@@ -92,7 +45,7 @@ mod tests {
         let agent_id = Uuid::now_v7();
         let api_key = "sk_test_claim_result_123".to_string();
 
-        let result = ClaimResult {
+        let result = AgentCredentials {
             api_key: api_key.clone(),
             agent_id,
         };
@@ -104,7 +57,7 @@ mod tests {
     #[test]
     fn test_claim_result_clone() {
         let agent_id = Uuid::now_v7();
-        let result = ClaimResult {
+        let result = AgentCredentials {
             api_key: "test_key".to_string(),
             agent_id,
         };
@@ -120,7 +73,8 @@ mod tests {
         let token_hash = "hash123".to_string();
         let hostname = "test-host".to_string();
 
-        let registration = AgentRegistration::new(agent_id, token_hash.clone(), hostname.clone());
+        let registration =
+            openapi::AgentSelfRegistration::new(agent_id, token_hash.clone(), hostname.clone());
 
         assert_eq!(registration.agent_id, agent_id);
         assert_eq!(registration.claim_token_hash, token_hash);
