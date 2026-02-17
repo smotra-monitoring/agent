@@ -122,7 +122,9 @@ impl Config {
         }
 
         if self.server.api_key.is_some() && self.server.api_key.as_ref().unwrap().is_empty() {
-            return Err(Error::Config("server API key cannot be empty".to_string()));
+            return Err(Error::ConfigApiKey(
+                "server API key cannot be empty".to_string(),
+            ));
         }
 
         Ok(())
