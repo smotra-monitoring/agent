@@ -4,6 +4,20 @@ This document outlines the development roadmap for the Smotra monitoring agent, 
 
 ---
 
+## Current PR
+- [ ] Move load_and_validate_config to AgentConfig.loader
+- [ ] Refactor running part of first conifg load into load_and_validate_config. Replace flow if api_key is missing to check of returned error type Error::MissingApiKey.
+      Current flow:
+      - load config
+      - if api_key is missing, start claiming workflow
+      - validate config
+      New flow:
+      - load and validate config in one step
+      - if api_key is missing, return Error::MissingApiKey, start claiming workflow in main.rs, then call load_and_validate_config again to load the config with api_key and validate it
+
+- [ ] Refactor main gen_config. Move it to a dedicated function.
+- [ ] Rename src/monitor/coordinator.rs -> src/monitor/server.rs, due to other similar files like src/monitor/server.rs and src/reporter/server.rs
+
 ## ✅ Completed Milestones
 
 ### Core Infrastructure (v0.1.0)
