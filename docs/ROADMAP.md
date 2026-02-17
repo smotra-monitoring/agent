@@ -16,6 +16,8 @@ This document outlines the development roadmap for the Smotra monitoring agent, 
       - if api_key is missing, return Error::MissingApiKey, start claiming workflow in main.rs, then call load_and_validate_config again to load the config with api_key and validate it
 
 - [ ] Refactor main gen_config. Move it to a dedicated function.
+- [ ] ConfigReloadManager.reload_config should be private. This is internal implementation detail. 
+
 - [ ] Rename src/monitor/coordinator.rs -> src/monitor/server.rs, due to other similar files like src/monitor/server.rs and src/reporter/server.rs
 
 - [ ] Refactor async loops in main.rs to follow the same principle as other async loops in the codebase (check agent.rs).
