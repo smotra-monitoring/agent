@@ -18,6 +18,10 @@ This document outlines the development roadmap for the Smotra monitoring agent, 
 - [ ] Refactor main gen_config. Move it to a dedicated function.
 - [ ] Rename src/monitor/coordinator.rs -> src/monitor/server.rs, due to other similar files like src/monitor/server.rs and src/reporter/server.rs
 
+- [ ] Refactor async loops in main.rs to follow the same principle as other async loops in the codebase (check agent.rs).
+
+- [ ] IMO Agent::reload_config make an assumption that all async loops will pick-up config change because they programmed with reference to self.config. This is not true. Config cloned by value. DOUBLE CHECK !!! Potentially refactor rest of the green threads to use config reference instead of cloning it.
+
 ## ✅ Completed Milestones
 
 ### Core Infrastructure (v0.1.0)
