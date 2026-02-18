@@ -90,7 +90,13 @@ impl Agent {
         info!("Stopping agent");
 
         // Wait for tasks to complete
-        let _ = tokio::join!(monitor_handle, reporter_handle, heartbeat_handle);
+        tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            let _ = monitor_handle.await;
+            let _ = reporter_handle.await;
+            let _ = heartbeat_handle.await;
+        })
+        .await
+        .ok(); // Ignore timeout error, we just want to wait for tasks to finish if they can
 
         // Update status.Agent is considered "stopped".
         {
