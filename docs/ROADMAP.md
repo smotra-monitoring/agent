@@ -26,6 +26,8 @@ This document outlines the development roadmap for the Smotra monitoring agent, 
 
 - [ ] Test test_manual_trigger_reload is running "green-thread" to simulate config reload. This is not ideal. Spawn is the internal implementation detail of the ConfigReloadManager. Refactor treading in this struct implementation so that test can call reload_config directly without relying on internal implementation details.
 
+- [ ] Consider saving new config to disk after successful reload. This way we can ensure that config on disk is always valid and consistent with the config in memory. This is not critical, but it can be nice to have.
+
 ## ✅ Completed Milestones
 
 ### Core Infrastructure (v0.1.0)
