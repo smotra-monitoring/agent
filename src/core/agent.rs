@@ -129,13 +129,6 @@ impl Agent {
         self.status.read().clone()
     }
 
-    /// Update agent configuration
-    pub fn update_config(&self, config: Config) -> Result<()> {
-        info!("Updating agent configuration");
-        *self.config.write() = config;
-        Ok(())
-    }
-
     /// Hot-reload configuration with validation
     ///
     /// This method validates the new configuration before applying it.
@@ -326,7 +319,7 @@ mod tests {
         let mut new_config = original_config.clone();
         new_config.agent_name = "New Name".to_string();
 
-        let result = agent.update_config(new_config.clone());
+        let result = agent.reload_config(new_config.clone());
         assert!(result.is_ok());
 
         // Verify the config was updated
