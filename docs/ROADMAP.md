@@ -24,6 +24,8 @@ This document outlines the development roadmap for the Smotra monitoring agent, 
 
 - [ ] IMO Agent::reload_config make an assumption that all async loops will pick-up config change because they programmed with reference to self.config. This is not true. Config cloned by value. DOUBLE CHECK !!! Potentially refactor rest of the green threads to use config reference instead of cloning it.
 
+- [ ] Test test_manual_trigger_reload is running "green-thread" to simulate config reload. This is not ideal. Spawn is the internal implementation detail of the ConfigReloadManager. Refactor treading in this struct implementation so that test can call reload_config directly without relying on internal implementation details.
+
 ## ✅ Completed Milestones
 
 ### Core Infrastructure (v0.1.0)
