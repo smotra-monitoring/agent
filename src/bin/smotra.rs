@@ -119,7 +119,10 @@ async fn main() -> Result<()> {
     info!("Tags: {:?}", config.tags);
     info!("Monitoring {} endpoints", config.endpoints.len());
 
-    // Create and start agent
+    // -----------------------------
+    // remove block
+    // -----------------------------
+
     let agent = Arc::new(Agent::new(config));
 
     // Set up config reload manager
@@ -199,10 +202,18 @@ async fn main() -> Result<()> {
 
     info!("Config hot-reload enabled (file changes and SIGHUP)");
 
+    // -----------------------------
+    // remove block
+    // -----------------------------
+
+    // Create and start agent
+    // let agent = Agent::new(config);
+
     match agent.start().await {
         Ok(_) => {
             info!("Agent stopped gracefully");
 
+            // TODO: remove
             // Wait for reload tasks to complete (with short timeout)
             let timeout_duration = std::time::Duration::from_secs(2);
             let _ = tokio::time::timeout(timeout_duration, async {
