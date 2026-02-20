@@ -262,7 +262,7 @@ mod tests {
         config.save_to_file_secure(temp_file.path()).await.unwrap();
 
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
-        let mut manager =
+        let manager =
             ConfigReloadManager::new(temp_file.path().to_path_buf(), shutdown_rx).unwrap();
 
         // Clone the reload_tx for testing

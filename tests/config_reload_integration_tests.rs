@@ -9,6 +9,7 @@ use smotra::{
     load_and_validate_config, Agent, Config, ConfigReloadManager, Endpoint, MonitoringConfig,
     ReloadTrigger,
 };
+use std::fs;
 use std::time::Duration;
 use tempfile::NamedTempFile;
 use tokio::sync::broadcast;
@@ -89,7 +90,7 @@ async fn test_config_reload_file_change() {
         .unwrap();
 
     // Wait for reload to process
-    tokio::time::sleep(Duration::from_secs(1)).await;
+    tokio::time::sleep(Duration::from_millis(550)).await;
 
     // Verify config was reloaded
     let current_config = agent_clone.config_clone();
@@ -168,210 +169,258 @@ async fn test_config_reload_manual_trigger() {
     let _ = tokio::time::timeout(Duration::from_secs(2), reload_handle).await;
 }
 
-// #[tokio::test]
-// async fn test_config_reload_invalid_config() {
-//     let temp_dir = TempDir::new().unwrap();
-//     let config_path = temp_dir.path().join("config.toml");
+#[tokio::test]
+async fn test_config_reload_invalid_config() {
+    // Create a temporary directory and config file
+    let config_path = NamedTempFile::new().unwrap();
 
-//     // Write initial valid config
-//     let initial_config = config_with_endpoints(1, 60, 1);
-//     fs::write(&config_path, initial_config).unwrap();
+    // Write initial config
+    let initial_config = config_with_endpoints(1, 60, 2);
+    initial_config
+        .save_to_file_secure(&config_path)
+        .await
+        .unwrap();
 
-//     let config = load_and_validate_config(&config_path).unwrap();
-//     let agent = Agent::new(config.clone());
+    let config = load_and_validate_config(config_path.path()).unwrap();
+    let agent = Agent::new(config.clone());
 
-//     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
-//     let reload_manager = ConfigReloadManager::new(config_path.clone(), shutdown_rx).unwrap();
+    let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
+    let reload_manager =
+        ConfigReloadManager::new(config_path.path().to_path_buf(), shutdown_rx).unwrap();
 
-//     let reload_tx = reload_manager.reload_sender();
+    let agent_arc = std::sync::Arc::new(agent);
+    let agent_for_callback = agent_arc.clone();
+    let config_path_for_callback = config_path.path().to_path_buf();
 
-//     let agent_arc = std::sync::Arc::new(agent);
-//     let agent_for_callback = agent_arc.clone();
-//     let config_path_for_callback = config_path.clone();
+    let reload_handle = tokio::spawn(async move {
+        reload_manager
+            .run(move |_trigger| {
+                let agent = agent_for_callback.clone();
+                let config_path = config_path_for_callback.clone();
+                async move {
+                    let new_config = load_and_validate_config(&config_path)?;
+                    agent.reload_config(new_config)?;
+                    Ok(())
+                }
+            })
+            .await
+    });
 
-//     let reload_handle = tokio::spawn(async move {
-//         reload_manager
-//             .run(move |_trigger| {
-//                 let agent = agent_for_callback.clone();
-//                 let config_path = config_path_for_callback.clone();
-//                 async move {
-//                     let new_config = load_and_validate_config(&config_path)?;
-//                     agent.reload_config(new_config)?;
-//                     Ok(())
-//                 }
-//             })
-//             .await
-//     });
+    // Write invalid config (interval_secs = 0)
+    let invalid_config = config_with_endpoints(2, 0, 1); // 0 is invalid
+    invalid_config
+        .save_to_file_secure(&config_path)
+        .await
+        .unwrap();
 
-//     // Write invalid config (interval_secs = 0)
-//     let invalid_config = config_with_endpoints(2, 0, 1); // 0 is invalid
-//     fs::write(&config_path, invalid_config).unwrap();
+    // Wait for reload attempt
+    tokio::time::sleep(Duration::from_millis(200)).await;
 
-//     // Trigger reload
-//     reload_tx.send(ReloadTrigger::Signal).unwrap();
+    // Verify old config is still in effect
+    let current_config = agent_arc.config_clone();
+    assert_eq!(current_config.version, 1); // Should still be version 1
+    assert_eq!(current_config.monitoring.interval_secs, 60); // Should still be 60
 
-//     // Wait for reload attempt
-//     tokio::time::sleep(Duration::from_millis(200)).await;
+    // Shutdown
+    let _ = shutdown_tx.send(());
+    let _ = tokio::time::timeout(Duration::from_secs(2), reload_handle).await;
+}
 
-//     // Verify old config is still in effect
-//     let current_config = agent_arc.config_clone();
-//     assert_eq!(current_config.version, 1); // Should still be version 1
-//     assert_eq!(current_config.monitoring.interval_secs, 60); // Should still be 60
+#[tokio::test]
+async fn test_config_reload_malformed_toml() {
+    // Create a temporary directory and config file
+    let config_path = NamedTempFile::new().unwrap();
 
-//     // Shutdown
-//     let _ = shutdown_tx.send(());
-//     let _ = tokio::time::timeout(Duration::from_secs(2), reload_handle).await;
-// }
+    // Write initial config
+    let initial_config = config_with_endpoints(1, 60, 1);
+    initial_config
+        .save_to_file_secure(&config_path)
+        .await
+        .unwrap();
 
-// #[tokio::test]
-// async fn test_config_reload_malformed_toml() {
-//     let temp_dir = TempDir::new().unwrap();
-//     let config_path = temp_dir.path().join("config.toml");
+    let config = load_and_validate_config(config_path.path()).unwrap();
+    let agent = Agent::new(config.clone());
 
-//     // Write initial valid config
-//     let initial_config = config_with_endpoints(1, 60, 1);
-//     fs::write(&config_path, initial_config).unwrap();
+    let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
+    let reload_manager =
+        ConfigReloadManager::new(config_path.path().to_path_buf(), shutdown_rx).unwrap();
 
-//     let config = load_and_validate_config(&config_path).unwrap();
-//     let agent = Agent::new(config.clone());
+    let reload_tx = reload_manager.reload_sender();
 
-//     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
-//     let reload_manager = ConfigReloadManager::new(config_path.clone(), shutdown_rx).unwrap();
+    let agent_arc = std::sync::Arc::new(agent);
+    let agent_for_callback = agent_arc.clone();
+    let config_path_for_callback = config_path.path().to_path_buf();
 
-//     let reload_tx = reload_manager.reload_sender();
+    let reload_handle = tokio::spawn(async move {
+        reload_manager
+            .run(move |_trigger| {
+                let agent = agent_for_callback.clone();
+                let config_path = config_path_for_callback.clone();
+                async move {
+                    // This will fail due to malformed TOML
+                    let new_config = load_and_validate_config(&config_path)?;
+                    agent.reload_config(new_config)?;
+                    Ok(())
+                }
+            })
+            .await
+    });
 
-//     let agent_arc = std::sync::Arc::new(agent);
-//     let agent_for_callback = agent_arc.clone();
-//     let config_path_for_callback = config_path.clone();
+    // Write malformed TOML
+    fs::write(&config_path, "invalid [ toml content").unwrap();
 
-//     let reload_handle = tokio::spawn(async move {
-//         reload_manager
-//             .run(move |_trigger| {
-//                 let agent = agent_for_callback.clone();
-//                 let config_path = config_path_for_callback.clone();
-//                 async move {
-//                     // This will fail due to malformed TOML
-//                     let new_config = load_and_validate_config(&config_path)?;
-//                     agent.reload_config(new_config)?;
-//                     Ok(())
-//                 }
-//             })
-//             .await
-//     });
+    // Trigger reload
+    reload_tx.send(ReloadTrigger::Manual).unwrap();
 
-//     // Write malformed TOML
-//     fs::write(&config_path, "invalid [ toml content").unwrap();
+    // Wait for reload attempt
+    tokio::time::sleep(Duration::from_millis(200)).await;
 
-//     // Trigger reload
-//     reload_tx.send(ReloadTrigger::Signal).unwrap();
+    // Verify old config is still in effect
+    let current_config = agent_arc.config_clone();
+    assert_eq!(current_config.version, 1);
+    assert_eq!(current_config.monitoring.interval_secs, 60);
 
-//     // Wait for reload attempt
-//     tokio::time::sleep(Duration::from_millis(200)).await;
+    // Shutdown
+    let _ = shutdown_tx.send(());
+    let _ = tokio::time::timeout(Duration::from_secs(2), reload_handle).await;
+}
 
-//     // Verify old config is still in effect
-//     let current_config = agent_arc.config_clone();
-//     assert_eq!(current_config.version, 1);
-//     assert_eq!(current_config.monitoring.interval_secs, 60);
+#[tokio::test]
+async fn test_multiple_config_reloads() {
+    // Create a temporary directory and config file
+    let config_path = NamedTempFile::new().unwrap();
 
-//     // Shutdown
-//     let _ = shutdown_tx.send(());
-//     let _ = tokio::time::timeout(Duration::from_secs(2), reload_handle).await;
-// }
+    // Write initial config
+    let initial_config = config_with_endpoints(1, 60, 2);
+    initial_config
+        .save_to_file_secure(&config_path)
+        .await
+        .unwrap();
 
-// #[tokio::test]
-// async fn test_multiple_config_reloads() {
-//     let temp_dir = TempDir::new().unwrap();
-//     let config_path = temp_dir.path().join("config.toml");
+    let config = load_and_validate_config(config_path.path()).unwrap();
+    let agent = Agent::new(config);
 
-//     // Write initial config
-//     let initial_config = config_with_endpoints(1, 60, 1);
-//     fs::write(&config_path, initial_config).unwrap();
+    let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
+    let mut reload_manager =
+        ConfigReloadManager::new(config_path.path().to_path_buf(), shutdown_rx).unwrap();
 
-//     let config = load_and_validate_config(&config_path).unwrap();
-//     let agent = Agent::new(config);
+    reload_manager.start_watching_file().unwrap();
 
-//     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
-//     let reload_manager = ConfigReloadManager::new(config_path.clone(), shutdown_rx).unwrap();
+    let reload_tx = reload_manager.reload_sender();
 
-//     let reload_tx = reload_manager.reload_sender();
+    let agent_arc = std::sync::Arc::new(agent);
+    let agent_for_callback = agent_arc.clone();
+    let config_path_for_callback = config_path.path().to_path_buf();
 
-//     let agent_arc = std::sync::Arc::new(agent);
-//     let agent_for_callback = agent_arc.clone();
-//     let config_path_for_callback = config_path.clone();
+    let reload_handle = tokio::spawn(async move {
+        reload_manager
+            .run(move |_trigger| {
+                let agent = agent_for_callback.clone();
+                let config_path = config_path_for_callback.clone();
+                async move {
+                    let new_config = load_and_validate_config(&config_path)?;
+                    agent.reload_config(new_config)?;
+                    Ok(())
+                }
+            })
+            .await
+    });
 
-//     let reload_handle = tokio::spawn(async move {
-//         reload_manager
-//             .run(move |_trigger| {
-//                 let agent = agent_for_callback.clone();
-//                 let config_path = config_path_for_callback.clone();
-//                 async move {
-//                     let new_config = load_and_validate_config(&config_path)?;
-//                     agent.reload_config(new_config)?;
-//                     Ok(())
-//                 }
-//             })
-//             .await
-//     });
+    // Perform multiple reloads
+    for i in 2..=5 {
+        let updated_config = config_with_endpoints(i, 60 + (i as u64 * 10), i as usize);
+        updated_config
+            .save_to_file_secure(&config_path)
+            .await
+            .unwrap();
 
-//     // Perform multiple reloads
-//     for i in 2..=5 {
-//         let updated_config = config_with_endpoints(i, 60 + (i as u64 * 10), i as usize);
-//         fs::write(&config_path, updated_config).unwrap();
+        // Do not reload manually, rely on file watcher to trigger reload
+        // File debounce timer is 500ms, so current config will be reloaded after the loop is over.
+        tokio::time::sleep(Duration::from_millis(50)).await;
 
-//         reload_tx.send(ReloadTrigger::Signal).unwrap();
-//         tokio::time::sleep(Duration::from_millis(150)).await;
+        let current_config = agent_arc.config_clone();
+        assert_eq!(current_config.version, 1);
+        assert_eq!(current_config.monitoring.interval_secs, 60);
+    }
 
-//         let current_config = agent_arc.config_clone();
-//         assert_eq!(current_config.version, i);
-//         assert_eq!(
-//             current_config.monitoring.interval_secs,
-//             60 + (i as u64 * 10)
-//         );
-//     }
+    // Wait for file debounce timer to expire and reload will be triggered
+    tokio::time::sleep(Duration::from_millis(550)).await;
+    let current_config = agent_arc.config_clone();
+    assert_eq!(current_config.version, 5);
+    assert_eq!(current_config.monitoring.interval_secs, 110);
 
-//     // Shutdown
-//     let _ = shutdown_tx.send(());
-//     let _ = tokio::time::timeout(Duration::from_secs(2), reload_handle).await;
-// }
+    // Perform multiple reloads
+    for i in 2..=5 {
+        let updated_config = config_with_endpoints(i, 60 + (i as u64 * 10), i as usize);
+        updated_config
+            .save_to_file_secure(&config_path)
+            .await
+            .unwrap();
 
-// #[tokio::test]
-// async fn test_reload_trigger_variants() {
-//     let temp_dir = TempDir::new().unwrap();
-//     let config_path = temp_dir.path().join("config.toml");
+        // Reload manually
+        // File debounce timer is 500ms, speed it up by triggering manual reload.
+        reload_tx.send(ReloadTrigger::Manual).unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
 
-//     let initial_config = config_with_endpoints(1, 60, 1);
-//     fs::write(&config_path, initial_config).unwrap();
+        let current_config = agent_arc.config_clone();
+        assert_eq!(current_config.version, i);
+        assert_eq!(
+            current_config.monitoring.interval_secs,
+            60 + (i as u64 * 10)
+        );
+    }
 
-//     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
-//     let reload_manager = ConfigReloadManager::new(config_path.clone(), shutdown_rx).unwrap();
+    // Shutdown
+    let _ = shutdown_tx.send(());
+    let _ = tokio::time::timeout(Duration::from_secs(2), reload_handle).await;
+}
 
-//     let reload_tx = reload_manager.reload_sender();
+#[tokio::test]
+async fn test_reload_trigger_variants() {
+    // Create a temporary directory and config file
+    let config_path = NamedTempFile::new().unwrap();
 
-//     let reload_handle = tokio::spawn(async move {
-//         reload_manager
-//             .run(move |trigger| {
-//                 // Just log the trigger variants, testing that they're all accepted
-//                 println!("Received trigger: {:?}", trigger);
-//                 async move { Ok(()) }
-//             })
-//             .await
-//     });
+    // Write initial config
+    let initial_config = config_with_endpoints(1, 60, 1);
+    initial_config
+        .save_to_file_secure(&config_path)
+        .await
+        .unwrap();
 
-//     // Test different trigger types
-//     reload_tx
-//         .send(ReloadTrigger::FileChange(config_path.clone()))
-//         .unwrap();
-//     tokio::time::sleep(Duration::from_millis(50)).await;
+    let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
+    let reload_manager =
+        ConfigReloadManager::new(config_path.path().to_path_buf(), shutdown_rx).unwrap();
 
-//     reload_tx.send(ReloadTrigger::Signal).unwrap();
-//     tokio::time::sleep(Duration::from_millis(50)).await;
+    let reload_tx = reload_manager.reload_sender();
 
-//     reload_tx
-//         .send(ReloadTrigger::ServerVersionChange(3))
-//         .unwrap();
-//     tokio::time::sleep(Duration::from_millis(50)).await;
+    let reload_handle = tokio::spawn(async move {
+        reload_manager
+            .run(move |trigger| {
+                // Just log the trigger variants, testing that they're all accepted
+                println!("Received trigger: {:?}", trigger);
+                async move { Ok(()) }
+            })
+            .await
+    });
 
-//     // Shutdown
-//     let _ = shutdown_tx.send(());
-//     let _ = tokio::time::timeout(Duration::from_secs(2), reload_handle).await;
-// }
+    // Test different trigger types
+    reload_tx
+        .send(ReloadTrigger::FileChange(config_path.path().to_path_buf()))
+        .unwrap();
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    reload_tx.send(ReloadTrigger::Signal).unwrap();
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    reload_tx.send(ReloadTrigger::Manual).unwrap();
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    reload_tx
+        .send(ReloadTrigger::ServerVersionChange(3))
+        .unwrap();
+    tokio::time::sleep(Duration::from_millis(50)).await;
+
+    // Shutdown
+    let _ = shutdown_tx.send(());
+    let _ = tokio::time::timeout(Duration::from_secs(2), reload_handle).await;
+}
