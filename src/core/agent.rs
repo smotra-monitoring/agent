@@ -4,9 +4,10 @@
 //! monitoring tasks and managing agent lifecycle.
 
 use parking_lot::RwLock;
+use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::broadcast;
-use tracing::{info, warn};
+use tokio::sync::{broadcast, mpsc};
+use tracing::{error, info, warn};
 
 use super::AgentStatus;
 use crate::agent_config::Config;
@@ -15,21 +16,34 @@ use crate::error::Result;
 /// Main agent instance that coordinates all monitoring tasks
 pub struct Agent {
     config: Arc<RwLock<Config>>,
+    config_path: PathBuf,
     status: Arc<RwLock<AgentStatus>>,
     shutdown_tx: broadcast::Sender<()>,
 }
 
 impl Agent {
-    /// Create a new agent instance with the given configuration
-    pub fn new(config: Config) -> Self {
+    /// Create a new agent instance by loading configuration from file
+    ///
+    /// # Arguments
+    ///
+    /// * `config_path` - Path to the configuration file to load
+    ///
+    /// # Returns
+    ///
+    /// Returns the agent instance or an error if config loading/validation fails
+    pub fn new(config_path: PathBuf) -> Result<Self> {
+        // Load and validate configuration from file
+        let config = Config::load_and_validate_config(&config_path)?;
+        
         let (shutdown_tx, _) = broadcast::channel(1);
         let status = AgentStatus::new(config.agent_id);
 
-        Self {
+        Ok(Self {
             config: Arc::new(RwLock::new(config)),
+            config_path,
             status: Arc::new(RwLock::new(status)),
             shutdown_tx,
-        }
+        })
     }
 
     /// Start the agent and all monitoring tasks
@@ -38,6 +52,9 @@ impl Agent {
         let mut shutdown_rx = self.subscribe_shutdown();
 
         info!("Starting agent id {}", config.agent_id);
+
+        // Create channel for config hot-reload
+        let (reload_config_tx, mut reload_config_rx) = mpsc::channel(1);
 
         // Update status. Agent is considered "running".
         {
@@ -76,14 +93,37 @@ impl Agent {
             tokio::spawn(async move { crate::reporter::run_heartbeat(config, shutdown_rx).await })
         };
 
-        // Wait for shutdown signal
-        tokio::select! {
-            _ = shutdown_rx.recv() => {
-                info!("Shutdown signal received");
-            }
-            _ = tokio::signal::ctrl_c() => {
-                info!("Ctrl+C received, shutting down");
-                let _ = self.shutdown_tx.send(());
+        // Start config hot-reload task
+        let hot_reload_handle = {
+            let config_path = self.config_path.clone();
+            let reload_tx = reload_config_tx;
+            let shutdown_rx = self.subscribe_shutdown();
+
+            tokio::spawn(async move {
+                crate::agent_config::run_hot_reload(config_path, reload_tx, shutdown_rx).await
+            })
+        };
+
+        info!("Config hot-reload enabled (file changes and SIGHUP)");
+
+        // Wait for shutdown signal or process config reloads
+        loop {
+            tokio::select! {
+                Some(new_config) = reload_config_rx.recv() => {
+                    info!("Config reload received from hot reload task");
+                    if let Err(e) = self.reload_config(new_config) {
+                        error!("Failed to apply reloaded config: {}", e);
+                    }
+                }
+                _ = shutdown_rx.recv() => {
+                    info!("Shutdown signal received");
+                    break;
+                }
+                _ = tokio::signal::ctrl_c() => {
+                    info!("Ctrl+C received, shutting down");
+                    let _ = self.shutdown_tx.send(());
+                    break;
+                }
             }
         }
 
@@ -94,6 +134,7 @@ impl Agent {
             let _ = monitor_handle.await;
             let _ = reporter_handle.await;
             let _ = heartbeat_handle.await;
+            let _ = hot_reload_handle.await;
         })
         .await
         .ok(); // Ignore timeout error, we just want to wait for tasks to finish if they can
@@ -220,24 +261,33 @@ impl Agent {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::NamedTempFile;
     use uuid::Uuid;
 
-    #[test]
-    fn test_agent_creation() {
-        let config = Config::default();
-        let agent = Agent::new(config);
+    #[tokio::test]
+    async fn test_agent_creation() {
+        let temp_file = NamedTempFile::new().unwrap();
+        let config = Config {
+            agent_id: Uuid::new_v4(),
+            ..Config::default()
+        };
+        config.save_to_file_secure(temp_file.path()).await.unwrap();
+        
+        let agent = Agent::new(temp_file.path().to_path_buf()).unwrap();
         assert!(!agent.status().is_running);
     }
 
-    #[test]
-    fn test_reload_config_success() {
+    #[tokio::test]
+    async fn test_reload_config_success() {
         let config = Config {
             agent_id: Uuid::new_v4(),
             agent_name: "Test Agent".to_string(),
             ..Config::default()
         };
 
-        let agent = Agent::new(config.clone());
+        let temp_file = NamedTempFile::new().unwrap();
+        config.save_to_file_secure(temp_file.path()).await.unwrap();
+        let agent = Agent::new(temp_file.path().to_path_buf()).unwrap();
 
         // Create a new config with changes
         let mut new_config = config.clone();
@@ -259,14 +309,16 @@ mod tests {
         assert_eq!(current_config.agent_name, new_config.agent_name);
     }
 
-    #[test]
-    fn test_reload_config_validation_failure() {
+    #[tokio::test]
+    async fn test_reload_config_validation_failure() {
         let original_config = Config {
             agent_id: Uuid::new_v4(),
             ..Config::default()
         };
 
-        let agent = Agent::new(original_config.clone());
+        let temp_file = NamedTempFile::new().unwrap();
+        original_config.save_to_file_secure(temp_file.path()).await.unwrap();
+        let agent = Agent::new(temp_file.path().to_path_buf()).unwrap();
 
         // Create an invalid config (interval_secs = 0)
         let mut invalid_config = original_config.clone();
@@ -284,14 +336,16 @@ mod tests {
         );
     }
 
-    #[test]
-    fn test_reload_config_nil_agent_id() {
+    #[tokio::test]
+    async fn test_reload_config_nil_agent_id() {
         let original_config = Config {
             agent_id: Uuid::new_v4(),
             ..Config::default()
         };
 
-        let agent = Agent::new(original_config.clone());
+        let temp_file = NamedTempFile::new().unwrap();
+        original_config.save_to_file_secure(temp_file.path()).await.unwrap();
+        let agent = Agent::new(temp_file.path().to_path_buf()).unwrap();
 
         // Create a config with nil UUID
         let mut invalid_config = original_config.clone();
@@ -306,14 +360,16 @@ mod tests {
         assert_eq!(current_config.agent_id, original_config.agent_id);
     }
 
-    #[test]
-    fn test_update_config() {
+    #[tokio::test]
+    async fn test_update_config() {
         let original_config = Config {
             agent_id: Uuid::new_v4(),
             ..Config::default()
         };
 
-        let agent = Agent::new(original_config.clone());
+        let temp_file = NamedTempFile::new().unwrap();
+        original_config.save_to_file_secure(temp_file.path()).await.unwrap();
+        let agent = Agent::new(temp_file.path().to_path_buf()).unwrap();
 
         // Update config
         let mut new_config = original_config.clone();

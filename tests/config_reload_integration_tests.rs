@@ -41,13 +41,14 @@ async fn test_config_reload_file_change() {
         .await
         .unwrap();
 
-    // Load initial config and create agent
-    let config = Config::load_and_validate_config(config_path.path()).unwrap();
+    // Create agent (loads config from file internally)
+    let agent = Agent::new(config_path.path().to_path_buf()).unwrap();
+
+    // Verify initial config was loaded correctly
+    let config = agent.config_clone();
     assert_eq!(config.version, 1);
     assert_eq!(config.monitoring.interval_secs, 60);
     assert_eq!(config.endpoints.len(), 2);
-
-    let agent = Agent::new(config);
 
     // Set up reload manager
     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
@@ -112,8 +113,7 @@ async fn test_config_reload_manual_trigger() {
         .await
         .unwrap();
 
-    let config = Config::load_and_validate_config(config_path.path()).unwrap();
-    let agent = Agent::new(config);
+    let agent = Agent::new(config_path.path().to_path_buf()).unwrap();
 
     // Create a temporary directory and config file
     let config_path2 = NamedTempFile::new().unwrap();
@@ -178,8 +178,7 @@ async fn test_config_reload_invalid_config() {
         .await
         .unwrap();
 
-    let config = Config::load_and_validate_config(config_path.path()).unwrap();
-    let agent = Agent::new(config.clone());
+    let agent = Agent::new(config_path.path().to_path_buf()).unwrap();
 
     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
     let reload_manager =
@@ -235,8 +234,7 @@ async fn test_config_reload_malformed_toml() {
         .await
         .unwrap();
 
-    let config = Config::load_and_validate_config(config_path.path()).unwrap();
-    let agent = Agent::new(config.clone());
+    let agent = Agent::new(config_path.path().to_path_buf()).unwrap();
 
     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
     let reload_manager =
@@ -294,8 +292,7 @@ async fn test_multiple_config_reloads() {
         .await
         .unwrap();
 
-    let config = Config::load_and_validate_config(config_path.path()).unwrap();
-    let agent = Agent::new(config);
+    let agent = Agent::new(config_path.path().to_path_buf()).unwrap();
 
     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
     let mut reload_manager =
