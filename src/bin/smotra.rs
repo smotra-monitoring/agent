@@ -2,8 +2,7 @@
 
 use clap::Parser;
 use smotra::{
-    handle_sighup, load_and_validate_config, Agent, Claim, Config, ConfigReloadManager, Endpoint,
-    Result,
+    handle_sighup, Agent, Claim, Config, ConfigReloadManager, Endpoint, Result,
 };
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -161,7 +160,7 @@ async fn main() -> Result<()> {
                         info!("Config reload triggered: {:?}", trigger);
 
                         // Load and validate new config
-                        match load_and_validate_config(&config_path) {
+                        match Config::load_and_validate_config(&config_path) {
                             Ok(new_config) => {
                                 // Apply the new config
                                 match agent.reload_config(new_config) {

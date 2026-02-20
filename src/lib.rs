@@ -22,7 +22,7 @@ mod plugin;
 mod reporter;
 
 pub use agent_config::{
-    handle_sighup, load_and_validate_config, ClaimConfig, Config, ConfigReloadManager,
+    handle_sighup, ClaimConfig, Config, ConfigReloadManager,
     MonitoringConfig, ReloadTrigger, ServerConfig, StorageConfig,
 };
 pub use claim::{AgentCredentials, Claim};

@@ -5,7 +5,7 @@ This document outlines the development roadmap for the Smotra monitoring agent, 
 ---
 
 ## Current PR
-- [ ] Move load_and_validate_config to AgentConfig.loader
+- [x] Move load_and_validate_config to AgentConfig.loader
 - [ ] Refactor running part of first conifg load into load_and_validate_config. Replace flow if api_key is missing to check of returned error type Error::MissingApiKey.
       Current flow:
       - load config

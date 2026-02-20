@@ -12,7 +12,6 @@ use std::time::Duration;
 use tokio::sync::{broadcast, mpsc};
 use tracing::{debug, error, info};
 
-use super::Config;
 use crate::error::{Error, Result};
 
 /// Events that trigger config reload
@@ -212,18 +211,10 @@ pub async fn handle_sighup(
     Ok(())
 }
 
-/// infoer function to load and validate config from file
-pub fn load_and_validate_config(path: &Path) -> Result<Config> {
-    info!("Loading config from: {:?}", path);
-    let config = Config::from_file(path)?;
-    config.validate()?;
-    info!("Config loaded and validated successfully");
-    Ok(config)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::Config;
     use std::fs;
     use tempfile::NamedTempFile;
     use tempfile::TempDir;
@@ -305,7 +296,7 @@ mod tests {
 
         config.save_to_file_secure(temp_file.path()).await.unwrap();
 
-        let result = load_and_validate_config(temp_file.path());
+        let result = Config::load_and_validate_config(temp_file.path());
         if let Err(ref e) = result {
             eprintln!("Config load error: {}", e);
         }
@@ -330,7 +321,7 @@ tags = [
         "#,
         );
 
-        let result = load_and_validate_config(&config_path);
+        let result = Config::load_and_validate_config(&config_path);
         assert!(result.is_err());
     }
 
@@ -341,7 +332,7 @@ tags = [
         let config = Config::default();
 
         config.save_to_file_secure(temp_file.path()).await.unwrap();
-        let result = load_and_validate_config(temp_file.path());
+        let result = Config::load_and_validate_config(temp_file.path());
         assert!(result.is_err());
         assert!(result
             .unwrap_err()

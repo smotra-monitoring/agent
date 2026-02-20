@@ -5,10 +5,7 @@
 //! - Agent config updates
 //! - Validation and error handling
 
-use smotra::{
-    load_and_validate_config, Agent, Config, ConfigReloadManager, Endpoint, MonitoringConfig,
-    ReloadTrigger,
-};
+use smotra::{Agent, Config, ConfigReloadManager, Endpoint, MonitoringConfig, ReloadTrigger};
 use std::fs;
 use std::time::Duration;
 use tempfile::NamedTempFile;
@@ -45,7 +42,7 @@ async fn test_config_reload_file_change() {
         .unwrap();
 
     // Load initial config and create agent
-    let config = load_and_validate_config(config_path.path()).unwrap();
+    let config = Config::load_and_validate_config(config_path.path()).unwrap();
     assert_eq!(config.version, 1);
     assert_eq!(config.monitoring.interval_secs, 60);
     assert_eq!(config.endpoints.len(), 2);
@@ -71,7 +68,7 @@ async fn test_config_reload_file_change() {
                 let agent = agent_for_callback.clone();
                 let config_path = config_path_for_callback.clone();
                 async move {
-                    let new_config = load_and_validate_config(&config_path)?;
+                    let new_config = Config::load_and_validate_config(&config_path)?;
                     agent.reload_config(new_config)?;
                     Ok(())
                 }
@@ -115,7 +112,7 @@ async fn test_config_reload_manual_trigger() {
         .await
         .unwrap();
 
-    let config = load_and_validate_config(config_path.path()).unwrap();
+    let config = Config::load_and_validate_config(config_path.path()).unwrap();
     let agent = Agent::new(config);
 
     // Create a temporary directory and config file
@@ -144,7 +141,7 @@ async fn test_config_reload_manual_trigger() {
                 let agent = agent_for_callback.clone();
                 let config_path = config_path_for_callback.clone();
                 async move {
-                    let new_config = load_and_validate_config(&config_path)?;
+                    let new_config = Config::load_and_validate_config(&config_path)?;
                     agent.reload_config(new_config)?;
                     Ok(())
                 }
@@ -181,7 +178,7 @@ async fn test_config_reload_invalid_config() {
         .await
         .unwrap();
 
-    let config = load_and_validate_config(config_path.path()).unwrap();
+    let config = Config::load_and_validate_config(config_path.path()).unwrap();
     let agent = Agent::new(config.clone());
 
     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
@@ -198,7 +195,7 @@ async fn test_config_reload_invalid_config() {
                 let agent = agent_for_callback.clone();
                 let config_path = config_path_for_callback.clone();
                 async move {
-                    let new_config = load_and_validate_config(&config_path)?;
+                    let new_config = Config::load_and_validate_config(&config_path)?;
                     agent.reload_config(new_config)?;
                     Ok(())
                 }
@@ -238,7 +235,7 @@ async fn test_config_reload_malformed_toml() {
         .await
         .unwrap();
 
-    let config = load_and_validate_config(config_path.path()).unwrap();
+    let config = Config::load_and_validate_config(config_path.path()).unwrap();
     let agent = Agent::new(config.clone());
 
     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
@@ -258,7 +255,7 @@ async fn test_config_reload_malformed_toml() {
                 let config_path = config_path_for_callback.clone();
                 async move {
                     // This will fail due to malformed TOML
-                    let new_config = load_and_validate_config(&config_path)?;
+                    let new_config = Config::load_and_validate_config(&config_path)?;
                     agent.reload_config(new_config)?;
                     Ok(())
                 }
@@ -297,7 +294,7 @@ async fn test_multiple_config_reloads() {
         .await
         .unwrap();
 
-    let config = load_and_validate_config(config_path.path()).unwrap();
+    let config = Config::load_and_validate_config(config_path.path()).unwrap();
     let agent = Agent::new(config);
 
     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
@@ -318,7 +315,7 @@ async fn test_multiple_config_reloads() {
                 let agent = agent_for_callback.clone();
                 let config_path = config_path_for_callback.clone();
                 async move {
-                    let new_config = load_and_validate_config(&config_path)?;
+                    let new_config = Config::load_and_validate_config(&config_path)?;
                     agent.reload_config(new_config)?;
                     Ok(())
                 }

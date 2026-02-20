@@ -1,5 +1,6 @@
 //! Configuration loading, saving, and validation
 
+use tracing::info;
 use uuid::Uuid;
 
 use super::Config;
@@ -128,6 +129,28 @@ impl Config {
         }
 
         Ok(())
+    }
+
+    /// Load and validate configuration from file
+    ///
+    /// Convenience function that loads a config file and validates it in one step.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the configuration file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * File cannot be read
+    /// * TOML parsing fails
+    /// * Configuration validation fails
+    pub fn load_and_validate_config(path: impl AsRef<Path>) -> Result<Self> {
+        info!("Loading config from: {:?}", path.as_ref());
+        let config = Self::from_file(path)?;
+        config.validate()?;
+        info!("Config loaded and validated successfully");
+        Ok(config)
     }
 }
 
