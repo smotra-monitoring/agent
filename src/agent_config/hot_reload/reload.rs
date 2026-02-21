@@ -172,7 +172,7 @@ impl ConfigReloadManager {
 /// * `reload_tx` - Channel to send reload triggers
 /// * `shutdown_rx` - Channel to receive shutdown signals
 #[cfg(unix)]
-pub async fn handle_sighup(
+pub(super) async fn handle_sighup(
     reload_tx: mpsc::UnboundedSender<ReloadTrigger>,
     mut shutdown_rx: broadcast::Receiver<()>,
 ) -> Result<()> {
@@ -202,7 +202,7 @@ pub async fn handle_sighup(
 
 /// Handle SIGHUP signal (no-op on non-Unix systems)
 #[cfg(not(unix))]
-pub async fn handle_sighup(
+pub(super) async fn handle_sighup(
     _reload_tx: mpsc::UnboundedSender<ReloadTrigger>,
     mut shutdown_rx: broadcast::Receiver<()>,
 ) -> Result<()> {
