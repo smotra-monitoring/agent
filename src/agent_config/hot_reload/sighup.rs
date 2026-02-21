@@ -26,7 +26,7 @@ pub async fn handle_sighup(
     use tokio::signal::unix::{signal, SignalKind};
 
     let mut sighup = signal(SignalKind::hangup())
-        .map_err(|e| Error::HotReload(format!("Failed to setup SIGHUP handler: {}", e)))?;
+        .map_err(|e| Error::SigHup(format!("Failed to setup SIGHUP handler: {}", e)))?;
 
     info!("SIGHUP handler started");
 
@@ -35,7 +35,7 @@ pub async fn handle_sighup(
             _ = sighup.recv() => {
                 info!("SIGHUP received, triggering config reload");
                 reload_tx.send(ReloadTrigger::Signal)
-                    .map_err(|e| Error::HotReload(format!("Failed to send reload trigger: {}", e)))?;
+                    .map_err(|e| Error::SigHup(format!("Failed to send reload trigger: {}", e)))?;
             }
             _ = shutdown_rx.recv() => {
                 info!("SIGHUP handler shutting down");

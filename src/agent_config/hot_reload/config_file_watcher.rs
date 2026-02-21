@@ -19,10 +19,9 @@ use super::orchestrator::ReloadTrigger;
 /// Watches for config file changes and sends reload triggers through provided channel
 pub(super) struct ConfigFileWatcher {
     config_path: PathBuf,
+    // required for lifetime management of the file watcher - must be kept alive while watching
     file_watcher: Option<Debouncer<RecommendedWatcher, NoCache>>,
     reload_tx: mpsc::UnboundedSender<ReloadTrigger>,
-    #[allow(dead_code)]  // May be used for future shutdown coordination
-    shutdown_rx: broadcast::Receiver<()>,
 }
 
 impl ConfigFileWatcher {
@@ -42,7 +41,6 @@ impl ConfigFileWatcher {
             config_path,
             file_watcher: None,
             reload_tx,
-            shutdown_rx,
         })
     }
 
@@ -115,12 +113,9 @@ mod tests {
 
         let (reload_tx, _reload_rx) = mpsc::unbounded_channel();
         let (_, shutdown_rx) = broadcast::channel(1);
-        
-        let watcher = ConfigFileWatcher::new(
-            temp_file.path().to_path_buf(),
-            reload_tx,
-            shutdown_rx,
-        );
+
+        let watcher =
+            ConfigFileWatcher::new(temp_file.path().to_path_buf(), reload_tx, shutdown_rx);
         assert!(watcher.is_ok());
     }
 
@@ -136,13 +131,9 @@ mod tests {
 
         let (reload_tx, _reload_rx) = mpsc::unbounded_channel();
         let (_, shutdown_rx) = broadcast::channel(1);
-        
-        let mut watcher = ConfigFileWatcher::new(
-            temp_file.path().to_path_buf(),
-            reload_tx,
-            shutdown_rx,
-        )
-        .unwrap();
+
+        let mut watcher =
+            ConfigFileWatcher::new(temp_file.path().to_path_buf(), reload_tx, shutdown_rx).unwrap();
 
         // Should be able to start watching without error
         let result = watcher.start_watching();
