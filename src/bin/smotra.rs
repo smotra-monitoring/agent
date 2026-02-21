@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use tracing::{error, info};
 
 #[derive(Parser)]
-#[command(name = "agent")]
+#[command(name = "smotra")]
 #[command(about = "Smotra Agent - Distributed monitoring daemon", long_about = None)]
 #[command(version)]
 struct Cli {

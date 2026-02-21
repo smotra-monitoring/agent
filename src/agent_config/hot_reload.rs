@@ -68,7 +68,8 @@ pub async fn run_hot_reload(
     info!("Starting config hot-reload orchestration");
 
     // Create the config reload manager
-    let mut reload_manager = ConfigReloadManager::new(config_path.clone(), shutdown_rx.resubscribe())?;
+    let mut reload_manager =
+        ConfigReloadManager::new(config_path.clone(), shutdown_rx.resubscribe())?;
 
     // Start watching for file changes
     if let Err(e) = reload_manager.start_watching_file() {
@@ -91,7 +92,7 @@ pub async fn run_hot_reload(
         })
     };
 
-    info!("Config hot-reload enabled (file changes and SIGHUP)");
+    info!("Config hot-reload enabled");
 
     // Run the main reload coordinator loop
     let result = reload_manager
@@ -139,8 +140,8 @@ pub async fn run_hot_reload(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use super::super::reload::ReloadTrigger;
+    use super::*;
     use std::fs;
     use tempfile::NamedTempFile;
     use tokio::time::{sleep, Duration};
@@ -156,13 +157,12 @@ mod tests {
         config.save_to_file_secure(temp_file.path()).await.unwrap();
 
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
-        let (reload_tx, mut reload_rx) = mpsc::channel(1);
+        let (reload_tx, reload_rx) = mpsc::channel(1);
 
         // Spawn the hot reload task
         let config_path = temp_file.path().to_path_buf();
-        let handle = tokio::spawn(async move {
-            run_hot_reload(config_path, reload_tx, shutdown_rx).await
-        });
+        let handle =
+            tokio::spawn(async move { run_hot_reload(config_path, reload_tx, shutdown_rx).await });
 
         // Give it a moment to start
         sleep(Duration::from_millis(50)).await;
@@ -172,7 +172,10 @@ mod tests {
 
         // Wait for task to complete
         let result = tokio::time::timeout(Duration::from_secs(1), handle).await;
-        assert!(result.is_ok(), "Hot reload task should complete on shutdown");
+        assert!(
+            result.is_ok(),
+            "Hot reload task should complete on shutdown"
+        );
 
         // Ensure reload channel is not blocked
         drop(reload_rx);

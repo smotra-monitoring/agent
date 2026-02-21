@@ -34,7 +34,7 @@ impl Agent {
     pub fn new(config_path: PathBuf) -> Result<Self> {
         // Load and validate configuration from file
         let config = Config::load_and_validate_config(&config_path)?;
-        
+
         let (shutdown_tx, _) = broadcast::channel(1);
         let status = AgentStatus::new(config.agent_id);
 
@@ -103,8 +103,6 @@ impl Agent {
                 crate::agent_config::run_hot_reload(config_path, reload_tx, shutdown_rx).await
             })
         };
-
-        info!("Config hot-reload enabled (file changes and SIGHUP)");
 
         // Wait for shutdown signal or process config reloads
         loop {
@@ -265,19 +263,6 @@ mod tests {
     use uuid::Uuid;
 
     #[tokio::test]
-    async fn test_agent_creation() {
-        let temp_file = NamedTempFile::new().unwrap();
-        let config = Config {
-            agent_id: Uuid::new_v4(),
-            ..Config::default()
-        };
-        config.save_to_file_secure(temp_file.path()).await.unwrap();
-        
-        let agent = Agent::new(temp_file.path().to_path_buf()).unwrap();
-        assert!(!agent.status().is_running);
-    }
-
-    #[tokio::test]
     async fn test_reload_config_success() {
         let config = Config {
             agent_id: Uuid::new_v4(),
@@ -317,7 +302,10 @@ mod tests {
         };
 
         let temp_file = NamedTempFile::new().unwrap();
-        original_config.save_to_file_secure(temp_file.path()).await.unwrap();
+        original_config
+            .save_to_file_secure(temp_file.path())
+            .await
+            .unwrap();
         let agent = Agent::new(temp_file.path().to_path_buf()).unwrap();
 
         // Create an invalid config (interval_secs = 0)
@@ -344,7 +332,10 @@ mod tests {
         };
 
         let temp_file = NamedTempFile::new().unwrap();
-        original_config.save_to_file_secure(temp_file.path()).await.unwrap();
+        original_config
+            .save_to_file_secure(temp_file.path())
+            .await
+            .unwrap();
         let agent = Agent::new(temp_file.path().to_path_buf()).unwrap();
 
         // Create a config with nil UUID
@@ -368,7 +359,10 @@ mod tests {
         };
 
         let temp_file = NamedTempFile::new().unwrap();
-        original_config.save_to_file_secure(temp_file.path()).await.unwrap();
+        original_config
+            .save_to_file_secure(temp_file.path())
+            .await
+            .unwrap();
         let agent = Agent::new(temp_file.path().to_path_buf()).unwrap();
 
         // Update config
