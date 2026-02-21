@@ -28,7 +28,7 @@ This document outlines the development roadmap for the Smotra monitoring agent, 
 
 - [ ] Consider saving new config to disk after successful reload. This way we can ensure that config on disk is always valid and consistent with the config in memory. This is not critical, but it can be nice to have.
 
-- [ ] Refactor hot_reload.rs. Make it a folder and move hot_reload.rs inside the new folder. Also move reload.rs to the same folder. Reload.rs is only used by hot_reload.rs, so it makes sense to keep them together. 
+- [ ] Refactor hot_reload.rs. Make it a folder and move hot_reload.rs inside the new folder. Also move reload.rs to the same folder. Reload.rs is only used by hot_reload.rs, so it makes sense to keep them together. Make all methods in reload.rs private, because they are the internal implementation details of the hot_reload.rs. This will simplify the code and make it more cohesive. If it is impossible to make all methods in reload.rs private, we can at least make them pub(xxx) to only allow access from hot_reload.rs. This will still be better than making them public to the entire crate.
 
 - [ ] Refactor integration tests related to reload.rs from previous "refactor list".
 
