@@ -28,6 +28,21 @@ This document outlines the development roadmap for the Smotra monitoring agent, 
 
 - [ ] Consider saving new config to disk after successful reload. This way we can ensure that config on disk is always valid and consistent with the config in memory. This is not critical, but it can be nice to have.
 
+- [ ] Refactor hot_reload.rs. Make it a folder and move hot_reload.rs inside the new folder. Also move reload.rs to the same folder. Reload.rs is only used by hot_reload.rs, so it makes sense to keep them together. 
+
+- [ ] Refactor integration tests related to reload.rs from previous "refactor list".
+
+- [ ] Refactor hot_reload.rs: run main loop of the hot_reload.rs insted of reload_manager.run().  It will simplify the code in hot_reload.rs and reload.rs.
+Reload.rs should have reload_tx as parameter to the start_watching (not create it interally). reload_rx part will be in hot_reload.rs, because it is the internal implementation detail of the hot_reload.rs. Reload.rs should only be responsible for watching the file changes and sending reload signal through reload_tx. The main loop of the hot_reload.rs will receive the reload signal from reload_rx and call reload_manager.reload_config(). Mehods in reload.rs should be private, because they are the internal implementation details of the hot_reload.rs. Insted of callback in run_hot_reload, we can just call reload_manager.reload_config() directly in the main loop of the hot_reload.rs when we receive reload signal from reload_rx. This way we can simplify the code and remove unnecessary abstractions.
+
+- [ ] Move 
+ a. ReloadTrigger to the hot_reload.rs, because it is only used by the hot_reload.rs. This will simplify the code and make it more cohesive.
+ b. Signal sending to the hot_reload.rs, because it is only used by the hot_reload.rs. This will simplify the code and make it more cohesive.
+ 
+After that ConfigReloadManager will be only responsible for file watching. The main loop of the hot_reload.rs will be responsible for receiving reload signal and calling reload_config(). 
+Rename ConfigReloadManager to ConfigFileWatcher. This will better reflect the responsibility of this struct.
+
+
 ## ✅ Completed Milestones
 
 ### Core Infrastructure (v0.1.0)
