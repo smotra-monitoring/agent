@@ -11,6 +11,9 @@ pub enum Error {
     #[error("Configuration error: {0}")]
     Config(String),
 
+    #[error("API key error: {0}")]
+    ConfigApiKey(String),
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 

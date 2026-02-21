@@ -4,6 +4,45 @@ This document outlines the development roadmap for the Smotra monitoring agent, 
 
 ---
 
+## Current PR
+- [x] Move load_and_validate_config to AgentConfig.loader
+- [ ] Refactor running part of first conifg load into load_and_validate_config. Replace flow if api_key is missing to check of returned error type Error::MissingApiKey.
+      Current flow:
+      - load config
+      - if api_key is missing, start claiming workflow
+      - validate config
+      New flow:
+      - load and validate config in one step
+      - if api_key is missing, return Error::MissingApiKey, start claiming workflow in main.rs, then call load_and_validate_config again to load the config with api_key and validate it
+
+- [ ] Refactor main gen_config. Move it to a dedicated function.
+- [ ] ConfigReloadManager.reload_config should be private. This is internal implementation detail. 
+
+- [ ] Rename src/monitor/coordinator.rs -> src/monitor/server.rs, due to other similar files like src/monitor/server.rs and src/reporter/server.rs
+
+- [ ] Refactor async loops in main.rs to follow the same principle as other async loops in the codebase (check agent.rs).
+
+- [ ] IMO Agent::reload_config make an assumption that all async loops will pick-up config change because they programmed with reference to self.config. This is not true. Config cloned by value. DOUBLE CHECK !!! Potentially refactor rest of the green threads to use config reference instead of cloning it.
+
+- [ ] Test test_manual_trigger_reload is running "green-thread" to simulate config reload. This is not ideal. Spawn is the internal implementation detail of the ConfigReloadManager. Refactor treading in this struct implementation so that test can call reload_config directly without relying on internal implementation details.
+
+- [ ] Consider saving new config to disk after successful reload. This way we can ensure that config on disk is always valid and consistent with the config in memory. This is not critical, but it can be nice to have.
+
+- [ ] Refactor hot_reload.rs. Make it a folder and move hot_reload.rs inside the new folder. Also move reload.rs to the same folder. Reload.rs is only used by hot_reload.rs, so it makes sense to keep them together. 
+
+- [ ] Refactor integration tests related to reload.rs from previous "refactor list".
+
+- [ ] Refactor hot_reload.rs: run main loop of the hot_reload.rs insted of reload_manager.run().  It will simplify the code in hot_reload.rs and reload.rs.
+Reload.rs should have reload_tx as parameter to the start_watching (not create it interally). reload_rx part will be in hot_reload.rs, because it is the internal implementation detail of the hot_reload.rs. Reload.rs should only be responsible for watching the file changes and sending reload signal through reload_tx. The main loop of the hot_reload.rs will receive the reload signal from reload_rx and call reload_manager.reload_config(). Mehods in reload.rs should be private, because they are the internal implementation details of the hot_reload.rs. Insted of callback in run_hot_reload, we can just call reload_manager.reload_config() directly in the main loop of the hot_reload.rs when we receive reload signal from reload_rx. This way we can simplify the code and remove unnecessary abstractions.
+
+- [ ] Move 
+ a. ReloadTrigger to the hot_reload.rs, because it is only used by the hot_reload.rs. This will simplify the code and make it more cohesive.
+ b. Signal sending to the hot_reload.rs, because it is only used by the hot_reload.rs. This will simplify the code and make it more cohesive.
+ 
+After that ConfigReloadManager will be only responsible for file watching. The main loop of the hot_reload.rs will be responsible for receiving reload signal and calling reload_config(). 
+Rename ConfigReloadManager to ConfigFileWatcher. This will better reflect the responsibility of this struct.
+
+
 ## ✅ Completed Milestones
 
 ### Core Infrastructure (v0.1.0)
