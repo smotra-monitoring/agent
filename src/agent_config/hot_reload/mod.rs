@@ -29,8 +29,12 @@
 //! - Makes the data flow explicit via channels
 //! - Simplifies error handling and shutdown coordination
 
+mod config_file_watcher;
 mod orchestrator;
-mod reload;
+mod sighup;
 
 pub use orchestrator::run_hot_reload;
-pub use reload::{ConfigReloadManager, ReloadTrigger};
+
+#[doc(hidden)]
+pub use orchestrator::test_helpers;
+

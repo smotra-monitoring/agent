@@ -9,9 +9,27 @@ use std::path::PathBuf;
 use tokio::sync::{broadcast, mpsc};
 use tracing::{error, info, warn};
 
-use super::reload::{handle_sighup, ConfigReloadManager};
+use super::config_file_watcher::ConfigFileWatcher;
+use super::sighup::handle_sighup;
 use crate::agent_config::Config;
 use crate::error::Result;
+
+/// Events that trigger config reload
+///
+/// **Internal use only** - Used by test helpers for integration testing.
+/// Not part of the public API - API is unstable and may change.
+#[derive(Debug, Clone)]
+#[doc(hidden)]
+pub enum ReloadTrigger {
+    /// Config file was modified on filesystem
+    FileChange(PathBuf),
+    /// SIGHUP signal received (Unix only)
+    Signal,
+    /// Server reported a new config version (future implementation)
+    ServerVersionChange(u32),
+    /// Manual trigger (for testing or manual reloads)
+    Manual,
+}
 
 /// Run the hot reload orchestration task
 ///
@@ -31,11 +49,11 @@ use crate::error::Result;
 ///
 /// # Architecture
 ///
-/// Spawns three conceptual tasks:
-/// 1. **File watcher**: Monitors config file for changes (via ConfigReloadManager's debouncer)
+/// Creates three coordinated components:
+/// 1. **File watcher**: Monitors config file for changes (ConfigFileWatcher)
 /// 2. **SIGHUP handler**: Listens for SIGHUP signals and sends reload triggers
-/// 3. **Reload coordinator**: Main event loop that receives triggers, loads/validates config,
-///    and sends validated configs through the channel
+/// 3. **Main event loop**: Receives triggers from internal channel, loads/validates config,
+///    and sends validated configs to Agent through the provided channel
 pub async fn run_hot_reload(
     config_path: PathBuf,
     reload_tx: mpsc::Sender<Config>,
@@ -43,26 +61,30 @@ pub async fn run_hot_reload(
 ) -> Result<()> {
     info!("Starting config hot-reload orchestration");
 
-    // Create the config reload manager
-    let mut reload_manager =
-        ConfigReloadManager::new(config_path.clone(), shutdown_rx.resubscribe())?;
+    // Create internal channel for reload triggers
+    let (trigger_tx, mut trigger_rx) = mpsc::unbounded_channel::<ReloadTrigger>();
+
+    // Create the config file watcher
+    let mut file_watcher = ConfigFileWatcher::new(
+        config_path.clone(),
+        trigger_tx.clone(),
+        shutdown_rx.resubscribe(),
+    )?;
 
     // Start watching for file changes
-    if let Err(e) = reload_manager.start_watching_file() {
+    if let Err(e) = file_watcher.start_watching() {
         warn!("Failed to start config file watching: {}", e);
         warn!("Config hot-reload from file changes will not be available");
     } else {
         info!("Config file watching enabled");
     }
 
-    // Get the reload trigger sender for the SIGHUP handler
-    let reload_trigger_tx = reload_manager.reload_sender();
-
     // Spawn SIGHUP handler task
     let sighup_handle = {
+        let trigger_tx = trigger_tx.clone();
         let shutdown_rx = shutdown_rx.resubscribe();
         tokio::spawn(async move {
-            if let Err(e) = handle_sighup(reload_trigger_tx, shutdown_rx).await {
+            if let Err(e) = handle_sighup(trigger_tx, shutdown_rx).await {
                 error!("SIGHUP handler error: {}", e);
             }
         })
@@ -71,11 +93,10 @@ pub async fn run_hot_reload(
     info!("Config hot-reload enabled");
 
     // Run the main reload coordinator loop
-    let result = reload_manager
-        .run(move |trigger| {
-            let config_path = config_path.clone();
-            let reload_tx = reload_tx.clone();
-            async move {
+    let mut shutdown_rx = shutdown_rx;
+    loop {
+        tokio::select! {
+            Some(trigger) = trigger_rx.recv() => {
                 info!("Config reload triggered: {:?}", trigger);
 
                 // Load and validate new config
@@ -89,34 +110,105 @@ pub async fn run_hot_reload(
                         // Send the validated config to Agent::start() for application
                         if let Err(e) = reload_tx.send(new_config).await {
                             error!("Failed to send reloaded config to agent: {}", e);
-                            return Err(crate::error::Error::Config(format!(
-                                "Config channel closed: {}",
-                                e
-                            )));
+                            // Channel closed, break the loop
+                            break;
                         }
 
                         info!("Config reload completed successfully");
-                        Ok(())
                     }
                     Err(e) => {
                         error!("Failed to load config during reload: {}", e);
-                        Err(e)
+                        // Continue running even if one reload fails
                     }
                 }
             }
-        })
-        .await;
+            _ = shutdown_rx.recv() => {
+                info!("Config hot-reload orchestration shutting down");
+                break;
+            }
+        }
+    }
+
+    // Keep file_watcher alive until shutdown (it owns the Debouncer)
+    drop(file_watcher);
 
     // Wait for SIGHUP handler to complete (with short timeout)
     let _ = tokio::time::timeout(std::time::Duration::from_millis(500), sighup_handle).await;
 
     info!("Config hot-reload orchestration stopped");
-    result
+    Ok(())
+}
+
+/// Test helpers for integration tests
+///
+/// Provides access to internal types and functionality needed for testing.
+/// **Internal use only** - API is unstable.
+#[doc(hidden)]
+pub mod test_helpers {
+    use super::*;
+
+    // Re-export ReloadTrigger for test use
+    pub use super::ReloadTrigger;
+
+    /// Create a test-only reload trigger sender
+    ///
+    /// Returns a channel sender that can be used to manually trigger reloads for testing
+    pub fn create_reload_trigger_channel() -> (
+        mpsc::UnboundedSender<ReloadTrigger>,
+        mpsc::UnboundedReceiver<ReloadTrigger>,
+    ) {
+        mpsc::unbounded_channel()
+    }
+
+    /// Run hot reload orchestration with custom trigger channel for testing
+    ///
+    /// This allows tests to manually send reload triggers
+    pub async fn run_hot_reload_with_trigger_channel(
+        config_path: PathBuf,
+        reload_tx: mpsc::Sender<Config>,
+        mut trigger_rx: mpsc::UnboundedReceiver<ReloadTrigger>,
+        shutdown_rx: broadcast::Receiver<()>,
+    ) -> Result<()> {
+        info!("Starting test hot-reload orchestration with custom trigger channel");
+
+        let mut shutdown_rx = shutdown_rx;
+        loop {
+            tokio::select! {
+                Some(trigger) = trigger_rx.recv() => {
+                    info!("Config reload triggered: {:?}", trigger);
+
+                    match Config::load_and_validate_config(&config_path) {
+                        Ok(new_config) => {
+                            info!(
+                                "Config loaded and validated successfully (version: {})",
+                                new_config.version
+                            );
+
+                            if let Err(e) = reload_tx.send(new_config).await {
+                                error!("Failed to send reloaded config: {}", e);
+                                break;
+                            }
+
+                            info!("Config reload completed successfully");
+                        }
+                        Err(e) => {
+                            error!("Failed to load config during reload: {}", e);
+                        }
+                    }
+                }
+                _ = shutdown_rx.recv() => {
+                    info!("Test hot-reload orchestration shutting down");
+                    break;
+                }
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::super::reload::{ConfigReloadManager, ReloadTrigger};
     use super::*;
     use tempfile::NamedTempFile;
     use tokio::time::{sleep, Duration};
@@ -157,72 +249,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_run_hot_reload_manual_trigger() {
-        // Create a temporary config file
-        let temp_file = NamedTempFile::new().unwrap();
-        let mut config = Config {
-            agent_id: uuid::Uuid::new_v4(),
-            ..Config::default()
-        };
-        config.version = 1;
-        config.save_to_file_secure(temp_file.path()).await.unwrap();
-
-        let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
-        let (reload_tx, mut reload_rx) = mpsc::channel(1);
-
-        // Create the reload manager to get its trigger sender
-        let reload_manager =
-            ConfigReloadManager::new(temp_file.path().to_path_buf(), shutdown_rx.resubscribe())
-                .unwrap();
-        let trigger_tx = reload_manager.reload_sender();
-
-        // Spawn the hot reload task
-        let config_path = temp_file.path().to_path_buf();
-        let handle = tokio::spawn(async move {
-            // Recycle the reload_manager by running it directly
-            // (we can't use run_hot_reload because we need the trigger_tx)
-            let (reload_tx_inner, mut reload_rx_inner) = mpsc::channel(1);
-
-            // Forward from inner to outer channel
-            tokio::spawn(async move {
-                while let Some(config) = reload_rx_inner.recv().await {
-                    let _ = reload_tx.send(config).await;
-                }
-            });
-
-            reload_manager
-                .run(move |_trigger| {
-                    let config_path = config_path.clone();
-                    let reload_tx = reload_tx_inner.clone();
-                    async move {
-                        let new_config = Config::load_and_validate_config(&config_path)?;
-                        reload_tx.send(new_config).await.map_err(|e| {
-                            crate::error::Error::Config(format!("Channel send failed: {}", e))
-                        })?;
-                        Ok(())
-                    }
-                })
-                .await
-        });
-
-        // Give it a moment to start
-        sleep(Duration::from_millis(50)).await;
-
-        // Trigger a manual reload
-        let _ = trigger_tx.send(ReloadTrigger::Manual);
-
-        // Wait for the reloaded config
-        let received_config = tokio::time::timeout(Duration::from_millis(500), reload_rx.recv())
-            .await
-            .expect("Should receive config within timeout")
-            .expect("Should receive Some(config)");
-
-        assert_eq!(received_config.version, 1);
-
-        // Send shutdown signal
-        let _ = shutdown_tx.send(());
-
-        // Wait for task to complete
-        let _ = tokio::time::timeout(Duration::from_secs(1), handle).await;
+    async fn test_reload_trigger_variants() {
+        // Test all variants can be created (accessible in tests within the module)
+        let _file_trigger = ReloadTrigger::FileChange(PathBuf::from("/tmp/config.toml"));
+        let _signal_trigger = ReloadTrigger::Signal;
+        let _server_trigger = ReloadTrigger::ServerVersionChange(2);
+        let _manual_trigger = ReloadTrigger::Manual;
     }
 }

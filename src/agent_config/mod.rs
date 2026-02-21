@@ -6,6 +6,10 @@ mod loader;
 mod server_config;
 mod types;
 
-pub use hot_reload::{run_hot_reload, ConfigReloadManager, ReloadTrigger};
+pub use hot_reload::run_hot_reload;
 pub use server_config::{ClaimConfig, ServerConfig};
 pub use types::*;
+
+#[doc(hidden)]
+pub use hot_reload::test_helpers;
+
