@@ -45,6 +45,8 @@ b. reload_tx and reload_rx to the orchestrator.rs, because they are the internal
 After that ConfigReloadManager will be only responsible for file watching. The main loop of the orchestrator.rs will be responsible for receiving reload signal and calling reload_config(). 
 Rename ConfigReloadManager to ConfigFileWatcher. This will better reflect the responsibility of this struct.
 
+- [ ] 1. pub enum ReloadTrigger should be private, because it is the internal implementation detail of the orchestrator.rs. It only used in integration tests, but it is not part of the public API. We can make it private and re-export it in the test_helpers module for integration test use. This way we can keep the public API clean and not expose internal implementation details.
+      2. mod test_helpers should be private, because it is only used for integration testing and not part of the public API.  
 
 ## ✅ Completed Milestones
 

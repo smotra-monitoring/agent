@@ -19,14 +19,14 @@ use super::orchestrator::ReloadTrigger;
 /// * `reload_tx` - Channel to send reload triggers
 /// * `shutdown_rx` - Channel to receive shutdown signals
 #[cfg(unix)]
-pub(super) async fn handle_sighup(
+pub async fn handle_sighup(
     reload_tx: mpsc::UnboundedSender<ReloadTrigger>,
     mut shutdown_rx: broadcast::Receiver<()>,
 ) -> Result<()> {
     use tokio::signal::unix::{signal, SignalKind};
 
     let mut sighup = signal(SignalKind::hangup())
-        .map_err(|e| Error::Config(format!("Failed to setup SIGHUP handler: {}", e)))?;
+        .map_err(|e| Error::HotReload(format!("Failed to setup SIGHUP handler: {}", e)))?;
 
     info!("SIGHUP handler started");
 
@@ -35,7 +35,7 @@ pub(super) async fn handle_sighup(
             _ = sighup.recv() => {
                 info!("SIGHUP received, triggering config reload");
                 reload_tx.send(ReloadTrigger::Signal)
-                    .map_err(|e| Error::Config(format!("Failed to send reload trigger: {}", e)))?;
+                    .map_err(|e| Error::HotReload(format!("Failed to send reload trigger: {}", e)))?;
             }
             _ = shutdown_rx.recv() => {
                 info!("SIGHUP handler shutting down");
@@ -49,7 +49,7 @@ pub(super) async fn handle_sighup(
 
 /// Handle SIGHUP signal (no-op on non-Unix systems)
 #[cfg(not(unix))]
-pub(super) async fn handle_sighup(
+pub async fn handle_sighup(
     _reload_tx: mpsc::UnboundedSender<ReloadTrigger>,
     mut shutdown_rx: broadcast::Receiver<()>,
 ) -> Result<()> {

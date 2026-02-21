@@ -11,6 +11,9 @@ pub enum Error {
     #[error("Configuration error: {0}")]
     Config(String),
 
+    #[error("Hot reload error: {0}")]
+    HotReload(String),
+
     #[error("API key error: {0}")]
     ConfigApiKey(String),
 
