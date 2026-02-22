@@ -175,7 +175,7 @@ pub mod test_helpers {
     /// This allows tests to manually send reload triggers
     pub async fn run_hot_reload_with_trigger_channel(
         config_path: PathBuf,
-        reload_tx: mpsc::Sender<Config>,
+        config_tx: mpsc::Sender<Config>,
         mut trigger_rx: mpsc::UnboundedReceiver<ReloadTrigger>,
         shutdown_rx: broadcast::Receiver<()>,
     ) -> Result<()> {
@@ -194,7 +194,7 @@ pub mod test_helpers {
                                 new_config.version
                             );
 
-                            if let Err(e) = reload_tx.send(new_config).await {
+                            if let Err(e) = config_tx.send(new_config).await {
                                 error!("Failed to send reloaded config: {}", e);
                                 break;
                             }
@@ -234,12 +234,12 @@ mod tests {
         config.save_to_file_secure(temp_file.path()).await.unwrap();
 
         let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
-        let (reload_tx, reload_rx) = mpsc::channel(1);
+        let (config_tx, config_rx) = mpsc::channel(1);
 
         // Spawn the hot reload task
         let config_path = temp_file.path().to_path_buf();
         let handle =
-            tokio::spawn(async move { run_hot_reload(config_path, reload_tx, shutdown_rx).await });
+            tokio::spawn(async move { run_hot_reload(config_path, config_tx, shutdown_rx).await });
 
         // Give it a moment to start
         sleep(Duration::from_millis(50)).await;
@@ -255,7 +255,7 @@ mod tests {
         );
 
         // Ensure reload channel is not blocked
-        drop(reload_rx);
+        drop(config_rx);
     }
 
     #[tokio::test]
