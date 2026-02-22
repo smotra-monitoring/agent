@@ -56,7 +56,7 @@ pub enum ReloadTrigger {
 ///    and sends validated configs to Agent through the provided channel
 pub async fn run_hot_reload(
     config_path: PathBuf,
-    reload_tx: mpsc::Sender<Config>,
+    config_tx: mpsc::Sender<Config>,
     shutdown_rx: broadcast::Receiver<()>,
 ) -> Result<()> {
     info!("Starting config hot-reload orchestration");
@@ -99,28 +99,38 @@ pub async fn run_hot_reload(
             Some(trigger) = trigger_rx.recv() => {
                 info!("Config reload triggered: {:?}", trigger);
 
-                // Load and validate new config
-                match Config::load_and_validate_config(&config_path) {
-                    Ok(new_config) => {
-                        info!(
-                            "Config loaded and validated successfully (version: {})",
-                            new_config.version
-                        );
+                match trigger {
+                    ReloadTrigger::FileChange(_) | ReloadTrigger::Signal | ReloadTrigger::Manual => {
 
-                        // Send the validated config to Agent::start() for application
-                        if let Err(e) = reload_tx.send(new_config).await {
-                            error!("Failed to send reloaded config to agent: {}", e);
-                            // Channel closed, break the loop
-                            break;
+                        match Config::load_and_validate_config(&config_path) {
+                            Ok(new_config) => {
+                                info!(
+                                    "Config loaded and validated successfully (version: {})",
+                                    new_config.version
+                                );
+
+                                // Send the validated config to Agent::start() for application
+                                if let Err(e) = config_tx.send(new_config).await {
+                                    error!("Failed to send config to a closed channel: {}", e);
+                                    // Channel closed, break the loop
+                                    break;
+                                }
+
+                                info!("Config reload completed successfully");
+                            }
+                            Err(e) => {
+                                error!("Failed to load config during reload: {}", e);
+                                // Continue running even if one reload fails
+                            }
                         }
 
-                        info!("Config reload completed successfully");
                     }
-                    Err(e) => {
-                        error!("Failed to load config during reload: {}", e);
-                        // Continue running even if one reload fails
+                    ReloadTrigger::ServerVersionChange(version) => {
+                        info!("Reload triggered by server version change: {}", version);
+                        unimplemented!("Server-initiated config version change handling is not implemented yet");
                     }
                 }
+
             }
             _ = shutdown_rx.recv() => {
                 info!("Config hot-reload orchestration shutting down");

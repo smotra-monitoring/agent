@@ -96,11 +96,11 @@ impl Agent {
         // Start config hot-reload task
         let hot_reload_handle = {
             let config_path = self.config_path.clone();
-            let reload_tx = reload_config_tx;
+            let config_tx = reload_config_tx;
             let shutdown_rx = self.subscribe_shutdown();
 
             tokio::spawn(async move {
-                crate::agent_config::run_hot_reload(config_path, reload_tx, shutdown_rx).await
+                crate::agent_config::run_hot_reload(config_path, config_tx, shutdown_rx).await
             })
         };
 
