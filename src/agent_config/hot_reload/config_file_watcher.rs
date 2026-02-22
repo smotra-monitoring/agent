@@ -139,4 +139,44 @@ mod tests {
         let result = watcher.start_watching();
         assert!(result.is_ok());
     }
+
+    #[tokio::test]
+    async fn test_watching_event() {
+        let temp_file = NamedTempFile::new().unwrap();
+
+        let config = Config {
+            version: 1,
+            agent_id: uuid::Uuid::new_v4(),
+            agent_name: "Test Agent".to_string(),
+            ..Config::default()
+        };
+        config.save_to_file_secure(temp_file.path()).await.unwrap();
+
+        let (reload_tx, mut reload_rx) = mpsc::unbounded_channel();
+        let (_, shutdown_rx) = broadcast::channel(1);
+
+        let mut watcher =
+            ConfigFileWatcher::new(temp_file.path().to_path_buf(), reload_tx, shutdown_rx).unwrap();
+
+        // Should be able to start watching without error
+        let result = watcher.start_watching();
+        assert!(result.is_ok());
+
+        let config_new = Config {
+            version: 2,
+            agent_id: uuid::Uuid::new_v4(),
+            agent_name: "Test Agent 2".to_string(),
+            ..Config::default()
+        };
+        config_new
+            .save_to_file_secure(temp_file.path())
+            .await
+            .unwrap();
+
+        if let ReloadTrigger::FileChange(fname) = reload_rx.recv().await.unwrap() {
+            assert_eq!(fname, temp_file.path());
+        } else {
+            panic!("Expected FileChange trigger");
+        }
+    }
 }
