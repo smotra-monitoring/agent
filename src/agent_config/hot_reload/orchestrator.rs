@@ -508,7 +508,12 @@ mod tests {
 
         // Shutdown
         let _ = shutdown_tx.send(());
-        let _ = tokio::time::timeout(Duration::from_secs(1), reload_handle).await;
+        let timeout_handle = tokio::time::timeout(Duration::from_secs(1), reload_handle).await;
+
+        assert!(
+            timeout_handle.is_ok(),
+            "Hot reload task should shutdown cleanly after multiple reloads"
+        );
     }
 
     #[tokio::test]
