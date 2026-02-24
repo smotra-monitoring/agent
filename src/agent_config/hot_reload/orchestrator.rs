@@ -65,11 +65,7 @@ pub async fn run_hot_reload(
     let (trigger_tx, mut trigger_rx) = mpsc::unbounded_channel::<ReloadTrigger>();
 
     // Create the config file watcher
-    let mut file_watcher = ConfigFileWatcher::new(
-        config_path.clone(),
-        trigger_tx.clone(),
-        shutdown_rx.resubscribe(),
-    )?;
+    let mut file_watcher = ConfigFileWatcher::new(config_path.clone(), trigger_tx.clone())?;
 
     // Start watching for file changes
     if let Err(e) = file_watcher.start_watching() {

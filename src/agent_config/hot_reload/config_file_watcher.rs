@@ -7,7 +7,7 @@ use notify::{RecommendedWatcher, RecursiveMode};
 use notify_debouncer_full::{new_debouncer, DebounceEventResult, Debouncer, NoCache};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-use tokio::sync::{broadcast, mpsc};
+use tokio::sync::mpsc;
 use tracing::{debug, error, info};
 
 use crate::error::{Error, Result};
@@ -35,7 +35,6 @@ impl ConfigFileWatcher {
     pub(super) fn new(
         config_path: PathBuf,
         trigger_tx: mpsc::UnboundedSender<ReloadTrigger>,
-        shutdown_rx: broadcast::Receiver<()>,
     ) -> Result<Self> {
         Ok(Self {
             config_path,
@@ -99,7 +98,6 @@ mod tests {
     use super::*;
     use crate::Config;
     use tempfile::NamedTempFile;
-    use tokio::sync::broadcast;
 
     #[tokio::test]
     async fn test_config_file_watcher_creation() {
@@ -112,10 +110,8 @@ mod tests {
         config.save_to_file_secure(temp_file.path()).await.unwrap();
 
         let (trigger_tx, _trigger_rx) = mpsc::unbounded_channel();
-        let (_, shutdown_rx) = broadcast::channel(1);
 
-        let watcher =
-            ConfigFileWatcher::new(temp_file.path().to_path_buf(), trigger_tx, shutdown_rx);
+        let watcher = ConfigFileWatcher::new(temp_file.path().to_path_buf(), trigger_tx);
         assert!(watcher.is_ok());
     }
 
@@ -130,11 +126,9 @@ mod tests {
         config.save_to_file_secure(temp_file.path()).await.unwrap();
 
         let (trigger_tx, _trigger_rx) = mpsc::unbounded_channel();
-        let (_, shutdown_rx) = broadcast::channel(1);
 
         let mut watcher =
-            ConfigFileWatcher::new(temp_file.path().to_path_buf(), trigger_tx, shutdown_rx)
-                .unwrap();
+            ConfigFileWatcher::new(temp_file.path().to_path_buf(), trigger_tx).unwrap();
 
         // Should be able to start watching without error
         let result = watcher.start_watching();
@@ -154,11 +148,9 @@ mod tests {
         config.save_to_file_secure(temp_file.path()).await.unwrap();
 
         let (trigger_tx, mut trigger_rx) = mpsc::unbounded_channel();
-        let (_, shutdown_rx) = broadcast::channel(1);
 
         let mut watcher =
-            ConfigFileWatcher::new(temp_file.path().to_path_buf(), trigger_tx, shutdown_rx)
-                .unwrap();
+            ConfigFileWatcher::new(temp_file.path().to_path_buf(), trigger_tx).unwrap();
 
         // Should be able to start watching without error
         let result = watcher.start_watching();
