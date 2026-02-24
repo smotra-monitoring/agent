@@ -34,7 +34,3 @@ mod orchestrator;
 mod sighup;
 
 pub use orchestrator::run_hot_reload;
-
-#[doc(hidden)]
-// #[cfg(test)]
-pub use orchestrator::test_helpers;

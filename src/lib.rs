@@ -32,11 +32,3 @@ pub use error::{Error, Result};
 pub use reporter::HeartbeatReporter;
 
 pub use plugin::{MonitoringPlugin, PluginRegistry};
-
-/// Test helpers for integration testing
-///
-/// **Internal use only** - These are exposed for integration tests and should not be
-/// used in production code. The API is unstable and may change without notice.
-#[doc(hidden)]
-// #[cfg(test)]
-pub use agent_config::test_helpers;
