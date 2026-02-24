@@ -22,7 +22,7 @@ use crate::error::Result;
 #[doc(hidden)]
 pub enum ReloadTrigger {
     /// Config file was modified on filesystem
-    FileChange(PathBuf),
+    FileChange(),
     /// SIGHUP signal received (Unix only)
     Signal,
     /// Server reported a new config version (future implementation)
@@ -94,7 +94,7 @@ pub async fn run_hot_reload(
                 info!("Config reload triggered: {:?}", trigger);
 
                 match trigger {
-                    ReloadTrigger::FileChange(_) | ReloadTrigger::Signal
+                    ReloadTrigger::FileChange() | ReloadTrigger::Signal
                      => {
 
                         match Config::load_and_validate_config(&config_path) {
@@ -538,9 +538,7 @@ mod tests {
         });
 
         // Test different trigger types - all should work
-        trigger_tx
-            .send(ReloadTrigger::FileChange(config_path.path().to_path_buf()))
-            .unwrap();
+        trigger_tx.send(ReloadTrigger::FileChange()).unwrap();
         let config = tokio::time::timeout(Duration::from_millis(100), config_rx.recv())
             .await
             .expect("Should receive reload trigger within timeout");

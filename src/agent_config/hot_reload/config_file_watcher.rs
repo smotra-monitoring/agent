@@ -66,7 +66,7 @@ impl ConfigFileWatcher {
                             .any(|p| p.ends_with(config_path.file_name().unwrap_or_default()))
                         {
                             info!("Config file change detected: {:?}", config_path);
-                            let _ = trigger_tx.send(ReloadTrigger::FileChange(config_path.clone()));
+                            let _ = trigger_tx.send(ReloadTrigger::FileChange());
                         }
                     }
                 }
@@ -167,8 +167,7 @@ mod tests {
             .await
             .unwrap();
 
-        if let ReloadTrigger::FileChange(fname) = trigger_rx.recv().await.unwrap() {
-            assert_eq!(fname, temp_file.path());
+        if let ReloadTrigger::FileChange() = trigger_rx.recv().await.unwrap() {
         } else {
             panic!("Expected FileChange trigger");
         }
