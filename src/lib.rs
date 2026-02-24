@@ -21,9 +21,7 @@ mod monitor;
 mod plugin;
 mod reporter;
 
-pub use agent_config::{
-    ClaimConfig, Config, MonitoringConfig, ServerConfig, StorageConfig,
-};
+pub use agent_config::{ClaimConfig, Config, MonitoringConfig, ServerConfig, StorageConfig};
 pub use claim::{AgentCredentials, Claim};
 pub use core::{
     Agent, AgentHealthStatus, AgentHeartbeat, AgentStatus, CheckType, Endpoint, HttpGetResult,
@@ -40,4 +38,5 @@ pub use plugin::{MonitoringPlugin, PluginRegistry};
 /// **Internal use only** - These are exposed for integration tests and should not be
 /// used in production code. The API is unstable and may change without notice.
 #[doc(hidden)]
+// #[cfg(test)]
 pub use agent_config::test_helpers;

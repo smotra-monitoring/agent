@@ -154,6 +154,7 @@ pub async fn run_hot_reload(
 /// Provides access to internal types and functionality needed for testing.
 /// **Internal use only** - API is unstable.
 #[doc(hidden)]
+// #[cfg(test)]
 pub mod test_helpers {
     use super::*;
 

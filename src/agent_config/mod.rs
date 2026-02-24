@@ -11,5 +11,5 @@ pub use server_config::{ClaimConfig, ServerConfig};
 pub use types::*;
 
 #[doc(hidden)]
+// #[cfg(test)]
 pub use hot_reload::test_helpers;
-

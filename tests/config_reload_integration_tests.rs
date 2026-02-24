@@ -51,16 +51,14 @@ async fn test_config_reload_manual_trigger() {
 
     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
     let (trigger_tx, trigger_rx) = test_helpers::create_reload_trigger_channel();
-    let (reload_tx, mut reload_rx) = mpsc::channel(1);
-
-    let agent_arc = std::sync::Arc::new(agent);
+    let (config_tx, mut config_rx) = mpsc::channel(1);
 
     // Spawn the test reload handler
     let config_path2_clone = config_path2.path().to_path_buf();
     let reload_handle = tokio::spawn(async move {
         test_helpers::run_hot_reload_with_trigger_channel(
             config_path2_clone,
-            reload_tx,
+            config_tx,
             trigger_rx,
             shutdown_rx,
         )
@@ -73,23 +71,25 @@ async fn test_config_reload_manual_trigger() {
         .unwrap();
 
     // Wait for the reloaded config
-    let new_config = tokio::time::timeout(Duration::from_millis(500), reload_rx.recv())
+    let new_config = tokio::time::timeout(Duration::from_millis(500), config_rx.recv())
         .await
         .expect("Should receive config within timeout")
         .expect("Should receive Some(config)");
 
     // Apply the config to agent
-    agent_arc.reload_config(new_config).unwrap();
+    agent.reload_config(new_config).unwrap();
 
     // Verify
-    let current_config = agent_arc.config_clone();
+    let current_config = agent.config_clone();
     assert_eq!(current_config.version, 5);
     assert_eq!(current_config.monitoring.interval_secs, 90);
     assert_eq!(current_config.endpoints.len(), 4);
 
     // Shutdown
     let _ = shutdown_tx.send(());
-    let _ = tokio::time::timeout(Duration::from_secs(1), reload_handle).await;
+    let _ = tokio::time::timeout(Duration::from_secs(1), reload_handle)
+        .await
+        .expect("Hot reload task should shutdown cleanly");
 }
 
 #[tokio::test]
@@ -103,18 +103,17 @@ async fn test_config_reload_invalid_config() {
         .unwrap();
 
     let agent = Agent::new(config_path.path().to_path_buf()).unwrap();
-    let agent_arc = std::sync::Arc::new(agent);
 
     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
     let (trigger_tx, trigger_rx) = test_helpers::create_reload_trigger_channel();
-    let (reload_tx, mut reload_rx) = mpsc::channel(1);
+    let (config_tx, mut config_rx) = mpsc::channel(1);
 
     // Spawn reload handler
     let config_path_clone = config_path.path().to_path_buf();
     let reload_handle = tokio::spawn(async move {
         test_helpers::run_hot_reload_with_trigger_channel(
             config_path_clone,
-            reload_tx,
+            config_tx,
             trigger_rx,
             shutdown_rx,
         )
@@ -134,16 +133,23 @@ async fn test_config_reload_invalid_config() {
         .unwrap();
 
     // Try to receive new config - should not get one within timeout because validation fails
-    let _result = tokio::time::timeout(Duration::from_millis(200), reload_rx.recv()).await;
+    let result = tokio::time::timeout(Duration::from_millis(200), config_rx.recv()).await;
+
+    assert!(
+        result.is_err(),
+        "Timeout should occur because invalid config should not be sent through channel"
+    );
 
     // Verify old config is still in effect (no reload happened)
-    let current_config = agent_arc.config_clone();
+    let current_config = agent.config_clone();
     assert_eq!(current_config.version, 1);
     assert_eq!(current_config.monitoring.interval_secs, 60);
 
     // Shutdown
     let _ = shutdown_tx.send(());
-    let _ = tokio::time::timeout(Duration::from_secs(1), reload_handle).await;
+    let _ = tokio::time::timeout(Duration::from_secs(1), reload_handle)
+        .await
+        .expect("Hot reload task should shutdown cleanly");
 }
 
 #[tokio::test]
@@ -157,18 +163,17 @@ async fn test_config_reload_malformed_toml() {
         .unwrap();
 
     let agent = Agent::new(config_path.path().to_path_buf()).unwrap();
-    let agent_arc = std::sync::Arc::new(agent);
 
     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
     let (trigger_tx, trigger_rx) = test_helpers::create_reload_trigger_channel();
-    let (reload_tx, mut reload_rx) = mpsc::channel(1);
+    let (config_tx, mut config_rx) = mpsc::channel(1);
 
     // Spawn reload handler
     let config_path_clone = config_path.path().to_path_buf();
     let reload_handle = tokio::spawn(async move {
         test_helpers::run_hot_reload_with_trigger_channel(
             config_path_clone,
-            reload_tx,
+            config_tx,
             trigger_rx,
             shutdown_rx,
         )
@@ -184,10 +189,15 @@ async fn test_config_reload_malformed_toml() {
         .unwrap();
 
     // Should not receive new config because parsing fails
-    let _result = tokio::time::timeout(Duration::from_millis(200), reload_rx.recv()).await;
+    let _result = tokio::time::timeout(Duration::from_millis(200), config_rx.recv()).await;
+
+    assert!(
+        _result.is_err(),
+        "Timeout should occur because malformed config should not be sent through channel"
+    );
 
     // Verify old config is still in effect
-    let current_config = agent_arc.config_clone();
+    let current_config = agent.config_clone();
     assert_eq!(current_config.version, 1);
     assert_eq!(current_config.monitoring.interval_secs, 60);
 
@@ -211,7 +221,7 @@ async fn test_multiple_config_reloads() {
 
     let (shutdown_tx, shutdown_rx) = broadcast::channel(1);
     let (trigger_tx, trigger_rx) = test_helpers::create_reload_trigger_channel();
-    let (reload_tx, mut reload_rx) = mpsc::channel(1);
+    let (config_tx, mut config_rx) = mpsc::channel(1);
 
     // Spawn reload handler
     let config_path_clone = config_path.path().to_path_buf();
@@ -220,7 +230,7 @@ async fn test_multiple_config_reloads() {
         let reload_task = tokio::spawn(async move {
             test_helpers::run_hot_reload_with_trigger_channel(
                 config_path_clone,
-                reload_tx,
+                config_tx,
                 trigger_rx,
                 shutdown_rx,
             )
@@ -228,7 +238,7 @@ async fn test_multiple_config_reloads() {
         });
 
         // Apply configs as they come through the channel
-        while let Some(new_config) = reload_rx.recv().await {
+        while let Some(new_config) = config_rx.recv().await {
             let _ = agent_for_task.reload_config(new_config);
         }
 
@@ -247,7 +257,7 @@ async fn test_multiple_config_reloads() {
         trigger_tx
             .send(test_helpers::ReloadTrigger::Manual)
             .unwrap();
-        
+
         // Wait for reload to be applied
         tokio::time::sleep(Duration::from_millis(100)).await;
 
