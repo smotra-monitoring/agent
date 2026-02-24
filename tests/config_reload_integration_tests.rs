@@ -306,22 +306,38 @@ async fn test_reload_trigger_variants() {
             config_path.path().to_path_buf(),
         ))
         .unwrap();
-    let _ = tokio::time::timeout(Duration::from_millis(100), reload_rx.recv()).await;
+    let config = tokio::time::timeout(Duration::from_millis(100), reload_rx.recv())
+        .await
+        .expect("Should receive reload trigger within timeout");
+
+    assert!(config.is_some(), "Expected config received");
 
     trigger_tx
         .send(test_helpers::ReloadTrigger::Signal)
         .unwrap();
-    let _ = tokio::time::timeout(Duration::from_millis(100), reload_rx.recv()).await;
+    let config = tokio::time::timeout(Duration::from_millis(100), reload_rx.recv())
+        .await
+        .expect("Should receive reload trigger within timeout");
+
+    assert!(config.is_some(), "Expected config received");
 
     trigger_tx
         .send(test_helpers::ReloadTrigger::Manual)
         .unwrap();
-    let _ = tokio::time::timeout(Duration::from_millis(100), reload_rx.recv()).await;
+    let config = tokio::time::timeout(Duration::from_millis(100), reload_rx.recv())
+        .await
+        .expect("Should receive reload trigger within timeout");
+
+    assert!(config.is_some(), "Expected config received");
 
     trigger_tx
         .send(test_helpers::ReloadTrigger::ServerVersionChange(3))
         .unwrap();
-    let _ = tokio::time::timeout(Duration::from_millis(100), reload_rx.recv()).await;
+    let config = tokio::time::timeout(Duration::from_millis(100), reload_rx.recv())
+        .await
+        .expect("Should receive reload trigger within timeout");
+
+    assert!(config.is_some(), "Expected config received");
 
     // Shutdown
     let _ = shutdown_tx.send(());
