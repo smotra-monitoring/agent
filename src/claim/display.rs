@@ -18,23 +18,29 @@ impl openapi::AgentRegistrationResponse {
     /// * `claim_url` - URL where users can claim the agent
     /// * `expires_at` - When the claim token expires
     pub fn display_claim_info(&self, agent_id: Uuid, claim_token: &str) {
-        let border_top = "╔══════════════════════════════════════════════════════════════╗";
-        let border_bottom = "╚══════════════════════════════════════════════════════════════╝";
-        let border_mid = "╠══════════════════════════════════════════════════════════════╣";
-        let empty_line = "║                                                              ║";
+        let border_top = format!("╔{:═^81}╗", "");
+        let border_bottom = format!("╚{:═^81}╝", "");
+        let border_mid = format!("╠{:═^81}╣", "");
+        let empty_line = format!("║{: ^81}║", "");
 
         info!("");
         info!("{}", border_top);
-        info!("║              Agent Registration Required                     ║");
+        info!("║{:^81}║", "Agent Registration Required");
         info!("{}", border_mid);
         info!("{}", empty_line);
-        info!("║  Agent ID:    {:<42} ║", agent_id);
-        info!("║  Claim Token: {:<42} ║", claim_token);
+        info!("║  Agent ID:    {:<64}  ║", agent_id.to_string());
+        info!("║  Claim Token: {:<64}  ║", claim_token);
         info!("{}", empty_line);
-        info!("║  To claim this agent:                                        ║");
-        info!("║  1. Go to: {:<50} ║", self.claim_url);
-        info!("║  2. Enter the Agent ID and Claim Token shown above          ║");
-        info!("║  3. This agent will start automatically once claimed        ║");
+        info!("║  {:<79}║", "To claim this agent:");
+        info!("║  1. Go to: {:<69}║", self.claim_url);
+        info!(
+            "║  2. Enter the Agent ID and Claim Token shown above{:30}║",
+            ""
+        );
+        info!(
+            "║  3. This agent will start automatically once claimed{:28}║",
+            ""
+        );
         info!("{}", empty_line);
 
         let expires_at_tz = self
@@ -45,8 +51,8 @@ impl openapi::AgentRegistrationResponse {
         let hours = duration.num_hours();
 
         info!(
-            "║  Claim expires: {} (in {} hours)     ║",
-            expires_at_tz, hours
+            "║  Claim expires: {} (in {} hours){:24}║",
+            expires_at_tz, hours, ""
         );
         info!("{}", empty_line);
         info!("{}", border_bottom);
