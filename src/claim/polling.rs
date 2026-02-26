@@ -193,7 +193,7 @@ mod tests {
         let _mock_expired = server
             .mock(
                 "GET",
-                format!("/v1/agent/{}/claim-status", agent_id).as_str(),
+                format!("/agent/{}/claim-status", agent_id).as_str(),
             )
             .with_status(404)
             .create_async()
@@ -203,7 +203,7 @@ mod tests {
 
         let result = poll_claim_status(
             &client,
-            &format!("{}/v1/agent/{}/claim-status", server.url(), agent_id),
+            &format!("{}/agent/{}/claim-status", server.url(), agent_id),
             std::time::Duration::from_millis(100),
         )
         .await;

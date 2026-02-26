@@ -71,7 +71,7 @@ async fn send_agent_report(config: &Config, agent_status: &Arc<RwLock<AgentStatu
         .build()?;
 
     let status_data = agent_status.read().clone();
-    let report_url = format!("{}/api/v1/agent/report", server_url);
+    let report_url = format!("{}/agent/report", server_url);
 
     let mut request = client.post(&report_url).json(&status_data);
 

@@ -71,7 +71,7 @@ mod tests {
         let expires_at = chrono::Utc::now() + chrono::Duration::hours(24);
 
         let registration_response = openapi::AgentRegistrationResponse {
-            poll_url: "/v1/agent/poll".to_string(),
+            poll_url: "/agent/poll".to_string(),
             claim_url: "https://smotra.example.com/claim".to_string(),
             expires_at,
             status: openapi::RegistrationStatus::PendingClaim,

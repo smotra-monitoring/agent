@@ -66,10 +66,7 @@ impl HeartbeatReporter {
         let server_url = &self.config.server.url;
 
         let heartbeat = self.collect_metrics().await;
-        let heartbeat_url = format!(
-            "{}/api/v1/agent/{}/heartbeat",
-            server_url, self.config.agent_id
-        );
+        let heartbeat_url = format!("{}/agent/{}/heartbeat", server_url, self.config.agent_id);
 
         debug!(
             "Sending heartbeat to {} for agent {}",
