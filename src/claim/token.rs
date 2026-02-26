@@ -1,6 +1,6 @@
 //! Claim token generation and hashing
 
-use rand::Rng;
+use rand::RngExt;
 use sha2::{Digest, Sha256};
 
 /// Generate a cryptographically secure claim token
@@ -8,11 +8,11 @@ use sha2::{Digest, Sha256};
 /// Returns a 64-character alphanumeric string with high entropy (384 bits)
 pub fn generate_claim_token() -> String {
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     (0..64)
         .map(|_| {
-            let idx = rng.gen_range(0..CHARSET.len());
+            let idx = rng.random_range(0..CHARSET.len());
             CHARSET[idx] as char
         })
         .collect()

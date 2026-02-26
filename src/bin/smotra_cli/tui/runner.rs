@@ -9,7 +9,7 @@ use crossterm::{
 };
 use parking_lot::Mutex;
 use ratatui::{backend::CrosstermBackend, Terminal};
-use smotra::{Agent, Config, Result};
+use smotra::{Agent, Result};
 use std::collections::VecDeque;
 use std::io;
 use std::path::PathBuf;
@@ -20,19 +20,6 @@ pub async fn run_tui(
     config_path: PathBuf,
     log_entries: Arc<Mutex<VecDeque<LogEntry>>>,
 ) -> Result<()> {
-    // Load configuration
-    let config = if config_path.exists() {
-        Config::from_file(&config_path)?
-    } else {
-        tracing::error!("Config file not found at: {}", config_path.display());
-        return Err(smotra::Error::Config(format!(
-            "Configuration file {} not found",
-            config_path.display()
-        )));
-    };
-
-    config.validate()?;
-
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -40,8 +27,8 @@ pub async fn run_tui(
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    // Create agent
-    let agent = Arc::new(Agent::new(config));
+    // Create agent (loads and validates config internally)
+    let agent = Arc::new(Agent::new(config_path)?);
 
     // Run the UI
     let result = tui::run_ui_loop(&mut terminal, agent, log_entries).await;

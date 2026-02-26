@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use tracing::{error, info};
 
 #[derive(Parser)]
-#[command(name = "agent")]
+#[command(name = "smotra")]
 #[command(about = "Smotra Agent - Distributed monitoring daemon", long_about = None)]
 #[command(version)]
 struct Cli {
@@ -116,7 +116,7 @@ async fn main() -> Result<()> {
     info!("Monitoring {} endpoints", config.endpoints.len());
 
     // Create and start agent
-    let agent = Agent::new(config);
+    let agent = Agent::new(cli.config)?;
 
     match agent.start().await {
         Ok(_) => {

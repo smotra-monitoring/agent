@@ -69,7 +69,7 @@ async fn register_agent(
     base_url: &str,
     registration: AgentSelfRegistration,
 ) -> Result<AgentRegistrationResponse> {
-    let url = format!("{}/v1/agent/register", base_url);
+    let url = format!("{}/agent/register", base_url);
 
     info!("Registering agent with server: {}", url);
 
@@ -150,7 +150,7 @@ mod tests {
 
         // First 2 attempts fail with 500
         let _mock_fail = server
-            .mock("POST", "/v1/agent/register")
+            .mock("POST", "/agent/register")
             .with_status(500)
             .expect(2)
             .create_async()
@@ -158,13 +158,13 @@ mod tests {
 
         // Third attempt succeeds
         let _mock_success = server
-            .mock("POST", "/v1/agent/register")
+            .mock("POST", "/agent/register")
             .with_status(201)
             .with_header("content-type", "application/json")
             .with_body(format!(
                 r#"{{
                     "status": "pending_claim",
-                    "pollUrl": "/v1/agent/{}/claim-status",
+                    "pollUrl": "/agent/{}/claim-status",
                     "claimUrl": "https://example.com/claim",
                     "expiresAt": "2026-02-01T12:00:00Z"
                 }}"#,
@@ -191,13 +191,13 @@ mod tests {
 
         // Both requests should succeed
         let _mock_register = server
-            .mock("POST", "/v1/agent/register")
+            .mock("POST", "/agent/register")
             .with_status(200) // 200 for idempotent update
             .with_header("content-type", "application/json")
             .with_body(format!(
                 r#"{{
                     "status": "pending_claim",
-                    "pollUrl": "/v1/agent/{}/claim-status",
+                    "pollUrl": "/agent/{}/claim-status",
                     "claimUrl": "https://example.com/claim",
                     "expiresAt": "2026-02-01T12:00:00Z"
                 }}"#,

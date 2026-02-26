@@ -35,6 +35,7 @@ cargo build --release
 - **ICMP Ping & Traceroute** - Check host reachability with detailed path analysis
 - **Zero-Config Onboarding** - Self-registration with secure claim-based workflow
 - **Heartbeat Reporting** - Automatic agent health status updates with system metrics
+- **Config Hot-Reload** - Update configuration without restarting (file changes & SIGHUP signal)
 - **Offline-First** - Caches results locally when server is unreachable
 - **Low Resource Usage** - Built with Rust async/await for efficiency
 - **Plugin System** - Extend monitoring capabilities with custom plugins
@@ -89,6 +90,7 @@ enabled = true
 ## 📖 Documentation
 
 - **[Complete User Guide](GUIDE.md)** - Detailed installation, configuration, and usage
+- **[Config Hot-Reload](CONFIG_HOTRELOAD.md)** - Configuration reload without restarts
 - **[Project Structure](PROJECT_STRUCTURE.md)** - Code organization and architecture
 - **[Implementation Status](IMPLEMENTATION_STATUS.md)** - Current implementation status and roadmap
 - **[Claiming Implementation](CLAIMING_IMPLEMENTATION.md)** - Agent registration details
