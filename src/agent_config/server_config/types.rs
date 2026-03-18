@@ -68,9 +68,6 @@ impl ServerConfig {
 /// Claiming workflow configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClaimConfig {
-    /// Polling interval while waiting for claim (in seconds)
-    pub poll_interval_secs: u64,
-
     /// Maximum registration retry attempts
     pub max_registration_retries: u32,
 }
@@ -78,14 +75,7 @@ pub struct ClaimConfig {
 impl Default for ClaimConfig {
     fn default() -> Self {
         Self {
-            poll_interval_secs: 30,
             max_registration_retries: 5,
         }
-    }
-}
-
-impl ClaimConfig {
-    pub fn poll_interval(&self) -> Duration {
-        Duration::from_secs(self.poll_interval_secs)
     }
 }

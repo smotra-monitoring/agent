@@ -159,7 +159,6 @@ Customize claiming behavior in `config.toml`:
 
 ```toml
 [server.claiming]
-poll_interval_secs = 30           # How often to check claim status
 max_registration_retries = 5      # Max retries if registration fails
 ```
 
