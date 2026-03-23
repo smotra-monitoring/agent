@@ -59,6 +59,11 @@ impl ConfigFileWatcher {
                 Ok(events) => {
                     for event in events {
                         debug!("File event: {:?}", event);
+                        // Ignore access/read events (e.g. `cat config.toml`);
+                        // only react to actual content or metadata changes.
+                        if !event.event.kind.is_modify() && !event.event.kind.is_create() {
+                            continue;
+                        }
                         // Check if the event affects our config file
                         if event
                             .paths
