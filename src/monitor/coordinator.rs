@@ -36,9 +36,7 @@ pub async fn run_monitoring(
 
         let mut agent_shutdown_rx = agent_shutdown_rx.resubscribe();
 
-        tokio::spawn(async move {
-            run_check_loop(config, result_tx, &mut agent_shutdown_rx).await
-        })
+        tokio::spawn(async move { run_check_loop(config, result_tx, &mut agent_shutdown_rx).await })
     };
 
     // Process results
