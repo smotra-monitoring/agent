@@ -67,6 +67,8 @@ pub async fn run_reporter(
                         }
                     }
                     false => {
+                        warn!("Server not configured, reporter will cache data locally");
+
                         warn!("Implement local caching logic");
                     }
                 }
