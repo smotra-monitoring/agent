@@ -48,10 +48,9 @@ impl Agent {
 
     /// Start the agent and all monitoring tasks
     pub async fn start(&self) -> Result<()> {
-        let config = self.config.read().clone();
         let mut shutdown_rx = self.subscribe_shutdown();
 
-        info!("Starting agent id {}", config.agent_id);
+        info!("Starting agent id {}", self.config.read().agent_id);
 
         // Create channel for config hot-reload
         let (reload_config_tx, mut reload_config_rx) = mpsc::channel(1);
@@ -65,7 +64,7 @@ impl Agent {
 
         // Start monitoring tasks
         let monitor_handle = {
-            let config = config.clone();
+            let config = Arc::clone(&self.config);
             let status = Arc::clone(&self.status);
             let mut shutdown_rx = self.subscribe_shutdown();
 
@@ -76,7 +75,7 @@ impl Agent {
 
         // Start reporter task
         let reporter_handle = {
-            let config = config.clone();
+            let config = Arc::clone(&self.config);
             let status = Arc::clone(&self.status);
             let mut shutdown_rx = self.subscribe_shutdown();
 
@@ -87,7 +86,7 @@ impl Agent {
 
         // Start heartbeat task
         let heartbeat_handle = {
-            let config = config.clone();
+            let config = Arc::clone(&self.config);
             let shutdown_rx = self.subscribe_shutdown();
 
             tokio::spawn(async move { crate::reporter::run_heartbeat(config, shutdown_rx).await })

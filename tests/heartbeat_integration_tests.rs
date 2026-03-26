@@ -1,6 +1,8 @@
 //! Integration tests for heartbeat functionality
 
+use parking_lot::RwLock;
 use smotra::{Config, HeartbeatReporter};
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[tokio::test]
@@ -24,15 +26,20 @@ async fn test_heartbeat_collection() {
 
 #[tokio::test]
 async fn test_heartbeat_without_server() {
-    let mut config = create_test_config();
+    let mut config = create_test_config_plain();
     config.server.url = "".to_string(); // Clear server URL
+    let wrapped = Arc::new(RwLock::new(config));
 
-    let reporter = HeartbeatReporter::new(config);
+    let reporter = HeartbeatReporter::new(wrapped);
     // Should fail if server URL is not configured
     assert!(reporter.is_ok());
 }
 
-fn create_test_config() -> Config {
+fn create_test_config() -> Arc<RwLock<Config>> {
+    Arc::new(RwLock::new(create_test_config_plain()))
+}
+
+fn create_test_config_plain() -> Config {
     use smotra::{MonitoringConfig, ServerConfig, StorageConfig};
 
     Config {

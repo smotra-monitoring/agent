@@ -12,26 +12,46 @@ use tokio::time::interval;
 use tracing::{debug, error, info, warn};
 
 /// Run the reporter loop
+///
+/// Accepts a shared `Arc<RwLock<Config>>` so that config hot-reloads applied by
+/// `Agent::reload_config()` are picked up on every reporting tick.
 pub async fn run_reporter(
-    config: Config,
+    config: Arc<RwLock<Config>>,
     agent_status: Arc<RwLock<AgentStatus>>,
     agent_shutdown_rx: &mut broadcast::Receiver<()>,
 ) -> Result<()> {
     info!("Starting reporter");
 
-    if !config.server.is_configured() {
+    if !config.read().server.is_configured() {
         warn!("Server not configured, reporter will cache data locally only");
     }
 
-    let mut interval = interval(config.server.report_interval());
-    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    // Track the current interval so we can hot-reload it when config changes.
+    let mut current_interval_duration = config.read().server.report_interval();
+    let mut iv = interval(current_interval_duration);
+    iv.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
     loop {
         tokio::select! {
-            _ = interval.tick() => {
-                match config.server.is_configured() {
+            _ = iv.tick() => {
+                // Take a consistent snapshot for this tick.
+                let config_snapshot = config.read().clone();
+
+                // Detect interval changes and recreate the timer.
+                let new_interval = config_snapshot.server.report_interval();
+                if new_interval != current_interval_duration {
+                    info!(
+                        "Report interval changed from {:?} to {:?}, recreating timer",
+                        current_interval_duration, new_interval
+                    );
+                    current_interval_duration = new_interval;
+                    iv = interval(current_interval_duration);
+                    iv.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+                }
+
+                match config_snapshot.server.is_configured() {
                     true => {
-                        match send_agent_report(&config, &agent_status).await {
+                        match send_agent_report(&config_snapshot, &agent_status).await {
                             Ok(_) => {
                                 let mut s = agent_status.write();
                                 s.server_connected = true;
@@ -92,24 +112,42 @@ async fn send_agent_report(config: &Config, agent_status: &Arc<RwLock<AgentStatu
 }
 
 /// Run the heartbeat loop in a separate task
+///
+/// Accepts a shared `Arc<RwLock<Config>>` so that config hot-reloads are
+/// reflected in subsequent heartbeat payloads automatically.
 pub async fn run_heartbeat(
-    config: Config,
+    config: Arc<RwLock<Config>>,
     mut agent_shutdown_rx: broadcast::Receiver<()>,
 ) -> Result<()> {
     info!("Starting heartbeat reporter");
 
-    if !config.server.is_configured() {
+    if !config.read().server.is_configured() {
         warn!("Server not configured, heartbeat disabled");
         return Ok(());
     }
 
-    let heartbeat_reporter = HeartbeatReporter::new(config.clone())?;
-    let mut interval = interval(config.server.heartbeat_interval());
-    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    let heartbeat_reporter = HeartbeatReporter::new(Arc::clone(&config))?;
+
+    // Track the current interval so we can hot-reload it when config changes.
+    let mut current_interval_duration = config.read().server.heartbeat_interval();
+    let mut iv = interval(current_interval_duration);
+    iv.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
     loop {
         tokio::select! {
-            _ = interval.tick() => {
+            _ = iv.tick() => {
+                // Detect interval changes and recreate the timer.
+                let new_interval = config.read().server.heartbeat_interval();
+                if new_interval != current_interval_duration {
+                    info!(
+                        "Heartbeat interval changed from {:?} to {:?}, recreating timer",
+                        current_interval_duration, new_interval
+                    );
+                    current_interval_duration = new_interval;
+                    iv = interval(current_interval_duration);
+                    iv.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+                }
+
                 match heartbeat_reporter.send_heartbeat().await {
                     Ok(_) => {
                         debug!("Heartbeat sent successfully");

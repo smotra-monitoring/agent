@@ -17,8 +17,11 @@ use tokio::sync::mpsc;
 type ResultSender = mpsc::UnboundedSender<MonitoringResult>;
 
 /// Run the monitoring loop
+///
+/// Accepts a shared `Arc<RwLock<Config>>` so that config hot-reloads applied by
+/// `Agent::reload_config()` are picked up on every monitoring tick.
 pub async fn run_monitoring(
-    agent_config: Config,
+    agent_config: Arc<RwLock<Config>>,
     agent_status: Arc<RwLock<AgentStatus>>,
     agent_shutdown_rx: &mut broadcast::Receiver<()>,
 ) -> Result<()> {
@@ -26,28 +29,15 @@ pub async fn run_monitoring(
 
     let (result_tx, mut result_rx) = mpsc::unbounded_channel::<MonitoringResult>();
 
-    // Create ping checker
-    let ping_checker = match PingChecker::new(
-        agent_config.monitoring.timeout(),
-        agent_config.monitoring.ping_count,
-    ) {
-        Ok(checker) => Arc::new(checker),
-        Err(e) => {
-            error!("Failed to create ping checker: {}", e);
-            return Err(e);
-        }
-    };
-
     // Spawn monitoring task
     let monitor_handle = {
-        let config = agent_config.clone();
-        let ping_checker = Arc::clone(&ping_checker);
+        let config = Arc::clone(&agent_config);
         let result_tx = result_tx.clone();
 
         let mut agent_shutdown_rx = agent_shutdown_rx.resubscribe();
 
         tokio::spawn(async move {
-            run_check_loop(config, ping_checker, result_tx, &mut agent_shutdown_rx).await
+            run_check_loop(config, result_tx, &mut agent_shutdown_rx).await
         })
     };
 
@@ -94,22 +84,54 @@ pub async fn run_monitoring(
 }
 
 /// Main check loop that runs periodically
+///
+/// Reads a fresh config snapshot on every tick so that hot-reloaded values
+/// (endpoints, intervals, ping parameters) take effect without a restart.
 async fn run_check_loop(
-    agent_config: Config,
-    ping_checker: Arc<PingChecker>,
+    agent_config: Arc<RwLock<Config>>,
     result_tx: ResultSender,
     agent_shutdown_rx: &mut broadcast::Receiver<()>,
 ) {
-    let mut interval = interval(agent_config.monitoring.interval());
-    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    // Bootstrap the interval from the current config.
+    let mut current_interval_duration = agent_config.read().monitoring.interval();
+    let mut iv = interval(current_interval_duration);
+    iv.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
     loop {
         tokio::select! {
-            _ = interval.tick() => {
+            _ = iv.tick() => {
+                // Take a consistent snapshot for this tick.
+                let config = agent_config.read().clone();
+
+                // Detect interval changes and recreate the timer.
+                let new_interval = config.monitoring.interval();
+                if new_interval != current_interval_duration {
+                    info!(
+                        "Monitoring interval changed from {:?} to {:?}, recreating timer",
+                        current_interval_duration, new_interval
+                    );
+                    current_interval_duration = new_interval;
+                    iv = interval(current_interval_duration);
+                    iv.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+                }
+
+                // Recreate PingChecker from current config snapshot so that
+                // timeout and ping_count changes take effect immediately.
+                let ping_checker = match PingChecker::new(
+                    config.monitoring.timeout(),
+                    config.monitoring.ping_count,
+                ) {
+                    Ok(checker) => Arc::new(checker),
+                    Err(e) => {
+                        error!("Failed to create ping checker: {}", e);
+                        continue;
+                    }
+                };
 
                 // Filter only enabled endpoints
-                let enabled_endpoints: Vec<_> = agent_config.endpoints.iter()
+                let enabled_endpoints: Vec<_> = config.endpoints.iter()
                     .filter(|e| e.enabled)
+                    .cloned()
                     .collect();
 
                 if enabled_endpoints.is_empty() {
@@ -119,14 +141,13 @@ async fn run_check_loop(
                 debug!("Running checks for {} enabled endpoints", enabled_endpoints.len());
 
                 // Run checks concurrently with limit
-                let semaphore = Arc::new(tokio::sync::Semaphore::new(agent_config.monitoring.max_concurrent));
+                let semaphore = Arc::new(tokio::sync::Semaphore::new(config.monitoring.max_concurrent));
                 let mut tasks = Vec::new();
 
                 for endpoint in enabled_endpoints {
                     let permit = semaphore.clone().acquire_owned().await.unwrap();
                     let ping_checker = Arc::clone(&ping_checker);
-                    let agent_id = agent_config.agent_id;
-                    let endpoint = endpoint.clone();
+                    let agent_id = config.agent_id;
                     let result_tx = result_tx.clone();
 
                     let task = tokio::spawn(async move {

@@ -1,6 +1,8 @@
 //! Example demonstrating heartbeat metrics collection
 
+use parking_lot::RwLock;
 use smotra::{Config, HeartbeatReporter, MonitoringConfig, ServerConfig, StorageConfig};
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[tokio::main]
@@ -8,7 +10,7 @@ async fn main() {
     println!("=== Heartbeat Metrics Demo ===\n");
 
     // Create a test configuration
-    let config = Config {
+    let config = Arc::new(RwLock::new(Config {
         version: 1,
         agent_id: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
         agent_name: "Demo Agent".to_string(),
@@ -17,7 +19,7 @@ async fn main() {
         server: ServerConfig::default(),
         storage: StorageConfig::default(),
         endpoints: vec![],
-    };
+    }));
 
     // Create heartbeat reporter
     let reporter = match HeartbeatReporter::new(config) {
