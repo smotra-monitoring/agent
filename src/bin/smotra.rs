@@ -118,12 +118,15 @@ async fn main() -> Result<()> {
         return generate_config(&cli.config).await;
     }
 
-    let mut config = load_config(&cli.config)?;
-    if config.server.is_claim_required() {
-        ensure_claimed(&mut config, &cli.config).await?;
+    // Scoping is only to make sure that config is dropped before we start the agent,
+    // since Agent::new() will re-open the config file for reading and writing
+    {
+        let mut config = load_config(&cli.config)?;
+        if config.server.is_claim_required() {
+            ensure_claimed(&mut config, &cli.config).await?;
+        }
+        print_info(&config)?;
     }
-    print_info(&config)?;
-    drop(config); // Drop the config to ensure all references are released before starting the agent
 
     info!("Starting the agent");
 
