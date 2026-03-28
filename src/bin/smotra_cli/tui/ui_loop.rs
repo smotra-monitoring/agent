@@ -35,7 +35,7 @@ pub async fn run_ui_loop(
     loop {
         // Update data
         let status = agent.status();
-        let config = agent.config();
+        let config = agent.config_clone();
         let logs: Vec<LogEntry> = log_entries.lock().iter().cloned().collect();
 
         terminal.draw(|f| {

@@ -15,24 +15,16 @@ use tracing::{error, info};
 /// # Arguments
 ///
 /// * `client` - HTTP client to use for requests
-/// * `base_url` - Base URL of the server
-/// * `agent_id` - Agent ID
 /// * `poll_url` - URL to poll for claim status (from registration response)
-/// * `poll_interval` - Interval between poll attempts
 ///
 /// # Returns
 ///
 /// * `Ok(Some(api_key))` - Agent was claimed, API key received
 /// * `Ok(None)` - Claim expired or not found
 /// * `Err(...)` - Network or other error
-pub async fn poll_claim_status(
-    client: &Client,
-    poll_url: &str,
-    poll_interval: Duration,
-) -> Result<Option<String>> {
+pub async fn poll_claim_status(client: &Client, poll_url: &str) -> Result<Option<String>> {
     info!("Starting claim status polling");
     info!("Poll URL: {}", poll_url);
-    info!("Poll interval: {:?}", poll_interval);
 
     loop {
         match check_claim_status(client, poll_url).await? {
@@ -49,12 +41,22 @@ pub async fn poll_claim_status(
                 let minutes = (expires_in.num_minutes() % 60).abs();
                 let seconds = (expires_in.num_seconds() % 60).abs();
 
-                info!(
-                    "Status: {:?} (expires in {}:{:02}:{:02})",
-                    pending.status, hours, minutes, seconds
+                let next_poll = Duration::from_secs(pending.poll_in as u64).min(
+                    expires_in
+                        .to_std()
+                        .unwrap_or_else(|_| Duration::from_secs(60)),
                 );
 
-                tokio::time::sleep(poll_interval).await;
+                info!(
+                    "Status: {:?} (expires in {}:{:02}:{:02}), next poll in {} seconds",
+                    pending.status,
+                    hours,
+                    minutes,
+                    seconds,
+                    next_poll.as_secs()
+                );
+
+                tokio::time::sleep(next_poll).await;
             }
             ClaimStatus::Claimed(claimed) => {
                 info!(
@@ -150,7 +152,8 @@ mod tests {
     fn test_claim_status_pending_deserialization() {
         let json = r#"{
             "status": "pending_claim",
-            "expiresAt": "2026-02-01T12:00:00Z"
+            "expiresAt": "2026-02-01T12:00:00Z",
+            "pollIn": 30
         }"#;
 
         let pending: openapi::ClaimStatusPending = serde_json::from_str(json).unwrap();
@@ -162,6 +165,15 @@ mod tests {
             ),
             "expected status to be PendingClaim"
         );
+
+        assert_eq!(
+            pending.expires_at,
+            chrono::DateTime::parse_from_rfc3339("2026-02-01T12:00:00Z")
+                .unwrap()
+                .with_timezone(&chrono::Utc)
+        );
+
+        assert_eq!(pending.poll_in, 30);
     }
 
     #[test]
@@ -191,10 +203,7 @@ mod tests {
 
         // Mock returns 404 (expired)
         let _mock_expired = server
-            .mock(
-                "GET",
-                format!("/v1/agent/{}/claim-status", agent_id).as_str(),
-            )
+            .mock("GET", format!("/agent/{}/claim-status", agent_id).as_str())
             .with_status(404)
             .create_async()
             .await;
@@ -203,8 +212,7 @@ mod tests {
 
         let result = poll_claim_status(
             &client,
-            &format!("{}/v1/agent/{}/claim-status", server.url(), agent_id),
-            std::time::Duration::from_millis(100),
+            &format!("{}/agent/{}/claim-status", server.url(), agent_id),
         )
         .await;
 

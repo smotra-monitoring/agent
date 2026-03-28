@@ -73,7 +73,6 @@ These generated types are available through `use crate::openapi;` and should be 
 
 #### Updated `src/agent_config/types.rs`
 - Added `ClaimConfig` structure:
-  - `poll_interval_secs`: Configurable polling interval
   - `max_registration_retries`: Maximum retry attempts
 - Integrated into `ServerConfig`
 - Default values aligned with requirements

@@ -5,8 +5,7 @@ use std::path::PathBuf;
 
 /// Show current status
 pub async fn show_status(config_path: PathBuf) -> Result<()> {
-    let config = Config::from_file(&config_path)?;
-    let agent = Agent::new(config);
+    let agent = Agent::new(config_path)?;
     let status = agent.status();
 
     println!("Agent Status:");

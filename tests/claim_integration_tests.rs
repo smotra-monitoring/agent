@@ -33,7 +33,7 @@ async fn test_claim_workflow_with_mock_server() {
 
     // Mock registration endpoint - return error to fail quickly
     let _mock_register = server
-        .mock("POST", "/v1/agent/register")
+        .mock("POST", "/agent/register")
         .with_status(500)
         .create_async()
         .await;

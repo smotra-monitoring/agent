@@ -343,6 +343,9 @@ pub struct ClaimStatusPending {
     /// When the claim token expires (RFC3339)
     #[serde(rename = "expiresAt")]
     pub expires_at: DateTime<Utc>,
+    /// Seconds until next poll (server-controlled backoff)
+    #[serde(rename = "pollIn")]
+    pub poll_in: i64,
 }
 
 /// ClaimStatusClaimed

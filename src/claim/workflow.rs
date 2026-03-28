@@ -94,17 +94,12 @@ impl<'a> Claim<'a> {
         // Display claim information
         registration_response.display_claim_info(agent_id, &claim_token);
 
-        info!("Waiting for agent to be claimed...");
-        info!(
-            "Polling claim status every {:?} (press Ctrl+C to cancel)",
-            self.config.server.claiming.poll_interval()
-        );
+        info!("Waiting for agent to be claimed... (press Ctrl+C to cancel)");
 
         // Poll for claim status
         let api_key = poll_claim_status(
             &client,
             format!("{}{}", server_url, &registration_response.poll_url).as_str(),
-            self.config.server.claiming.poll_interval(),
         )
         .await?;
 

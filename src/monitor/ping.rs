@@ -61,8 +61,13 @@ impl PingChecker {
         let mut success_latencies = Vec::new();
         let mut errors = Vec::new();
 
+        let seq_start = rand::random::<u16>();
+
         for seq in 0..self.count {
-            match self.ping_once(addr, seq as u16).await {
+            match self
+                .ping_once(addr, seq_start.wrapping_add(seq as u16))
+                .await
+            {
                 Ok(rtt) => {
                     successes += 1;
                     let latency_ms = rtt.as_millis() as f64;

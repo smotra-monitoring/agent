@@ -54,6 +54,7 @@ Files structure
 - `Cargo.toml`: Cargo configuration file for the project.
 - `Dockerfile`: Dockerfile for building the agent container image.
 - `docs/`: Documentation for the project.
+- `docs/features/`: Documentation for the project's features.
 - `examples/`: Example plugin implementations.
 - `tests/`: Unit and integration tests for the agent library and binaries.
 - `api/`: OpenAPI specification and related documentation.
@@ -390,7 +391,7 @@ Documentation should be maintained in the `docs/` directory and linked from the 
 **CRITICAL**: All features implemented in the project MUST be documented in the `docs/` folder with practical examples.
 
 ### Documentation Requirements for Features
-- **Create Dedicated Documentation**: For each major feature or module, create a corresponding documentation file in `docs/` (e.g., `docs/CLAIMING_IMPLEMENTATION.md`, `docs/HEARTBEAT_SYSTEM.md`)
+- **Create Dedicated Documentation**: For each major feature or module, create a corresponding documentation file in `docs/features/` (e.g., `docs/features/CLAIMING_IMPLEMENTATION.md`, `docs/features/HEARTBEAT_SYSTEM.md`)
 - **Include Examples**: Every feature documentation MUST include practical, runnable examples showing how to use the feature
 - **Code Snippets**: Provide clear code snippets demonstrating typical usage patterns
 - **Configuration Examples**: Show relevant configuration options and their effects
@@ -516,7 +517,7 @@ echo "pub mod responses;" >> ./src/openapi/omg/mod.rs
 
 #### Manual Response Wrappers
 
-Some response types must be manually maintained in `responses.rs` because OMG doesn't generate wrappers for reusable response components (`$ref: '#/components/responses/...'`). See [OPENAPI_CODE_GENERATION.md](../docs/OPENAPI_CODE_GENERATION.md) for details.
+Some response types must be manually maintained in `responses.rs` because OMG doesn't generate wrappers for reusable response components (`$ref: '#/components/responses/...'`). See [OPENAPI_CODE_GENERATION.md](../docs/features/OPENAPI_CODE_GENERATION.md) for details.
 
 #### Example Workflow
 
@@ -562,4 +563,4 @@ Some response types must be manually maintained in `responses.rs` because OMG do
    let heartbeat = openapi::AgentHeartbeat { ... };
    ```
 
-For comprehensive information about OpenAPI type generation, regeneration workflows, and manual response wrappers, see [OPENAPI_CODE_GENERATION.md](../docs/OPENAPI_CODE_GENERATION.md).
+For comprehensive information about OpenAPI type generation, regeneration workflows, and manual response wrappers, see [OPENAPI_CODE_GENERATION.md](../docs/features/OPENAPI_CODE_GENERATION.md).

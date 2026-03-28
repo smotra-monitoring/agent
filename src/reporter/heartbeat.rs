@@ -3,26 +3,28 @@
 use crate::agent_config::Config;
 use crate::core::{AgentHealthStatus, AgentHeartbeat};
 use crate::error::{Error, Result};
+use parking_lot::RwLock;
+use std::sync::Arc;
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
 use tokio::sync::Mutex;
 use tracing::{debug, error, warn};
 
 /// Heartbeat reporter for sending lightweight agent status updates
+///
+/// Holds a shared reference to the live config so any hot-reload applied by
+/// `Agent::reload_config()` is immediately reflected in subsequent heartbeats.
 #[derive(Debug)]
 pub struct HeartbeatReporter {
-    config: Config,
-    client: reqwest::Client,
+    config: Arc<RwLock<Config>>,
     system: Mutex<System>,
 }
 
 impl HeartbeatReporter {
     /// Create a new heartbeat reporter
-    pub fn new(config: Config) -> Result<Self> {
-        let client = reqwest::Client::builder()
-            .timeout(config.server.timeout())
-            .danger_accept_invalid_certs(!config.server.verify_tls)
-            .build()?;
-
+    ///
+    /// Accepts a shared `Arc<RwLock<Config>>` so that config hot-reloads are
+    /// picked up automatically on every `send_heartbeat()` call.
+    pub fn new(config: Arc<RwLock<Config>>) -> Result<Self> {
         // Initialize system with minimal refresh for better performance
         let system = System::new_with_specifics(
             RefreshKind::nothing()
@@ -32,7 +34,6 @@ impl HeartbeatReporter {
 
         Ok(Self {
             config,
-            client,
             system: Mutex::new(system),
         })
     }
@@ -63,26 +64,29 @@ impl HeartbeatReporter {
 
     /// Send heartbeat to the server
     pub async fn send_heartbeat(&self) -> Result<()> {
-        let server_url = &self.config.server.url;
+        // Snapshot the live config so all fields within this call are consistent.
+        let config = self.config.read().clone();
+
+        let client = reqwest::Client::builder()
+            .timeout(config.server.timeout())
+            .danger_accept_invalid_certs(!config.server.verify_tls)
+            .build()?;
 
         let heartbeat = self.collect_metrics().await;
-        let heartbeat_url = format!(
-            "{}/api/v1/agent/{}/heartbeat",
-            server_url, self.config.agent_id
-        );
+        let heartbeat_url = format!("{}/agent/{}/heartbeat", config.server.url, config.agent_id);
 
         debug!(
             "Sending heartbeat to {} for agent {}",
-            heartbeat_url, self.config.agent_id
+            heartbeat_url, config.agent_id
         );
 
-        let mut request = self.client.post(&heartbeat_url).json(&heartbeat);
+        let mut request = client.post(&heartbeat_url).json(&heartbeat);
 
         // Add agent version header
-        request = request.header("X-Agent-Version", self.config.version.to_string());
+        request = request.header("X-Agent-Version", config.version.to_string());
 
         // Use X-Agent-API-Key header as specified in OpenAPI spec (AgentApiKey security scheme)
-        if let Some(api_key) = &self.config.server.api_key {
+        if let Some(api_key) = &config.server.api_key {
             request = request.header("X-Agent-API-Key", api_key);
         }
 
@@ -157,8 +161,8 @@ mod tests {
     use crate::agent_config::{MonitoringConfig, ServerConfig, StorageConfig};
     use chrono::Utc;
 
-    fn create_test_config() -> Config {
-        Config {
+    fn create_test_config() -> Arc<RwLock<Config>> {
+        Arc::new(RwLock::new(Config {
             version: 1,
             agent_id: uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
             agent_name: "Test Agent".to_string(),
@@ -167,7 +171,7 @@ mod tests {
             server: ServerConfig::default(),
             storage: StorageConfig::default(),
             endpoints: vec![],
-        }
+        }))
     }
 
     #[test]
@@ -223,8 +227,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_system_metrics_collection() {
-        let config = create_test_config();
-        let reporter = HeartbeatReporter::new(config).unwrap();
+        let reporter = HeartbeatReporter::new(create_test_config()).unwrap();
 
         // Get CPU usage
         let cpu = reporter.get_cpu_usage().await;
@@ -243,8 +246,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_metrics_in_heartbeat() {
-        let config = create_test_config();
-        let reporter = HeartbeatReporter::new(config).unwrap();
+        let reporter = HeartbeatReporter::new(create_test_config()).unwrap();
         let heartbeat = reporter.collect_metrics().await;
 
         // Verify the heartbeat was created successfully with valid status
