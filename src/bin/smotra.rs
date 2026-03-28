@@ -123,6 +123,7 @@ async fn main() -> Result<()> {
         ensure_claimed(&mut config, &cli.config).await?;
     }
     print_info(&config)?;
+    drop(config); // Drop the config to ensure all references are released before starting the agent
 
     info!("Starting the agent");
 
