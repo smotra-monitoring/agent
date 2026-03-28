@@ -63,6 +63,10 @@ impl ServerConfig {
         !self.url.is_empty()
             && (self.api_key.is_some() && !self.api_key.as_ref().unwrap().is_empty())
     }
+
+    pub fn is_claim_required(&self) -> bool {
+        self.api_key.is_none() || self.api_key.as_ref().unwrap().is_empty()
+    }
 }
 
 /// Claiming workflow configuration

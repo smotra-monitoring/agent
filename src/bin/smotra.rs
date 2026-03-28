@@ -70,11 +70,6 @@ fn load_config(path: &Path) -> Result<Config> {
 /// Otherwise, it runs the interactive claiming workflow, applies the result
 /// to `config`, and persists the updated config to `config_path`.
 async fn ensure_claimed(config: &mut Config, config_path: &Path) -> Result<()> {
-    if config.server.is_configured() {
-        info!("API key found in configuration");
-        return Ok(());
-    }
-
     if config.server.url.is_empty() {
         error!("Server URL not configured. Please set 'server.url' in the configuration file.");
         std::process::exit(1);
@@ -124,7 +119,9 @@ async fn main() -> Result<()> {
     }
 
     let mut config = load_config(&cli.config)?;
-    ensure_claimed(&mut config, &cli.config).await?;
+    if config.server.is_claim_required() {
+        ensure_claimed(&mut config, &cli.config).await?;
+    }
     print_info(&config)?;
 
     info!("Starting the agent");
