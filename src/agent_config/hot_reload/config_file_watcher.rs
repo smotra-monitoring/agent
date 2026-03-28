@@ -8,7 +8,7 @@ use notify_debouncer_full::{new_debouncer, DebounceEventResult, Debouncer, NoCac
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::sync::mpsc;
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 use crate::error::{Error, Result};
 
