@@ -61,10 +61,10 @@ pub async fn run_monitoring(
                                 s.checks_failed += 1;
                             }
                         }
-                        // Push to in-memory cache for deferred batch reporting
-                        result_cache.push(result).await;
                         // Reflect current cache depth in agent status
                         agent_status.write().cached_reports = result_cache.len().await as i64;
+                        // Push to in-memory cache for deferred batch reporting
+                        result_cache.push(result).await;
                     }
                     _ = agent_shutdown_rx.recv() => {
                         info!("Monitoring coordinator shutting down");
