@@ -10,6 +10,11 @@ This document outlines the development roadmap for the Smotra monitoring agent, 
     - failures: Some(1),
     - success_latencies: Some(Vec::new()),
     - errors: Some(vec![format!("Failed to resolve address: {}", e)]),
+- [ ] Same for Plugin type 
+    - plugin_name: Some(PLUGIN_NAME.to_string()),
+    - plugin_version: Some(PLUGIN_VERSION.to_string()),
+    - success: Some(success),
+    - data: Some(data),
 
 - [ ] Review other ___Result types for similar optional fields and apply the same principle of making them required if they are essential for the check results.
 

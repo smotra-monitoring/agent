@@ -19,6 +19,7 @@ pub struct Agent {
     config: Arc<RwLock<Config>>,
     config_path: PathBuf,
     status: Arc<RwLock<AgentStatus>>,
+    result_cache: Arc<ResultCache>,
     shutdown_tx: broadcast::Sender<()>,
 }
 
@@ -40,10 +41,16 @@ impl Agent {
         let mut status = AgentStatus::new(config.agent_id);
         status.config_version = config.version as i64;
 
+        let result_cache = Arc::new(ResultCache::new(
+            config.storage.max_cached_results,
+            std::time::Duration::from_secs(config.storage.max_cache_age_secs),
+        ));
+
         Ok(Self {
             config: Arc::new(RwLock::new(config)),
             config_path,
             status: Arc::new(RwLock::new(status)),
+            result_cache,
             shutdown_tx,
         })
     }
@@ -64,20 +71,11 @@ impl Agent {
             status.started_at = chrono::Utc::now();
         }
 
-        // Create the in-memory result cache from current storage config
-        let result_cache = {
-            let storage = self.config.read().storage.clone();
-            Arc::new(ResultCache::new(
-                storage.max_cached_results,
-                std::time::Duration::from_secs(storage.max_cache_age_secs),
-            ))
-        };
-
         // Start monitoring tasks
         let monitor_handle = {
             let config = Arc::clone(&self.config);
             let status = Arc::clone(&self.status);
-            let cache = Arc::clone(&result_cache);
+            let cache = Arc::clone(&self.result_cache);
             let mut shutdown_rx = self.subscribe_shutdown();
 
             tokio::spawn(async move {
@@ -100,7 +98,7 @@ impl Agent {
         let result_reporter_handle = {
             let config = Arc::clone(&self.config);
             let status = Arc::clone(&self.status);
-            let cache = Arc::clone(&result_cache);
+            let cache = Arc::clone(&self.result_cache);
             let shutdown_rx = self.subscribe_shutdown();
 
             tokio::spawn(async move {

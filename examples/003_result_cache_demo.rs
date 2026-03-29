@@ -14,12 +14,12 @@
 
 use smotra::{
     CacheStats, CheckType, Endpoint, HttpGetCheck, HttpGetCheckType, HttpGetResult,
-    MonitoringResult, PingCheck, PingCheckType, PingResult, ResultCache,
-    TcpConnectCheck, TcpConnectCheckType, TcpConnectResult,
+    MonitoringResult, PingCheck, PingCheckType, PingResult, ResultCache, TcpConnectCheck,
+    TcpConnectCheckType, TcpConnectResult,
 };
 
-use std::time::Duration;
 use std::sync::Arc;
+use std::time::Duration;
 use uuid::Uuid;
 
 /// Build a simple ping result for demonstration purposes.
@@ -48,7 +48,9 @@ fn make_http(url: &str) -> MonitoringResult {
     MonitoringResult {
         id: Uuid::new_v4(),
         agent_id: Uuid::new_v4(),
-        target: Endpoint::new(url).with_port(443).with_tags(vec!["web".to_string()]),
+        target: Endpoint::new(url)
+            .with_port(443)
+            .with_tags(vec!["web".to_string()]),
         check_type: CheckType::HttpGetCheck(HttpGetCheck {
             r#type: HttpGetCheckType::Httpget,
             result: HttpGetResult {
@@ -105,22 +107,36 @@ async fn main() {
     cache.push(make_tcp_fail("10.0.0.99", 443)).await;
 
     let stats: CacheStats = cache.stats().await;
-    println!("After 3 pushes  → len={}, capacity={}", stats.len, stats.capacity);
+    println!(
+        "After 3 pushes  → len={}, capacity={}",
+        stats.len, stats.capacity
+    );
 
     // ─────────────────────────────────────────────────────────────
     // 3. Peek a batch of up to 10 items — non-destructive.
     // ─────────────────────────────────────────────────────────────
     println!("\n--- Peek batch (n=10, only 3 in cache) ---");
     let batch = cache.peek_batch(10).await;
-    println!("Peeked {} items (cache still has {})", batch.len(), cache.len().await);
+    println!(
+        "Peeked {} items (cache still has {})",
+        batch.len(),
+        cache.len().await
+    );
     for (i, r) in batch.iter().enumerate() {
         println!("  [{}] is_successful={}", i, r.is_successful());
     }
 
     // Simulate a successful POST to the server:
-    println!("\n--- Simulating successful POST → draining {} items ---", batch.len());
+    println!(
+        "\n--- Simulating successful POST → draining {} items ---",
+        batch.len()
+    );
     cache.drain_front(batch.len()).await;
-    println!("Drained {} items. Cache len = {}", batch.len(), cache.len().await);
+    println!(
+        "Drained {} items. Cache len = {}",
+        batch.len(),
+        cache.len().await
+    );
 
     // ─────────────────────────────────────────────────────────────
     // 4. Demonstrate size-cap eviction (FIFO).
@@ -139,19 +155,33 @@ async fn main() {
     );
 
     // ─────────────────────────────────────────────────────────────
-    // 5. Demonstrate TTL eviction.
+    // 5. Final stats
+    // ─────────────────────────────────────────────────────────────
+    println!("\n--- Final stats on main cache ---");
+    let s = cache.stats().await;
+    println!("  len      = {}", s.len);
+    println!("  capacity = {}", s.capacity);
+
+    // ─────────────────────────────────────────────────────────────
+    // 6. Demonstrate TTL eviction.
     //    A zero-TTL cache evicts everything on the next push.
     // ─────────────────────────────────────────────────────────────
     println!("\n--- TTL eviction: zero-TTL cache ---");
     let ttl_cache = ResultCache::new(100, Duration::from_millis(0));
     ttl_cache.push(make_ping("1.1.1.1")).await;
-    println!("After push to zero-TTL cache: len={}", ttl_cache.len().await);
+    println!(
+        "After push to zero-TTL cache: len={}",
+        ttl_cache.len().await
+    );
     // Pushing another item triggers TTL sweep of existing items.
     ttl_cache.push(make_ping("1.0.0.1")).await;
-    println!("After second push: len={} (first item TTL-evicted)", ttl_cache.len().await);
+    println!(
+        "After second push: len={} (first item TTL-evicted)",
+        ttl_cache.len().await
+    );
 
     // ─────────────────────────────────────────────────────────────
-    // 6. Retry semantics: peek, simulate failure, peek again.
+    // 7. Retry semantics: peek, simulate failure, peek again.
     //    Items must not be lost on a failed POST.
     // ─────────────────────────────────────────────────────────────
     let retry_cache = ResultCache::new(100, Duration::from_secs(3600));
@@ -160,26 +190,28 @@ async fn main() {
 
     println!("\n--- Peek-then-drain retry semantics ---");
     let first_peek = retry_cache.peek_batch(2).await;
-    println!("First peek: {} items, cache len = {}", first_peek.len(), retry_cache.len().await);
+    println!(
+        "First peek: {} items, cache len = {}",
+        first_peek.len(),
+        retry_cache.len().await
+    );
 
     // Simulate server failure — do NOT drain:
-    println!("Server failure: NOT draining. Cache len = {}", retry_cache.len().await);
+    println!(
+        "Server failure: NOT draining. Cache len = {}",
+        retry_cache.len().await
+    );
 
     // On next tick, peek again — same items visible:
     let second_peek = retry_cache.peek_batch(2).await;
-    println!("Second peek: {} items still available for retry", second_peek.len());
+    println!(
+        "Second peek: {} items still available for retry",
+        second_peek.len()
+    );
 
     // Now simulate success:
     retry_cache.drain_front(second_peek.len()).await;
     println!("Success: drained. Cache len = {}", retry_cache.len().await);
-
-    // ─────────────────────────────────────────────────────────────
-    // 7. Final stats
-    // ─────────────────────────────────────────────────────────────
-    println!("\n--- Final stats on main cache ---");
-    let s = cache.stats().await;
-    println!("  len      = {}", s.len);
-    println!("  capacity = {}", s.capacity);
 
     println!("\nDone.");
 }
