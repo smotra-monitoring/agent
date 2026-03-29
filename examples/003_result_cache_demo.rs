@@ -13,8 +13,9 @@
 //! See `docs/features/RESULT_CACHE.md` for the full design document.
 
 use smotra::{
-    CacheStats, CheckType, Endpoint, HttpGetResult, MonitoringResult, PingResult, ResultCache,
-    TcpConnectResult,
+    CacheStats, CheckType, Endpoint, HttpGetCheck, HttpGetCheckType, HttpGetResult,
+    MonitoringResult, PingCheck, PingCheckType, PingResult, ResultCache,
+    TcpConnectCheck, TcpConnectCheckType, TcpConnectResult,
 };
 
 use std::time::Duration;
@@ -27,13 +28,16 @@ fn make_ping(address: &str) -> MonitoringResult {
         id: Uuid::new_v4(),
         agent_id: Uuid::new_v4(),
         target: Endpoint::new(address),
-        check_type: CheckType::Ping(PingResult {
-            successes: 3,
-            failures: 0,
-            success_latencies: vec![12.0, 11.5, 11.8],
-            errors: vec![],
-            avg_response_time_ms: Some(11.8),
-            resolved_ip: Some(address.to_string()),
+        check_type: CheckType::PingCheck(PingCheck {
+            r#type: PingCheckType::Ping,
+            result: PingResult {
+                successes: Some(3),
+                failures: Some(0),
+                success_latencies: Some(vec![12.0, 11.5, 11.8]),
+                errors: Some(vec![]),
+                avg_response_time_ms: Some(11.8),
+                resolved_ip: Some(address.to_string()),
+            },
         }),
         timestamp: chrono::Utc::now(),
     }
@@ -45,12 +49,15 @@ fn make_http(url: &str) -> MonitoringResult {
         id: Uuid::new_v4(),
         agent_id: Uuid::new_v4(),
         target: Endpoint::new(url).with_port(443).with_tags(vec!["web".to_string()]),
-        check_type: CheckType::HttpGet(HttpGetResult {
-            status_code: Some(200),
-            response_time_ms: Some(85.0),
-            response_size_bytes: Some(1024),
-            error: None,
-            success: true,
+        check_type: CheckType::HttpGetCheck(HttpGetCheck {
+            r#type: HttpGetCheckType::Httpget,
+            result: HttpGetResult {
+                status_code: Some(200),
+                response_time_ms: Some(85.0),
+                response_size_bytes: Some(1024),
+                error: None,
+                success: Some(true),
+            },
         }),
         timestamp: chrono::Utc::now(),
     }
@@ -62,11 +69,14 @@ fn make_tcp_fail(address: &str, port: u16) -> MonitoringResult {
         id: Uuid::new_v4(),
         agent_id: Uuid::new_v4(),
         target: Endpoint::new(address).with_port(port),
-        check_type: CheckType::TcpConnect(TcpConnectResult {
-            connected: false,
-            connect_time_ms: None,
-            error: Some("Connection refused".to_string()),
-            resolved_ip: Some(address.to_string()),
+        check_type: CheckType::TcpConnectCheck(TcpConnectCheck {
+            r#type: TcpConnectCheckType::Tcpconnect,
+            result: TcpConnectResult {
+                connected: Some(false),
+                connect_time_ms: None,
+                error: Some("Connection refused".to_string()),
+                resolved_ip: Some(address.to_string()),
+            },
         }),
         timestamp: chrono::Utc::now(),
     }

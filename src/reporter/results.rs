@@ -4,10 +4,9 @@
 //! # Wire format
 //!
 //! The JSON payload matches `openapi::BatchMonitoringResults` (generated from
-//! the OpenAPI spec). Because the OMG generator produces a `Type` discriminator
-//! enum with only a `Ping` variant (a known generator limitation), we use
-//! private adapter types here to correctly serialise every `CheckType` variant
-//! with the `{type, result}` envelope the spec requires.
+//! the OpenAPI spec). Since `openapi::MonitoringResult` and `openapi::CheckType`
+//! are now the canonical types used end-to-end, results are serialized directly
+//! without any adapter layer.
 //!
 //! # Peek-then-drain semantics
 //!
@@ -18,115 +17,14 @@
 
 use crate::agent_config::Config;
 use crate::cache::ResultCache;
-use crate::core::{AgentStatus, CheckType, Endpoint, MonitoringResult};
+use crate::core::{AgentStatus, MonitoringResult};
 use crate::error::{Error, Result};
+use crate::openapi;
 use parking_lot::RwLock;
-use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::time::interval;
 use tracing::{debug, error, info};
-
-// ============================================================
-// Wire-format adapter types
-// ============================================================
-//
-// These private types serialise domain MonitoringResult to the wire format
-// defined by the OpenAPI spec:
-//   MonitoringResult.check_type → {"type": "<variant>", "result": {...}}
-//
-// We cannot use `openapi::CheckType` directly because the OMG generator's
-// `Type` discriminator enum only contains `Ping`.
-
-/// Adapter for `crate::core::Endpoint` — omits the domain-only fields and
-/// matches the spec's `Endpoint` schema (id is absent in agent-generated events).
-#[derive(Debug, Serialize)]
-struct ApiEndpoint<'a> {
-    address: &'a str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    port: Option<u16>,
-    enabled: bool,
-    tags: &'a [String],
-}
-
-impl<'a> From<&'a Endpoint> for ApiEndpoint<'a> {
-    fn from(e: &'a Endpoint) -> Self {
-        Self {
-            address: &e.address,
-            port: e.port,
-            enabled: e.enabled,
-            tags: &e.tags,
-        }
-    }
-}
-
-/// Adjacently-tagged adapter for `crate::core::CheckType`.
-///
-/// `#[serde(tag = "type", content = "result")]` generates:
-///   `{"type": "ping",       "result": {...}}`
-///   `{"type": "traceroute", "result": {...}}`
-///   etc.
-///
-/// This matches the spec's `CheckType` oneOf discriminator exactly.
-#[derive(Debug, Serialize)]
-#[serde(tag = "type", content = "result", rename_all = "lowercase")]
-enum ApiCheckType<'a> {
-    Ping(&'a crate::core::PingResult),
-    Traceroute(&'a crate::core::TracerouteResult),
-    TcpConnect(&'a crate::core::TcpConnectResult),
-    UdpConnect(&'a crate::core::UdpConnectResult),
-    HttpGet(&'a crate::core::HttpGetResult),
-    Plugin(&'a crate::core::PluginResult),
-}
-
-impl<'a> From<&'a CheckType> for ApiCheckType<'a> {
-    fn from(ct: &'a CheckType) -> Self {
-        match ct {
-            CheckType::Ping(r) => ApiCheckType::Ping(r),
-            CheckType::Traceroute(r) => ApiCheckType::Traceroute(r),
-            CheckType::TcpConnect(r) => ApiCheckType::TcpConnect(r),
-            CheckType::UdpConnect(r) => ApiCheckType::UdpConnect(r),
-            CheckType::HttpGet(r) => ApiCheckType::HttpGet(r),
-            CheckType::Plugin(r) => ApiCheckType::Plugin(r),
-        }
-    }
-}
-
-/// Adapter for a single `MonitoringResult` in wire format.
-#[derive(Debug, Serialize)]
-struct ApiMonitoringResult<'a> {
-    id: &'a uuid::Uuid,
-    agent_id: &'a uuid::Uuid,
-    target: ApiEndpoint<'a>,
-    check_type: ApiCheckType<'a>,
-    timestamp: &'a chrono::DateTime<chrono::Utc>,
-}
-
-impl<'a> From<&'a MonitoringResult> for ApiMonitoringResult<'a> {
-    fn from(r: &'a MonitoringResult) -> Self {
-        Self {
-            id: &r.id,
-            agent_id: &r.agent_id,
-            target: ApiEndpoint::from(&r.target),
-            check_type: ApiCheckType::from(&r.check_type),
-            timestamp: &r.timestamp,
-        }
-    }
-}
-
-/// Wire payload matching `openapi::BatchMonitoringResults`.
-#[derive(Debug, Serialize)]
-struct ApiBatchPayload<'a> {
-    results: Vec<ApiMonitoringResult<'a>>,
-}
-
-impl<'a> ApiBatchPayload<'a> {
-    fn from_slice(batch: &'a [MonitoringResult]) -> Self {
-        Self {
-            results: batch.iter().map(ApiMonitoringResult::from).collect(),
-        }
-    }
-}
 
 // ============================================================
 // Reporter loop
@@ -237,7 +135,9 @@ async fn send_result_batch(config: &Config, batch: &[MonitoringResult]) -> Resul
         .build()?;
 
     let url = format!("{}/agent/{}/results", server_url, agent_id);
-    let payload = ApiBatchPayload::from_slice(batch);
+    let payload = openapi::BatchMonitoringResults {
+        results: batch.to_vec(),
+    };
 
     let mut request = client.post(&url).json(&payload);
 
@@ -254,6 +154,21 @@ async fn send_result_batch(config: &Config, batch: &[MonitoringResult]) -> Resul
         )));
     }
 
+    // Parse and log the acknowledgment for observability.
+    match response.json::<openapi::ResultsBatchAcknowledgment>().await {
+        Ok(ack) => {
+            debug!(
+                "Server acknowledged batch: accepted={}, duplicates_skipped={}",
+                ack.accepted,
+                ack.duplicates_skipped.unwrap_or(0),
+            );
+        }
+        Err(e) => {
+            // A parse failure is non-fatal — the server already returned 2xx.
+            debug!("Could not parse ResultsBatchAcknowledgment body: {}", e);
+        }
+    }
+
     Ok(())
 }
 
@@ -264,7 +179,7 @@ async fn send_result_batch(config: &Config, batch: &[MonitoringResult]) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{CheckType, Endpoint, MonitoringResult, PingResult};
+    use crate::core::{CheckType, Endpoint, MonitoringResult, PingCheck, PingCheckType, PingResult};
     use chrono::Utc;
     use uuid::Uuid;
 
@@ -273,27 +188,33 @@ mod tests {
             id: Uuid::new_v4(),
             agent_id: Uuid::new_v4(),
             target: Endpoint::new("1.2.3.4"),
-            check_type: CheckType::Ping(PingResult {
-                resolved_ip: Some("1.2.3.4".to_string()),
-                successes: 3,
-                failures: 0,
-                success_latencies: vec![1.0, 2.0, 3.0],
-                avg_response_time_ms: Some(2.0),
-                errors: vec![],
+            check_type: CheckType::PingCheck(PingCheck {
+                r#type: PingCheckType::Ping,
+                result: PingResult {
+                    resolved_ip: Some("1.2.3.4".to_string()),
+                    successes: Some(3),
+                    failures: Some(0),
+                    success_latencies: Some(vec![1.0, 2.0, 3.0]),
+                    avg_response_time_ms: Some(2.0),
+                    errors: Some(vec![]),
+                },
             }),
             timestamp: Utc::now(),
         }
     }
 
-    mod adapter_serialisation_tests {
+    mod serialisation_tests {
         use super::*;
+
+        fn make_batch(results: Vec<MonitoringResult>) -> openapi::BatchMonitoringResults {
+            openapi::BatchMonitoringResults { results }
+        }
 
         #[test]
         fn ping_serialises_with_type_result_envelope() {
             let result = make_result();
-            let batch = ApiBatchPayload::from_slice(std::slice::from_ref(&result));
+            let batch = make_batch(vec![result]);
             let json = serde_json::to_value(&batch).expect("serialisation should not fail");
-
             let check = &json["results"][0]["check_type"];
             assert_eq!(
                 check["type"].as_str(),
@@ -309,15 +230,18 @@ mod tests {
 
         #[test]
         fn tcpconnect_serialises_correct_discriminator() {
-            use crate::core::TcpConnectResult;
+            use crate::core::{TcpConnectCheck, TcpConnectCheckType, TcpConnectResult};
             let mut result = make_result();
-            result.check_type = CheckType::TcpConnect(TcpConnectResult {
-                connected: true,
-                connect_time_ms: Some(5.0),
-                error: None,
-                resolved_ip: None,
+            result.check_type = CheckType::TcpConnectCheck(TcpConnectCheck {
+                r#type: TcpConnectCheckType::Tcpconnect,
+                result: TcpConnectResult {
+                    connected: Some(true),
+                    connect_time_ms: Some(5.0),
+                    error: None,
+                    resolved_ip: None,
+                },
             });
-            let batch = ApiBatchPayload::from_slice(std::slice::from_ref(&result));
+            let batch = make_batch(vec![result]);
             let json = serde_json::to_value(&batch).expect("serialisation should not fail");
             assert_eq!(
                 json["results"][0]["check_type"]["type"].as_str(),
@@ -327,16 +251,19 @@ mod tests {
 
         #[test]
         fn httpget_serialises_correct_discriminator() {
-            use crate::core::HttpGetResult;
+            use crate::core::{HttpGetCheck, HttpGetCheckType, HttpGetResult};
             let mut result = make_result();
-            result.check_type = CheckType::HttpGet(HttpGetResult {
-                status_code: Some(200),
-                response_time_ms: Some(100.0),
-                response_size_bytes: Some(1024),
-                error: None,
-                success: true,
+            result.check_type = CheckType::HttpGetCheck(HttpGetCheck {
+                r#type: HttpGetCheckType::Httpget,
+                result: HttpGetResult {
+                    status_code: Some(200),
+                    response_time_ms: Some(100.0),
+                    response_size_bytes: Some(1024),
+                    error: None,
+                    success: Some(true),
+                },
             });
-            let batch = ApiBatchPayload::from_slice(std::slice::from_ref(&result));
+            let batch = make_batch(vec![result]);
             let json = serde_json::to_value(&batch).expect("serialisation should not fail");
             assert_eq!(
                 json["results"][0]["check_type"]["type"].as_str(),
@@ -346,7 +273,7 @@ mod tests {
 
         #[test]
         fn empty_batch_serialises_as_empty_results_array() {
-            let batch = ApiBatchPayload::from_slice(&[]);
+            let batch = make_batch(vec![]);
             let json = serde_json::to_value(&batch).expect("serialisation should not fail");
             assert_eq!(
                 json["results"].as_array().map(|a| a.len()),
@@ -358,8 +285,7 @@ mod tests {
         fn multiple_results_all_present_in_json() {
             let r1 = make_result();
             let r2 = make_result();
-            let batch_data = vec![r1, r2];
-            let batch = ApiBatchPayload::from_slice(&batch_data);
+            let batch = make_batch(vec![r1, r2]);
             let json = serde_json::to_value(&batch).expect("serialisation should not fail");
             assert_eq!(
                 json["results"].as_array().map(|a| a.len()),

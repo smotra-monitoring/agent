@@ -29,6 +29,8 @@ use tracing::{debug, trace};
 #[derive(Debug, Clone)]
 struct CacheEntry {
     result: MonitoringResult,
+    /// Stopwatch (not a timestamp) of the moment when the entry was inserted.
+    /// Used only for the cache TTL eviction.
     inserted_at: Instant,
 }
 
@@ -47,12 +49,12 @@ pub struct CacheStats {
 ///
 /// ```rust
 /// use std::time::Duration;
-/// use smotra::cache::ResultCache;
+/// use smotra::ResultCache;
 ///
-/// # tokio_test::block_on(async {
-/// let cache = ResultCache::new(1000, Duration::from_secs(3600));
-/// // Push a result; then peek and drain after a successful send.
-/// # });
+/// tokio::runtime::Runtime::new().unwrap().block_on(async {
+///     let cache = ResultCache::new(1000, Duration::from_secs(3600));
+///     // Push a result; then peek and drain after a successful send.
+/// });
 /// ```
 #[derive(Debug, Clone)]
 pub struct ResultCache {
@@ -125,11 +127,7 @@ impl ResultCache {
     /// Items are only removed via `drain_front` after the server acknowledges.
     pub async fn peek_batch(&self, n: usize) -> Vec<MonitoringResult> {
         let inner = self.inner.lock().await;
-        inner
-            .iter()
-            .take(n)
-            .map(|e| e.result.clone())
-            .collect()
+        inner.iter().take(n).map(|e| e.result.clone()).collect()
     }
 
     /// Remove the first `n` entries from the front of the queue.
@@ -142,7 +140,11 @@ impl ResultCache {
         for _ in 0..to_drain {
             inner.pop_front();
         }
-        debug!("Drained {} entries from cache, {} remaining", to_drain, inner.len());
+        debug!(
+            "Drained {} entries from cache, {} remaining",
+            to_drain,
+            inner.len()
+        );
     }
 
     /// Return the current number of entries in the cache.
@@ -176,17 +178,21 @@ mod tests {
     use uuid::Uuid;
 
     fn make_result(address: &str) -> MonitoringResult {
+        use crate::core::{PingCheck, PingCheckType};
         MonitoringResult {
             id: Uuid::new_v4(),
             agent_id: Uuid::new_v4(),
             target: Endpoint::new(address),
-            check_type: CheckType::Ping(PingResult {
-                resolved_ip: None,
-                successes: 1,
-                failures: 0,
-                success_latencies: vec![1.0],
-                avg_response_time_ms: Some(1.0),
-                errors: vec![],
+            check_type: CheckType::PingCheck(PingCheck {
+                r#type: PingCheckType::Ping,
+                result: PingResult {
+                    resolved_ip: None,
+                    successes: Some(1),
+                    failures: Some(0),
+                    success_latencies: Some(vec![1.0]),
+                    avg_response_time_ms: Some(1.0),
+                    errors: Some(vec![]),
+                },
             }),
             timestamp: Utc::now(),
         }
@@ -230,7 +236,10 @@ mod tests {
 
             // The first result should have been evicted
             let batch = cache.peek_batch(3).await;
-            assert!(!batch.iter().any(|r| r.id == first_id), "oldest entry should be evicted");
+            assert!(
+                !batch.iter().any(|r| r.id == first_id),
+                "oldest entry should be evicted"
+            );
         }
 
         #[tokio::test]
@@ -238,10 +247,14 @@ mod tests {
             // max_size = 0 is treated as "no size cap" (unlimited).
             // Use cache_enabled = false (via StorageConfig) to disable caching entirely.
             let cache = ResultCache::new(0, Duration::from_secs(3600));
-            cache.push(make_result("1.1.1.1")).await;
+            for i in 0..100 {
+                cache
+                    .push(make_result(&format!("10.0.{}.{}", i / 256, i % 256)))
+                    .await;
+            }
             assert_eq!(
                 cache.len().await,
-                1,
+                100,
                 "max_size=0 means unlimited, not disabled"
             );
         }
@@ -376,10 +389,22 @@ mod tests {
         #[tokio::test]
         async fn stats_reflect_current_state() {
             let cache = ResultCache::new(50, Duration::from_secs(3600));
-            assert_eq!(cache.stats().await, CacheStats { len: 0, capacity: 50 });
+            assert_eq!(
+                cache.stats().await,
+                CacheStats {
+                    len: 0,
+                    capacity: 50
+                }
+            );
             cache.push(make_result("1.1.1.1")).await;
             cache.push(make_result("2.2.2.2")).await;
-            assert_eq!(cache.stats().await, CacheStats { len: 2, capacity: 50 });
+            assert_eq!(
+                cache.stats().await,
+                CacheStats {
+                    len: 2,
+                    capacity: 50
+                }
+            );
         }
     }
 
@@ -389,19 +414,24 @@ mod tests {
 
         #[tokio::test]
         async fn concurrent_pushes_stay_within_capacity() {
-            let cache = StdArc::new(ResultCache::new(100, Duration::from_secs(3600)));
+            let max_size = 1000;
+            let cache = StdArc::new(ResultCache::new(max_size, Duration::from_secs(3600)));
             let mut handles = vec![];
-            for i in 0..200u32 {
+            for i in 0..max_size * 2 {
                 let c = StdArc::clone(&cache);
                 handles.push(tokio::spawn(async move {
-                    c.push(make_result(&format!("10.0.{}.{}", i / 256, i % 256))).await;
+                    c.push(make_result(&format!("10.0.{}.{}", i / 256, i % 256)))
+                        .await;
                 }));
             }
             for h in handles {
                 h.await.unwrap();
             }
             // Must not exceed max_size
-            assert!(cache.len().await <= 100, "cache must not exceed max_size");
+            assert!(
+                cache.len().await == max_size,
+                "cache must not exceed max_size"
+            );
         }
 
         #[tokio::test]
@@ -413,16 +443,16 @@ mod tests {
 
             let cache_clone = StdArc::clone(&cache);
             let drain_task = tokio::spawn(async move {
-                cache_clone.drain_front(25).await;
+                cache_clone.drain_front(20).await;
             });
 
             let batch = cache.peek_batch(50).await;
             drain_task.await.unwrap();
 
-            // After draining 25, remaining should be ≤ 25
-            assert!(cache.len().await <= 25);
+            // After draining 20, remaining should be ≤ 30
+            assert!(cache.len().await == 30);
             // batch captured before or during drain; length is 0–50
-            assert!(batch.len() <= 50);
+            assert!(batch.len() == 50);
         }
     }
 }

@@ -4,7 +4,16 @@ This document outlines the development roadmap for the Smotra monitoring agent, 
 
 ---
 
-## Current PR
+## Cache Persistence PR
+- [ ] spec::PingResult all fields should be required, not optional. This will simplify the code and make it more robust. The reporter can use default values for missing fields if necessary, but the core types should be strict and not allow missing data. This will also help with type safety and reduce the chances of runtime errors due to missing fields.
+    - successes: Some(0),
+    - failures: Some(1),
+    - success_latencies: Some(Vec::new()),
+    - errors: Some(vec![format!("Failed to resolve address: {}", e)]),
+
+- [ ] Review other ___Result types for similar optional fields and apply the same principle of making them required if they are essential for the check results.
+
+## Hot-reload PR
 - [x] Move load_and_validate_config to AgentConfig.loader
 - [ ] Refactor running part of first conifg load into load_and_validate_config. Replace flow if api_key is missing to check of returned error type Error::MissingApiKey.
       Current flow:

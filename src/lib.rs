@@ -26,9 +26,13 @@ pub use agent_config::{ClaimConfig, Config, MonitoringConfig, ServerConfig, Stor
 pub use cache::{CacheStats, ResultCache};
 pub use claim::{AgentCredentials, Claim};
 pub use core::{
-    Agent, AgentHealthStatus, AgentHeartbeat, AgentStatus, CheckType, Endpoint, HttpGetResult,
-    MonitoringResult, PingResult, PluginResult, TcpConnectResult, TracerouteHop, TracerouteResult,
-    UdpConnectResult,
+    Agent, AgentHealthStatus, AgentHeartbeat, AgentStatus, CheckType,
+    Endpoint, HttpGetCheck, HttpGetCheckType, HttpGetResult,
+    MonitoringResult, PingCheck, PingCheckType, PingResult,
+    PluginCheck, PluginCheckType, PluginResult,
+    TcpConnectCheck, TcpConnectCheckType, TcpConnectResult,
+    TracerouteCheck, TracerouteCheckType, TracerouteHop, TracerouteResult,
+    UdpConnectCheck, UdpConnectCheckType, UdpConnectResult,
 };
 pub use error::{Error, Result};
 pub use reporter::{run_result_reporter, HeartbeatReporter};

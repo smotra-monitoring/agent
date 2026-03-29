@@ -1,6 +1,6 @@
 //! ICMP ping monitoring
 
-use crate::core::{CheckType, Endpoint, MonitoringResult, PingResult};
+use crate::core::{CheckType, Endpoint, MonitoringResult, PingCheck, PingCheckType, PingResult};
 use crate::error::{Error, Result};
 use chrono::Utc;
 use std::net::{IpAddr, ToSocketAddrs};
@@ -37,10 +37,10 @@ impl PingChecker {
             Ok(addr) => addr,
             Err(e) => {
                 let ping_result = PingResult {
-                    successes: 0,
-                    failures: 1,
-                    success_latencies: Vec::new(),
-                    errors: vec![format!("Failed to resolve address: {}", e)],
+                    successes: Some(0),
+                    failures: Some(1),
+                    success_latencies: Some(Vec::new()),
+                    errors: Some(vec![format!("Failed to resolve address: {}", e)]),
                     avg_response_time_ms: None,
                     resolved_ip: None,
                 };
@@ -49,7 +49,10 @@ impl PingChecker {
                     id: Uuid::new_v4(),
                     agent_id,
                     target: endpoint.clone(),
-                    check_type: CheckType::Ping(ping_result),
+                    check_type: CheckType::PingCheck(PingCheck {
+                        r#type: PingCheckType::Ping,
+                        result: ping_result,
+                    }),
                     timestamp: Utc::now(),
                 };
             }
@@ -93,18 +96,21 @@ impl PingChecker {
 
         let ping_result = PingResult {
             resolved_ip: Some(addr.to_string()),
-            successes,
-            failures,
-            success_latencies,
+            successes: Some(successes as i64),
+            failures: Some(failures as i64),
+            success_latencies: Some(success_latencies),
             avg_response_time_ms,
-            errors: errors.clone(),
+            errors: Some(errors.clone()),
         };
 
         MonitoringResult {
             id: Uuid::new_v4(),
             agent_id,
             target: endpoint.clone(),
-            check_type: CheckType::Ping(ping_result),
+            check_type: CheckType::PingCheck(PingCheck {
+                r#type: PingCheckType::Ping,
+                result: ping_result,
+            }),
             timestamp: Utc::now(),
         }
     }

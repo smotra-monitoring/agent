@@ -11,7 +11,7 @@ use parking_lot::RwLock;
 use smotra::{
     CacheStats, Config, MonitoringConfig, ResultCache, ServerConfig, StorageConfig,
 };
-use smotra::{CheckType, Endpoint, MonitoringResult, PingResult};
+use smotra::{CheckType, Endpoint, MonitoringResult, PingCheck, PingCheckType, PingResult};
 use std::sync::Arc;
 use std::time::Duration;
 use uuid::Uuid;
@@ -25,13 +25,16 @@ fn make_ping_result(address: &str) -> MonitoringResult {
         id: Uuid::new_v4(),
         agent_id: Uuid::new_v4(),
         target: Endpoint::new(address),
-        check_type: CheckType::Ping(PingResult {
-            resolved_ip: Some(address.to_string()),
-            successes: 3,
-            failures: 0,
-            success_latencies: vec![1.0, 2.0, 3.0],
-            avg_response_time_ms: Some(2.0),
-            errors: vec![],
+        check_type: CheckType::PingCheck(PingCheck {
+            r#type: PingCheckType::Ping,
+            result: PingResult {
+                resolved_ip: Some(address.to_string()),
+                successes: Some(3),
+                failures: Some(0),
+                success_latencies: Some(vec![1.0, 2.0, 3.0]),
+                avg_response_time_ms: Some(2.0),
+                errors: Some(vec![]),
+            },
         }),
         timestamp: chrono::Utc::now(),
     }
@@ -157,6 +160,14 @@ async fn spawn_mock_server_202(
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
 
+    // Minimal valid ResultsBatchAcknowledgment body.
+    let ack_body = r#"{"submission_id":"00000000-0000-0000-0000-000000000001","accepted":1,"received_at":"2026-01-01T00:00:00Z"}"#;
+    let response = format!(
+        "HTTP/1.1 202 Accepted\r\nContent-Length: {}\r\nContent-Type: application/json\r\n\r\n{}",
+        ack_body.len(),
+        ack_body,
+    );
+
     let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
     let addr = listener.local_addr().unwrap();
     let (tx, rx) = tokio::sync::oneshot::channel();
@@ -166,9 +177,7 @@ async fn spawn_mock_server_202(
             let mut buf = vec![0u8; 16384];
             let n = stream.read(&mut buf).await.unwrap_or(0);
             buf.truncate(n);
-            let _ = stream
-                .write_all(b"HTTP/1.1 202 Accepted\r\nContent-Length: 2\r\nContent-Type: application/json\r\n\r\n{}")
-                .await;
+            let _ = stream.write_all(response.as_bytes()).await;
             let _ = tx.send(buf);
         }
     });

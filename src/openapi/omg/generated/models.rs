@@ -100,10 +100,10 @@ pub struct StorageConfig {
     pub max_cache_age_secs: i64,
 }
 
-/// Endpoint
+/// An endpoint to monitor (IP address, hostname, or URL)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Endpoint {
-    pub id: UUIDv7,
+    pub id: Option<UUIDv7>,
     /// IP address, hostname, or URL
     pub address: String,
     pub port: Option<i64>,
@@ -115,10 +115,8 @@ pub struct Endpoint {
 /// MonitoringResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MonitoringResult {
-    /// Unique identifier for the monitoring result
-    pub id: String,
-    /// Unique identifier for the agent
-    pub agent_id: String,
+    pub id: UUIDv7,
+    pub agent_id: UUIDv7,
     pub target: Endpoint,
     pub check_type: CheckType,
     /// Timestamp when the report was generated (RFC3339)
@@ -133,12 +131,6 @@ pub struct BatchMonitoringResults {
     pub results: Vec<MonitoringResult>,
 }
 
-/// Type
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Type {
-    #[serde(rename = "ping")]
-    Ping
-}
 /// CheckType (oneOf)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -150,11 +142,47 @@ pub enum CheckType {
     HttpGetCheck(HttpGetCheck),
     PluginCheck(PluginCheck),
 }
+/// PingCheckType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PingCheckType {
+    #[serde(rename = "ping")]
+    Ping,
+}
+/// TracerouteCheckType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TracerouteCheckType {
+    #[serde(rename = "traceroute")]
+    Traceroute,
+}
+/// TcpConnectCheckType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TcpConnectCheckType {
+    #[serde(rename = "tcpconnect")]
+    Tcpconnect,
+}
+/// UdpConnectCheckType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum UdpConnectCheckType {
+    #[serde(rename = "udpconnect")]
+    Udpconnect,
+}
+/// HttpGetCheckType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HttpGetCheckType {
+    #[serde(rename = "httpget")]
+    Httpget,
+}
+/// PluginCheckType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PluginCheckType {
+    #[serde(rename = "plugin")]
+    Plugin,
+}
 /// PingCheck
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PingCheck {
     #[serde(rename = "type")]
-    pub r#type: Type,
+    pub r#type: PingCheckType,
     pub result: PingResult,
 }
 
@@ -173,7 +201,7 @@ pub struct PingResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TracerouteCheck {
     #[serde(rename = "type")]
-    pub r#type: Type,
+    pub r#type: TracerouteCheckType,
     pub result: TracerouteResult,
 }
 
@@ -199,7 +227,7 @@ pub struct TracerouteHop {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TcpConnectCheck {
     #[serde(rename = "type")]
-    pub r#type: Type,
+    pub r#type: TcpConnectCheckType,
     pub result: TcpConnectResult,
 }
 
@@ -216,7 +244,7 @@ pub struct TcpConnectResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UdpConnectCheck {
     #[serde(rename = "type")]
-    pub r#type: Type,
+    pub r#type: UdpConnectCheckType,
     pub result: UdpConnectResult,
 }
 
@@ -233,7 +261,7 @@ pub struct UdpConnectResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HttpGetCheck {
     #[serde(rename = "type")]
-    pub r#type: Type,
+    pub r#type: HttpGetCheckType,
     pub result: HttpGetResult,
 }
 
@@ -251,7 +279,7 @@ pub struct HttpGetResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginCheck {
     #[serde(rename = "type")]
-    pub r#type: Type,
+    pub r#type: PluginCheckType,
     pub result: PluginResult,
 }
 
@@ -278,6 +306,20 @@ pub struct AgentHeartbeat {
     pub memory_usage_mb: Option<f64>,
 }
 
+/// Type of check performed
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Type {
+    #[serde(rename = "icmp_ping")]
+    IcmpPing,
+    #[serde(rename = "tcp_check")]
+    TcpCheck,
+    #[serde(rename = "http_check")]
+    HttpCheck,
+    #[serde(rename = "traceroute")]
+    Traceroute,
+    #[serde(rename = "custom")]
+    Custom,
+}
 /// Additional metric-specific data
 pub type Metadata = std::collections::HashMap<String, serde_json::Value>;
 
@@ -436,6 +478,18 @@ pub struct ReportAcknowledgment {
     pub update_available: Option<bool>,
 }
 
+/// ResultsBatchAcknowledgment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResultsBatchAcknowledgment {
+    pub submission_id: UUIDv7,
+    /// Number of results accepted for processing
+    pub accepted: i64,
+    /// Number of results deduplicated (already known to the server)
+    pub duplicates_skipped: Option<i64>,
+    /// Timestamp when the batch was received by the server
+    pub received_at: DateTime<Utc>,
+}
+
 /// TimeRange
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TimeRange {
@@ -506,7 +560,7 @@ pub enum Severity {
     #[serde(rename = "warning")]
     Warning,
     #[serde(rename = "info")]
-    Info
+    Info,
 }
 /// Alert
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -552,7 +606,7 @@ pub enum Operator {
     #[serde(rename = "equals")]
     Equals,
     #[serde(rename = "not_equals")]
-    NotEquals
+    NotEquals,
 }
 /// Aggregation
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -566,7 +620,7 @@ pub enum Aggregation {
     #[serde(rename = "sum")]
     Sum,
     #[serde(rename = "count")]
-    Count
+    Count,
 }
 /// Filters
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -601,7 +655,7 @@ pub struct NotificationChannel {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GrantType {
     #[serde(rename = "authorization_code")]
-    AuthorizationCode
+    AuthorizationCode,
 }
 /// AuthorizationCodeTokenRequest
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -713,7 +767,7 @@ pub enum Plan {
     #[serde(rename = "professional")]
     Professional,
     #[serde(rename = "enterprise")]
-    Enterprise
+    Enterprise,
 }
 /// Settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -771,7 +825,7 @@ pub enum AgentHealthStatus {
     #[serde(rename = "healthy")]
     Healthy,
     #[serde(rename = "degraded")]
-    Degraded
+    Degraded,
 }
 /// Status of a monitoring check
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -783,31 +837,31 @@ pub enum MetricStatus {
     #[serde(rename = "degraded")]
     Degraded,
     #[serde(rename = "unknown")]
-    Unknown
+    Unknown,
 }
 /// Status of agent registration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RegistrationStatus {
     #[serde(rename = "pending_claim")]
-    PendingClaim
+    PendingClaim,
 }
 /// Pending claim status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClaimStatusPendingEnum {
     #[serde(rename = "pending_claim")]
-    PendingClaim
+    PendingClaim,
 }
 /// Claimed status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClaimStatusClaimedEnum {
     #[serde(rename = "claimed")]
-    Claimed
+    Claimed,
 }
 /// Status in claim response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClaimResponseStatus {
     #[serde(rename = "claimed")]
-    Claimed
+    Claimed,
 }
 /// Report acknowledgment status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -815,7 +869,7 @@ pub enum ReportAckStatus {
     #[serde(rename = "accepted")]
     Accepted,
     #[serde(rename = "queued")]
-    Queued
+    Queued,
 }
 /// Metric status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -827,7 +881,7 @@ pub enum AggregatedMetricStatus {
     #[serde(rename = "degraded")]
     Degraded,
     #[serde(rename = "unknown")]
-    Unknown
+    Unknown,
 }
 /// Alert status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -837,7 +891,7 @@ pub enum AlertStatus {
     #[serde(rename = "acknowledged")]
     Acknowledged,
     #[serde(rename = "resolved")]
-    Resolved
+    Resolved,
 }
 /// User account status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -847,7 +901,7 @@ pub enum UserStatus {
     #[serde(rename = "inactive")]
     Inactive,
     #[serde(rename = "suspended")]
-    Suspended
+    Suspended,
 }
 /// Updated user status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -857,7 +911,7 @@ pub enum UpdateUserStatus {
     #[serde(rename = "inactive")]
     Inactive,
     #[serde(rename = "suspended")]
-    Suspended
+    Suspended,
 }
 /// Organization status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -867,7 +921,7 @@ pub enum OrganizationStatus {
     #[serde(rename = "suspended")]
     Suspended,
     #[serde(rename = "trial")]
-    Trial
+    Trial,
 }
 /// System health status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -877,7 +931,7 @@ pub enum SystemHealthStatus {
     #[serde(rename = "degraded")]
     Degraded,
     #[serde(rename = "unhealthy")]
-    Unhealthy
+    Unhealthy,
 }
 /// Component health status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -887,7 +941,7 @@ pub enum ComponentHealthStatus {
     #[serde(rename = "degraded")]
     Degraded,
     #[serde(rename = "unhealthy")]
-    Unhealthy
+    Unhealthy,
 }
 /// UUID version 7 as per RFC 4122
 pub type UUIDv7 = Uuid;
@@ -927,7 +981,7 @@ pub enum TokenTypeHint {
     #[serde(rename = "access_token")]
     AccessToken,
     #[serde(rename = "refresh_token")]
-    RefreshToken
+    RefreshToken,
 }
 /// Oauth2RevokeRequestBody
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1098,7 +1152,7 @@ pub struct UpdateAgentConfigurationResponse200 {
 /// Batch accepted for processing
 #[derive(Debug, Clone, Deserialize)]
 pub struct SubmitAgentResultsResponse202 {
-    pub body: ReportAcknowledgment,
+    pub body: ResultsBatchAcknowledgment,
 }
 /// Report generated successfully
 #[derive(Debug, Clone, Deserialize)]
