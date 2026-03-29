@@ -9,8 +9,11 @@ use uuid::Uuid;
 /// AgentStatus
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentStatus {
-    /// Unique identifier for the agent
-    pub agent_id: String,
+    pub agent_id: UUIDv7,
+    /// Version of the agent
+    pub agent_version: String,
+    /// Version of the agent configuration
+    pub config_version: i64,
     /// Whether the agent is currently running
     pub is_running: bool,
     /// Timestamp when the agent started in UTC (RFC3339), null if never started

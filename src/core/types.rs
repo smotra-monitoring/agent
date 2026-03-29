@@ -5,6 +5,10 @@ use serde::{Deserialize, Serialize};
 use std::net::IpAddr;
 use uuid::Uuid;
 
+// Re-export AgentStatus from the OpenAPI generated models so the rest of the
+// codebase gets the canonical wire-compatible type with no local duplicate.
+pub use crate::openapi::AgentStatus;
+
 /// Result of a monitoring check
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MonitoringResult {
@@ -289,41 +293,7 @@ impl Default for AgentHeartbeat {
     }
 }
 
-/// Current status of the agent
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct AgentStatus {
-    /// Unique identifier for this agent
-    pub agent_id: Uuid,
-    /// Whether the agent is currently running
-    pub is_running: bool,
-    /// When the agent was started
-    pub started_at: Option<DateTime<Utc>>,
-    /// When the agent was shutdown
-    pub stopped_at: Option<DateTime<Utc>>,
-    /// Number of checks performed
-    pub checks_performed: u64,
-    /// Number of successful checks
-    pub checks_successful: u64,
-    /// Number of failed checks
-    pub checks_failed: u64,
-    /// Last time data was sent to server
-    pub last_report_at: Option<DateTime<Utc>>,
-    /// Number of failed report attempts
-    pub failed_report_count: u64,
-    /// Whether the agent is connected to the server
-    pub server_connected: bool,
-    /// Number of cached reports waiting to be sent
-    pub cached_reports: usize,
-}
 
-impl AgentStatus {
-    pub fn new(agent_id: Uuid) -> Self {
-        Self {
-            agent_id,
-            ..Default::default()
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -382,6 +352,12 @@ mod tests {
         assert_eq!(status.agent_id, agent_id, "Agent ID should match");
         assert!(!status.is_running, "Agent should not be running by default");
         assert_eq!(status.checks_performed, 0, "Checks performed should be 0");
+        assert_eq!(
+            status.agent_version,
+            env!("CARGO_PKG_VERSION"),
+            "agent_version should match package version"
+        );
+        assert_eq!(status.config_version, 0, "config_version should default to 0");
     }
 
     #[test]
@@ -393,13 +369,21 @@ mod tests {
             json.contains(&agent_id.to_string()),
             "Serialized JSON should contain agent_id as UUID string"
         );
+        assert!(
+            json.contains("\"agent_version\""),
+            "Serialized JSON should contain agent_version field"
+        );
+        assert!(
+            json.contains("\"config_version\""),
+            "Serialized JSON should contain config_version field"
+        );
     }
 
     #[test]
     fn test_agent_status_deserialization() {
         let agent_id = Uuid::new_v4();
         let json = format!(
-            r#"{{"agent_id":"{}","is_running":false,"started_at":null,"stopped_at":null,"checks_performed":0,"checks_successful":0,"checks_failed":0,"last_report_at":null,"failed_report_count":0,"server_connected":false,"cached_reports":0}}"#,
+            r#"{{"agent_id":"{}","agent_version":"0.1.0","config_version":0,"is_running":false,"started_at":"1970-01-01T00:00:00Z","stopped_at":null,"checks_performed":0,"checks_successful":0,"checks_failed":0,"last_report_at":"1970-01-01T00:00:00Z","failed_report_count":0,"server_connected":false,"cached_reports":0}}"#,
             agent_id
         );
         let status: AgentStatus = serde_json::from_str(&json).unwrap();
@@ -407,5 +391,7 @@ mod tests {
             status.agent_id, agent_id,
             "Deserialized agent_id should match"
         );
+        assert_eq!(status.agent_version, "0.1.0", "agent_version should match");
+        assert_eq!(status.config_version, 0, "config_version should be 0");
     }
 }

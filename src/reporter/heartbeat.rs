@@ -82,9 +82,6 @@ impl HeartbeatReporter {
 
         let mut request = client.post(&heartbeat_url).json(&heartbeat);
 
-        // Add agent version header
-        request = request.header("X-Agent-Version", config.version.to_string());
-
         // Use X-Agent-API-Key header as specified in OpenAPI spec (AgentApiKey security scheme)
         if let Some(api_key) = &config.server.api_key {
             request = request.header("X-Agent-API-Key", api_key);
