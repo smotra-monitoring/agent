@@ -36,7 +36,8 @@ impl Agent {
         let config = Config::load_and_validate_config(&config_path)?;
 
         let (shutdown_tx, _) = broadcast::channel(1);
-        let status = AgentStatus::new(config.agent_id);
+        let mut status = AgentStatus::new(config.agent_id);
+        status.config_version = config.version as i64;
 
         Ok(Self {
             config: Arc::new(RwLock::new(config)),
@@ -59,7 +60,7 @@ impl Agent {
         {
             let mut status = self.status.write();
             status.is_running = true;
-            status.started_at = Some(chrono::Utc::now());
+            status.started_at = chrono::Utc::now();
         }
 
         // Start monitoring tasks
@@ -203,6 +204,7 @@ impl Agent {
 
         // Apply the new configuration atomically
         *self.config.write() = new_config.clone();
+        self.status.write().config_version = new_config.version as i64;
 
         info!(
             "Configuration reloaded successfully (version: {})",
@@ -291,6 +293,11 @@ mod tests {
             new_config.monitoring.interval_secs
         );
         assert_eq!(current_config.agent_name, new_config.agent_name);
+        assert_eq!(
+            agent.status().config_version,
+            new_config.version as i64,
+            "config_version in status should be updated after reload"
+        );
     }
 
     #[tokio::test]

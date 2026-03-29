@@ -36,8 +36,10 @@
 //!
 //! See [docs/OPENAPI_CODE_GENERATION.md] for more details.
 
-use super::generated::models::Error;
+use super::generated::models::{AgentStatus, Error};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 // ============================================
 // Agent Claim Endpoint Responses
@@ -64,6 +66,41 @@ pub struct HTTPResponse401 {
 // ============================================
 // Add more endpoint-specific response types below
 // ============================================
+
+// ============================================
+// AgentStatus constructor
+// ============================================
+
+impl Default for AgentStatus {
+    fn default() -> Self {
+        Self {
+            agent_id: Uuid::nil(),
+            agent_version: env!("CARGO_PKG_VERSION").to_string(),
+            config_version: 0,
+            is_running: false,
+            started_at: DateTime::<Utc>::UNIX_EPOCH,
+            stopped_at: None,
+            checks_performed: 0,
+            checks_successful: 0,
+            checks_failed: 0,
+            last_report_at: DateTime::<Utc>::UNIX_EPOCH,
+            failed_report_count: 0,
+            server_connected: false,
+            cached_reports: 0,
+        }
+    }
+}
+
+impl AgentStatus {
+    /// Create a new AgentStatus for a given agent, using the compiled package version
+    /// as the initial agent_version and UNIX_EPOCH as sentinel timestamps (never started/reported).
+    pub fn new(agent_id: Uuid) -> Self {
+        Self {
+            agent_id,
+            ..Default::default()
+        }
+    }
+}
 
 // Example for a new endpoint:
 //
