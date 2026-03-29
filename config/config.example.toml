@@ -32,6 +32,14 @@ cache_dir = "./cache"
 max_cached_results = 10000
 max_cache_age_secs = 86400
 
+# --- Result cache settings ---
+# Set to false to disable in-memory caching and batch result reporting entirely.
+cache_enabled = true
+# How many results to include in a single POST /agent/{id}/results request.
+cache_batch_size = 100
+# How often the result reporter drains the cache and sends a batch (seconds).
+cache_report_interval_secs = 60
+
 # Example endpoints to monitor
 [[endpoints]]
 address = "8.8.8.8"

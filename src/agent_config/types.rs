@@ -106,6 +106,33 @@ pub struct StorageConfig {
 
     /// Maximum age of cached results in seconds
     pub max_cache_age_secs: u64,
+
+    /// Enable in-memory result caching and batch reporting.
+    /// When disabled, results are never buffered locally and
+    /// the result reporter loop exits immediately.
+    #[serde(default = "default_cache_enabled")]
+    pub cache_enabled: bool,
+
+    /// Number of results sent to the server in a single POST request.
+    #[serde(default = "default_cache_batch_size")]
+    pub cache_batch_size: usize,
+
+    /// How often (in seconds) the result reporter drains the cache
+    /// and attempts to send a batch to the server.
+    #[serde(default = "default_cache_report_interval_secs")]
+    pub cache_report_interval_secs: u64,
+}
+
+fn default_cache_enabled() -> bool {
+    true
+}
+
+fn default_cache_batch_size() -> usize {
+    100
+}
+
+fn default_cache_report_interval_secs() -> u64 {
+    60
 }
 
 impl Default for StorageConfig {
@@ -114,6 +141,9 @@ impl Default for StorageConfig {
             cache_dir: "./cache".to_string(),
             max_cached_results: 10000,
             max_cache_age_secs: 86400, // 24 hours
+            cache_enabled: default_cache_enabled(),
+            cache_batch_size: default_cache_batch_size(),
+            cache_report_interval_secs: default_cache_report_interval_secs(),
         }
     }
 }

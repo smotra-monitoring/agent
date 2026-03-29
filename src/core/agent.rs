@@ -11,6 +11,7 @@ use tracing::{error, info, warn};
 
 use super::AgentStatus;
 use crate::agent_config::Config;
+use crate::cache::ResultCache;
 use crate::error::Result;
 
 /// Main agent instance that coordinates all monitoring tasks
@@ -63,14 +64,24 @@ impl Agent {
             status.started_at = chrono::Utc::now();
         }
 
+        // Create the in-memory result cache from current storage config
+        let result_cache = {
+            let storage = self.config.read().storage.clone();
+            Arc::new(ResultCache::new(
+                storage.max_cached_results,
+                std::time::Duration::from_secs(storage.max_cache_age_secs),
+            ))
+        };
+
         // Start monitoring tasks
         let monitor_handle = {
             let config = Arc::clone(&self.config);
             let status = Arc::clone(&self.status);
+            let cache = Arc::clone(&result_cache);
             let mut shutdown_rx = self.subscribe_shutdown();
 
             tokio::spawn(async move {
-                crate::monitor::run_monitoring(config, status, &mut shutdown_rx).await
+                crate::monitor::run_monitoring(config, status, cache, &mut shutdown_rx).await
             })
         };
 
@@ -82,6 +93,18 @@ impl Agent {
 
             tokio::spawn(async move {
                 crate::reporter::run_reporter(config, status, &mut shutdown_rx).await
+            })
+        };
+
+        // Start result-cache reporter task
+        let result_reporter_handle = {
+            let config = Arc::clone(&self.config);
+            let status = Arc::clone(&self.status);
+            let cache = Arc::clone(&result_cache);
+            let shutdown_rx = self.subscribe_shutdown();
+
+            tokio::spawn(async move {
+                crate::reporter::run_result_reporter(config, cache, status, shutdown_rx).await
             })
         };
 
@@ -131,6 +154,7 @@ impl Agent {
         tokio::time::timeout(std::time::Duration::from_secs(2), async {
             let _ = monitor_handle.await;
             let _ = reporter_handle.await;
+            let _ = result_reporter_handle.await;
             let _ = heartbeat_handle.await;
             let _ = hot_reload_handle.await;
         })
