@@ -15,8 +15,8 @@ This document outlines the development roadmap for the Smotra monitoring agent, 
     - plugin_version: Some(PLUGIN_VERSION.to_string()),
     - success: Some(success),
     - data: Some(data),
-
 - [ ] Review other ___Result types for similar optional fields and apply the same principle of making them required if they are essential for the check results.
+- [ ] OpenAPI Endpoint field ```tags```: remove `nullable: true`, the field should be required.
 
 ## Hot-reload PR
 - [x] Move load_and_validate_config to AgentConfig.loader
