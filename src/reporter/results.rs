@@ -158,7 +158,8 @@ async fn send_result_batch(config: &Config, batch: &[MonitoringResult]) -> Resul
     match response.json::<openapi::ResultsBatchAcknowledgment>().await {
         Ok(ack) => {
             debug!(
-                "Server acknowledged batch: accepted={}, duplicates_skipped={}",
+                "Server acknowledged batch: submission_id={}, accepted={}, duplicates_skipped={}",
+                ack.submission_id,
                 ack.accepted,
                 ack.duplicates_skipped.unwrap_or(0),
             );
@@ -179,7 +180,9 @@ async fn send_result_batch(config: &Config, batch: &[MonitoringResult]) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{CheckType, Endpoint, MonitoringResult, PingCheck, PingCheckType, PingResult};
+    use crate::core::{
+        CheckType, Endpoint, MonitoringResult, PingCheck, PingCheckType, PingResult,
+    };
     use chrono::Utc;
     use uuid::Uuid;
 
@@ -275,10 +278,7 @@ mod tests {
         fn empty_batch_serialises_as_empty_results_array() {
             let batch = make_batch(vec![]);
             let json = serde_json::to_value(&batch).expect("serialisation should not fail");
-            assert_eq!(
-                json["results"].as_array().map(|a| a.len()),
-                Some(0)
-            );
+            assert_eq!(json["results"].as_array().map(|a| a.len()), Some(0));
         }
 
         #[test]
@@ -287,9 +287,14 @@ mod tests {
             let r2 = make_result();
             let batch = make_batch(vec![r1, r2]);
             let json = serde_json::to_value(&batch).expect("serialisation should not fail");
+            assert_eq!(json["results"].as_array().map(|a| a.len()), Some(2));
             assert_eq!(
-                json["results"].as_array().map(|a| a.len()),
-                Some(2)
+                json["results"][0]["check_type"]["type"].as_str(),
+                Some("ping")
+            );
+            assert_eq!(
+                json["results"][1]["check_type"]["type"].as_str(),
+                Some("ping")
             );
         }
     }
