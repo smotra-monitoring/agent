@@ -416,9 +416,7 @@ mod reporter_loop_tests {
                     let mut buf = vec![0u8; 4096];
                     let _ = stream.read(&mut buf).await;
                     let _ = stream
-                        .write_all(
-                            b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\n\r\n",
-                        )
+                        .write_all(b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 0\r\n\r\n")
                         .await;
                 }
             }
@@ -451,7 +449,7 @@ mod reporter_loop_tests {
             async move { run_result_reporter(config, cache, status, shutdown_rx).await }
         });
 
-        let body = tokio::time::timeout(Duration::from_secs(5), body_rx)
+        let req_body = tokio::time::timeout(Duration::from_secs(5), body_rx)
             .await
             .expect("timeout waiting for POST request")
             .expect("server channel closed");
@@ -465,7 +463,7 @@ mod reporter_loop_tests {
             0,
             "cache must be fully drained after successful server acknowledgment"
         );
-        let body_str = String::from_utf8_lossy(&body);
+        let body_str = String::from_utf8_lossy(&req_body);
         assert!(
             body_str.contains("results"),
             "POST body should contain 'results' key"
