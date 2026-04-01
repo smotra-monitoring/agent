@@ -34,7 +34,8 @@ struct CacheEntry {
     inserted_at: Instant,
 }
 
-/// Summary statistics exposed for `AgentStatus.cached_reports`.
+/// Summary statistics for cache introspection in tests.
+#[cfg(test)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CacheStats {
     /// Number of entries currently held in the cache.
@@ -44,18 +45,6 @@ pub struct CacheStats {
 }
 
 /// Thread-safe in-memory cache for `MonitoringResult` items.
-///
-/// # Example
-///
-/// ```rust
-/// use std::time::Duration;
-/// use smotra::ResultCache;
-///
-/// tokio::runtime::Runtime::new().unwrap().block_on(async {
-///     let cache = ResultCache::new(1000, Duration::from_secs(3600));
-///     // Push a result; then peek and drain after a successful send.
-/// });
-/// ```
 #[derive(Debug, Clone)]
 pub struct ResultCache {
     inner: Arc<Mutex<VecDeque<CacheEntry>>>,
@@ -152,12 +141,8 @@ impl ResultCache {
         self.inner.lock().await.len()
     }
 
-    /// Return `true` if the cache contains no entries.
-    pub async fn is_empty(&self) -> bool {
-        self.inner.lock().await.is_empty()
-    }
-
-    /// Return summary statistics for reporting in `AgentStatus`.
+    /// Return summary statistics for cache introspection in tests.
+    #[cfg(test)]
     pub async fn stats(&self) -> CacheStats {
         CacheStats {
             len: self.inner.lock().await.len(),

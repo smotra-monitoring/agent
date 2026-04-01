@@ -4,4 +4,4 @@
 
 mod store;
 
-pub use store::{CacheStats, ResultCache};
+pub use store::ResultCache;

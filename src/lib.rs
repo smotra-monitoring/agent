@@ -12,7 +12,7 @@
 
 mod openapi;
 
-pub mod agent_config;
+mod agent_config;
 mod cache;
 mod claim;
 mod core;
@@ -23,18 +23,14 @@ mod plugin;
 mod reporter;
 
 pub use agent_config::{ClaimConfig, Config, MonitoringConfig, ServerConfig, StorageConfig};
-pub use cache::{CacheStats, ResultCache};
-pub use claim::{AgentCredentials, Claim};
+pub use claim::Claim;
 pub use core::{
-    Agent, AgentHealthStatus, AgentHeartbeat, AgentStatus, CheckType,
-    Endpoint, HttpGetCheck, HttpGetCheckType, HttpGetResult,
-    MonitoringResult, PingCheck, PingCheckType, PingResult,
-    PluginCheck, PluginCheckType, PluginResult,
-    TcpConnectCheck, TcpConnectCheckType, TcpConnectResult,
-    TracerouteCheck, TracerouteCheckType, TracerouteHop, TracerouteResult,
+    Agent, AgentHealthStatus, AgentHeartbeat, AgentStatus, CheckType, Endpoint, HttpGetCheck,
+    HttpGetCheckType, HttpGetResult, MonitoringResult, PingCheck, PingCheckType, PingResult,
+    PluginCheck, PluginCheckType, PluginResult, TcpConnectCheck, TcpConnectCheckType,
+    TcpConnectResult, TracerouteCheck, TracerouteCheckType, TracerouteHop, TracerouteResult,
     UdpConnectCheck, UdpConnectCheckType, UdpConnectResult,
 };
 pub use error::{Error, Result};
-pub use reporter::{run_result_reporter, HeartbeatReporter};
 
 pub use plugin::{MonitoringPlugin, PluginRegistry};
