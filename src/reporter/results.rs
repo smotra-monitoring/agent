@@ -101,11 +101,15 @@ pub async fn run_result_reporter(
                     Ok(()) => {
                         let sent = batch.len();
                         result_cache.drain_front(sent).await;
-                        let remaining = result_cache.len().await;
-                        agent_status.write().cached_reports = remaining as i64;
+                        let stats = result_cache.stats().await;
+                        {
+                            let mut s = agent_status.write();
+                            s.cache_stats.len = stats.len as i64;
+                            s.cache_stats.capacity = stats.capacity as i64;
+                        }
                         debug!(
                             "Sent {} results, {} remaining in cache",
-                            sent, remaining
+                            sent, stats.len
                         );
                     }
                     Err(e) => {

@@ -34,8 +34,7 @@ struct CacheEntry {
     inserted_at: Instant,
 }
 
-/// Summary statistics for cache introspection in tests.
-#[cfg(test)]
+/// Summary statistics for cache introspection.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CacheStats {
     /// Number of entries currently held in the cache.
@@ -141,8 +140,7 @@ impl ResultCache {
         self.inner.lock().await.len()
     }
 
-    /// Return summary statistics for cache introspection in tests.
-    #[cfg(test)]
+    /// Return summary statistics for cache introspection.
     pub async fn stats(&self) -> CacheStats {
         CacheStats {
             len: self.inner.lock().await.len(),

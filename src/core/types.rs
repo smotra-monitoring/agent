@@ -234,7 +234,7 @@ mod tests {
     fn test_agent_status_deserialization() {
         let agent_id = Uuid::new_v4();
         let json = format!(
-            r#"{{"agent_id":"{}","agent_version":"0.1.0","config_version":0,"is_running":false,"started_at":"1970-01-01T00:00:00Z","stopped_at":null,"checks_performed":0,"checks_successful":0,"checks_failed":0,"last_report_at":"1970-01-01T00:00:00Z","failed_report_count":0,"server_connected":false,"cached_reports":0}}"#,
+            r#"{{"agent_id":"{}","agent_version":"0.1.0","config_version":0,"is_running":false,"started_at":"1970-01-01T00:00:00Z","stopped_at":null,"checks_performed":0,"checks_successful":0,"checks_failed":0,"last_report_at":"1970-01-01T00:00:00Z","failed_report_count":0,"server_connected":false,"cache_stats":{{"len":0,"capacity":0}}}}"#,
             agent_id
         );
         let status: AgentStatus = serde_json::from_str(&json).unwrap();
