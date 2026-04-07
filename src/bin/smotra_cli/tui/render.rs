@@ -139,12 +139,11 @@ pub fn render_endpoints(f: &mut Frame, area: Rect, config: &Config) {
             // } else {
             //     format!(" [{}]", ep.tags.join(", "))
             // };
-            let tags_str = ep
-                .tags
-                .as_deref()
-                .filter(|t| !t.is_empty())
-                .map(|t| format!(" [{}]", t.join(", ")))
-                .unwrap_or_default();
+            let tags_str = if ep.tags.is_empty() {
+                String::new()
+            } else {
+                format!(" [{}]", ep.tags.join(", "))
+            };
             ListItem::new(format!("{}{}{}", ep.address, port_str, tags_str))
         })
         .collect();

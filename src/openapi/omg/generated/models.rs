@@ -117,7 +117,7 @@ pub struct Endpoint {
     pub port: Option<i64>,
     pub enabled: bool,
     /// Tags associated with the target
-    pub tags: Option<Vec<String>>,
+    pub tags: Vec<String>,
 }
 
 /// MonitoringResult
@@ -198,9 +198,9 @@ pub struct PingCheck {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PingResult {
     pub resolved_ip: Option<String>,
-    pub successes: Option<i64>,
-    pub failures: Option<i64>,
-    pub success_latencies: Option<Vec<f64>>,
+    pub successes: i64,
+    pub failures: i64,
+    pub success_latencies: Vec<f64>,
     pub avg_response_time_ms: Option<f64>,
     pub errors: Option<Vec<String>>,
 }
@@ -216,8 +216,8 @@ pub struct TracerouteCheck {
 /// TracerouteResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TracerouteResult {
-    pub hops: Option<Vec<TracerouteHop>>,
-    pub target_reached: Option<bool>,
+    pub hops: Vec<TracerouteHop>,
+    pub target_reached: bool,
     pub total_time_ms: Option<f64>,
     pub errors: Option<Vec<String>>,
 }
@@ -225,7 +225,7 @@ pub struct TracerouteResult {
 /// TracerouteHop
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TracerouteHop {
-    pub hop: Option<i64>,
+    pub hop: i64,
     pub address: Option<String>,
     pub response_time_ms: Option<f64>,
     pub hostname: Option<String>,
@@ -242,7 +242,7 @@ pub struct TcpConnectCheck {
 /// TcpConnectResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TcpConnectResult {
-    pub connected: Option<bool>,
+    pub connected: bool,
     pub connect_time_ms: Option<f64>,
     pub error: Option<String>,
     pub resolved_ip: Option<String>,
@@ -259,7 +259,7 @@ pub struct UdpConnectCheck {
 /// UdpConnectResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UdpConnectResult {
-    pub probe_successful: Option<bool>,
+    pub probe_successful: bool,
     pub response_time_ms: Option<f64>,
     pub error: Option<String>,
     pub resolved_ip: Option<String>,
@@ -280,7 +280,7 @@ pub struct HttpGetResult {
     pub response_time_ms: Option<f64>,
     pub response_size_bytes: Option<i64>,
     pub error: Option<String>,
-    pub success: Option<bool>,
+    pub success: bool,
 }
 
 /// PluginCheck
@@ -297,12 +297,12 @@ pub type Data = std::collections::HashMap<String, String>;
 /// PluginResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginResult {
-    pub plugin_name: Option<String>,
-    pub plugin_version: Option<String>,
-    pub success: Option<bool>,
+    pub plugin_name: String,
+    pub plugin_version: String,
+    pub success: bool,
     pub response_time_ms: Option<f64>,
     pub error: Option<String>,
-    pub data: Option<std::collections::HashMap<String, String>>,
+    pub data: std::collections::HashMap<String, String>,
 }
 
 /// AgentHeartbeat

@@ -17,12 +17,12 @@ impl MonitoringResult {
     /// Helper method to determine if the check was successful
     pub fn is_successful(&self) -> bool {
         match &self.check_type {
-            CheckType::PingCheck(c) => c.result.successes.unwrap_or(0) > 0,
-            CheckType::TracerouteCheck(c) => c.result.target_reached.unwrap_or(false),
-            CheckType::TcpConnectCheck(c) => c.result.connected.unwrap_or(false),
-            CheckType::UdpConnectCheck(c) => c.result.probe_successful.unwrap_or(false),
-            CheckType::HttpGetCheck(c) => c.result.success.unwrap_or(false),
-            CheckType::PluginCheck(c) => c.result.success.unwrap_or(false),
+            CheckType::PingCheck(c) => c.result.successes > 0,
+            CheckType::TracerouteCheck(c) => c.result.target_reached,
+            CheckType::TcpConnectCheck(c) => c.result.connected,
+            CheckType::UdpConnectCheck(c) => c.result.probe_successful,
+            CheckType::HttpGetCheck(c) => c.result.success,
+            CheckType::PluginCheck(c) => c.result.success,
         }
     }
 
@@ -72,7 +72,7 @@ impl Endpoint {
             address: address.into(),
             port: None,
             enabled: true,
-            tags: None,
+            tags: Vec::new(),
         }
     }
 
@@ -82,7 +82,7 @@ impl Endpoint {
     }
 
     pub fn with_tags(mut self, tags: Vec<String>) -> Self {
-        self.tags = Some(tags);
+        self.tags = tags;
         self
     }
 
@@ -190,7 +190,11 @@ mod tests {
     #[test]
     fn test_endpoint_with_tags() {
         let endpoint = Endpoint::new("example.com").with_tags(vec!["db".to_string()]);
-        assert_eq!(endpoint.tags, Some(vec!["db".to_string()]));
+        assert_eq!(
+            endpoint.tags,
+            vec!["db".to_string()],
+            "Tags should be set correctly"
+        );
     }
 
     #[test]

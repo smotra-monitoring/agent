@@ -36,12 +36,12 @@ impl MonitoringPlugin for DummyPlugin {
         endpoint: &Endpoint,
     ) -> smotra::Result<MonitoringResult> {
         let plugin_result = PluginResult {
-            plugin_name: Some(self.name.clone()),
-            plugin_version: Some("1.0.0".to_string()),
-            success: Some(true),
+            plugin_name: self.name.clone(),
+            plugin_version: "1.0.0".to_string(),
+            success: true,
             response_time_ms: Some(42.0),
             error: None,
-            data: Some(HashMap::new()),
+            data: HashMap::new(),
         };
 
         Ok(MonitoringResult {

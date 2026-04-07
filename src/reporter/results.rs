@@ -199,9 +199,9 @@ mod tests {
                 r#type: PingCheckType::Ping,
                 result: PingResult {
                     resolved_ip: Some("1.2.3.4".to_string()),
-                    successes: Some(3),
-                    failures: Some(0),
-                    success_latencies: Some(vec![1.0, 2.0, 3.0]),
+                    successes: 3,
+                    failures: 0,
+                    success_latencies: vec![1.0, 2.0, 3.0],
                     avg_response_time_ms: Some(2.0),
                     errors: Some(vec![]),
                 },
@@ -242,7 +242,7 @@ mod tests {
             result.check_type = CheckType::TcpConnectCheck(TcpConnectCheck {
                 r#type: TcpConnectCheckType::Tcpconnect,
                 result: TcpConnectResult {
-                    connected: Some(true),
+                    connected: true,
                     connect_time_ms: Some(5.0),
                     error: None,
                     resolved_ip: None,
@@ -267,7 +267,7 @@ mod tests {
                     response_time_ms: Some(100.0),
                     response_size_bytes: Some(1024),
                     error: None,
-                    success: Some(true),
+                    success: true,
                 },
             });
             let batch = make_batch(vec![result]);
@@ -330,9 +330,9 @@ mod reporter_loop_tests {
                 r#type: PingCheckType::Ping,
                 result: PingResult {
                     resolved_ip: Some(address.to_string()),
-                    successes: Some(3),
-                    failures: Some(0),
-                    success_latencies: Some(vec![1.0, 2.0, 3.0]),
+                    successes: 3,
+                    failures: 0,
+                    success_latencies: vec![1.0, 2.0, 3.0],
                     avg_response_time_ms: Some(2.0),
                     errors: Some(vec![]),
                 },

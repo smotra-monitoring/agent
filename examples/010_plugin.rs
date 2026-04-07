@@ -61,16 +61,16 @@ impl MonitoringPlugin for HttpPlugin {
                 data.insert("url".to_string(), url.clone());
 
                 let plugin_result = PluginResult {
-                    plugin_name: Some(PLUGIN_NAME.to_string()),
-                    plugin_version: Some(PLUGIN_VERSION.to_string()),
-                    success: Some(success),
+                    plugin_name: PLUGIN_NAME.to_string(),
+                    plugin_version: PLUGIN_VERSION.to_string(),
+                    success,
                     response_time_ms: Some(response_time_ms),
                     error: if success {
                         None
                     } else {
                         Some(format!("HTTP {}", response.status()))
                     },
-                    data: Some(data),
+                    data,
                 };
 
                 let result = MonitoringResult {
