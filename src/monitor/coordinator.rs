@@ -61,7 +61,6 @@ pub async fn run_monitoring(
                                 s.checks_failed += 1;
                             }
                         }
-                        // Push to in-memory cache for deferred batch reporting
                         result_cache.push(result).await;
                         // Reflect current cache depth in agent status (after push to avoid off-by-one)
                         let stats = result_cache.stats().await;
