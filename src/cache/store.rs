@@ -135,17 +135,18 @@ impl ResultCache {
         );
     }
 
-    /// Return the current number of entries in the cache.
-    pub async fn len(&self) -> usize {
-        self.inner.lock().await.len()
-    }
-
     /// Return summary statistics for cache introspection.
     pub async fn stats(&self) -> CacheStats {
         CacheStats {
             len: self.inner.lock().await.len(),
             capacity: self.max_size,
         }
+    }
+
+    /// Return the current number of entries in the cache.
+    #[cfg(test)]
+    pub async fn len(&self) -> usize {
+        self.inner.lock().await.len()
     }
 }
 
