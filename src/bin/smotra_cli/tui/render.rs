@@ -134,11 +134,6 @@ pub fn render_endpoints(f: &mut Frame, area: Rect, config: &Config) {
         .iter()
         .map(|ep| {
             let port_str = ep.port.map(|p| format!(":{}", p)).unwrap_or_default();
-            // let tags_str = if ep.tags.is_empty() {
-            //     String::new()
-            // } else {
-            //     format!(" [{}]", ep.tags.join(", "))
-            // };
             let tags_str = if ep.tags.is_empty() {
                 String::new()
             } else {
