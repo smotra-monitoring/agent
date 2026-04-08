@@ -170,7 +170,7 @@ mod tests {
             check_type: CheckType::PingCheck(PingCheck {
                 r#type: PingCheckType::Ping,
                 result: PingResult {
-                    resolved_ip: None,
+                    resolved_ip: String::new(),
                     successes: 1,
                     failures: 0,
                     success_latencies: vec![1.0],

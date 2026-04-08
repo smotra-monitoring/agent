@@ -42,7 +42,7 @@ impl PingChecker {
                     success_latencies: Vec::new(),
                     errors: Some(vec![format!("Failed to resolve address: {}", e)]),
                     avg_response_time_ms: None,
-                    resolved_ip: None,
+                    resolved_ip: String::new(),
                 };
 
                 return MonitoringResult {
@@ -95,7 +95,7 @@ impl PingChecker {
         );
 
         let ping_result = PingResult {
-            resolved_ip: Some(addr.to_string()),
+            resolved_ip: addr.to_string(),
             successes: successes as i64,
             failures: failures as i64,
             success_latencies,

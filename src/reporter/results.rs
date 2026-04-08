@@ -198,7 +198,7 @@ mod tests {
             check_type: CheckType::PingCheck(PingCheck {
                 r#type: PingCheckType::Ping,
                 result: PingResult {
-                    resolved_ip: Some("1.2.3.4".to_string()),
+                    resolved_ip: "1.2.3.4".to_string(),
                     successes: 3,
                     failures: 0,
                     success_latencies: vec![1.0, 2.0, 3.0],
@@ -245,7 +245,7 @@ mod tests {
                     connected: true,
                     connect_time_ms: Some(5.0),
                     error: None,
-                    resolved_ip: None,
+                    resolved_ip: String::new(),
                 },
             });
             let batch = make_batch(vec![result]);
@@ -263,7 +263,7 @@ mod tests {
             result.check_type = CheckType::HttpGetCheck(HttpGetCheck {
                 r#type: HttpGetCheckType::Httpget,
                 result: HttpGetResult {
-                    status_code: Some(200),
+                    status_code: 200,
                     response_time_ms: Some(100.0),
                     response_size_bytes: Some(1024),
                     error: None,
@@ -329,7 +329,7 @@ mod reporter_loop_tests {
             check_type: CheckType::PingCheck(PingCheck {
                 r#type: PingCheckType::Ping,
                 result: PingResult {
-                    resolved_ip: Some(address.to_string()),
+                    resolved_ip: address.to_string(),
                     successes: 3,
                     failures: 0,
                     success_latencies: vec![1.0, 2.0, 3.0],

@@ -197,7 +197,8 @@ pub struct PingCheck {
 /// PingResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PingResult {
-    pub resolved_ip: Option<String>,
+    /// Resolved IP address of the target
+    pub resolved_ip: String,
     pub successes: i64,
     pub failures: i64,
     pub success_latencies: Vec<f64>,
@@ -245,7 +246,7 @@ pub struct TcpConnectResult {
     pub connected: bool,
     pub connect_time_ms: Option<f64>,
     pub error: Option<String>,
-    pub resolved_ip: Option<String>,
+    pub resolved_ip: String,
 }
 
 /// UdpConnectCheck
@@ -262,7 +263,7 @@ pub struct UdpConnectResult {
     pub probe_successful: bool,
     pub response_time_ms: Option<f64>,
     pub error: Option<String>,
-    pub resolved_ip: Option<String>,
+    pub resolved_ip: String,
 }
 
 /// HttpGetCheck
@@ -276,7 +277,7 @@ pub struct HttpGetCheck {
 /// HttpGetResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HttpGetResult {
-    pub status_code: Option<i64>,
+    pub status_code: i64,
     pub response_time_ms: Option<f64>,
     pub response_size_bytes: Option<i64>,
     pub error: Option<String>,
