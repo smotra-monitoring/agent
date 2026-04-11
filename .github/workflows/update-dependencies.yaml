@@ -1,0 +1,63 @@
+name: Monthly Dependency Update
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 28 * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  update-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        run: rustup update stable && rustup default stable
+
+      - name: Generate Update Report and Update
+        id: update
+        run: |
+          echo "UPDATE_REPORT<<EOF" >> $GITHUB_ENV
+          cargo update --dry-run 2>&1 >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          cargo update
+
+      - name: Run Unit tests
+        id: test
+        run: cargo test --all-features
+
+      - name: Create Pull Request on Success
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          git checkout -b auto-update-deps
+          git add Cargo.lock
+          git commit -m "chore: monthly dependency update"
+          git push origin auto-update-deps --force
+
+          gh pr create \
+            --title "Monthly Rust Dependency Update" \
+            --body "Unit tests passed! Updates: ${{ env.UPDATE_REPORT }}" \
+            --base main \
+            --head auto-update-deps \
+            --label "dependencies"
+
+      - name: Create Issue on Failure
+        if: failure() && steps.test.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "Failed: Monthly dependency update" \
+            --body "The monthly dependency update failed unit tests. Updates: ${{ env.UPDATE_REPORT }}" \
+            --label "bug,automated-issue,dependencies"
