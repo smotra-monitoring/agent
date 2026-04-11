@@ -37,18 +37,26 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # 1. Identity
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
+
+          # 2. Check for changes
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to Cargo.lock. Skipping PR."
+            exit 0
+          fi
+
+          # 3. Commit and Push
           git checkout -b auto-update-deps
           git add Cargo.lock
           git commit -m "chore: monthly dependency update"
           git push origin auto-update-deps --force
 
+          # 4. Create PR
           gh pr create \
             --title "Monthly Rust Dependency Update" \
             --body "Unit tests passed! Updates: ${{ env.UPDATE_REPORT }}" \
-            --base main \
             --head auto-update-deps \
             --label "dependencies"
 
