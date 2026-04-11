@@ -48,7 +48,7 @@ jobs:
         run: |
           # 1. Identity
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # 2. Check for changes
           if [ -z "$(git status --porcelain)" ]; then
