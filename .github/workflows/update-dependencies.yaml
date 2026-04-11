@@ -65,7 +65,7 @@ jobs:
             --title "Monthly Rust Dependency Update" \
             --body "Unit tests passed! Updates: ${{ env.UPDATE_REPORT }}" \
             --head auto-update-deps \
-            --label "dependencies"
+            --label "dependencies" || echo "PR already exists, updated via force-push."
 
       - name: Create Issue on Failure
         if: failure() && steps.test.outcome == 'failure'
