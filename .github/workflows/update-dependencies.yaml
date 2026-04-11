@@ -23,9 +23,16 @@ jobs:
       - name: Generate Update Report and Update
         id: update
         run: |
+          # 1. Capture output to a variable (2>&1 captures the stderr)
+          # We use "|| true" to ensure the script continues even if cargo outputs an error
+          REPORT=$(cargo update --dry-run 2>&1 || true)
+          
+          # 2. Write the multiline variable to GITHUB_ENV
           echo "UPDATE_REPORT<<EOF" >> $GITHUB_ENV
-          cargo update --dry-run 2>&1 >> $GITHUB_ENV
+          echo "$REPORT" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
+          
+          # 3. Apply the actual update
           cargo update
 
       - name: Run Unit tests
