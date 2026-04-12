@@ -7,7 +7,7 @@ use std::net::{IpAddr, ToSocketAddrs};
 use std::time::Duration;
 use surge_ping::{Client, Config, PingIdentifier, PingSequence};
 use tracing::debug;
-use uuid::Uuid;
+use uuid::{Timestamp, Uuid};
 
 /// Ping checker for ICMP reachability tests
 pub struct PingChecker {
@@ -46,7 +46,7 @@ impl PingChecker {
                 };
 
                 return MonitoringResult {
-                    id: Uuid::new_v4(),
+                    id: Uuid::new_v7(Timestamp::now(uuid::NoContext)),
                     agent_id,
                     target: endpoint.clone(),
                     check_type: CheckType::PingCheck(PingCheck {
