@@ -41,6 +41,19 @@ jobs:
         id: test
         run: cargo test --all-features
 
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          labels=("dependencies" "github-actions")
+          for label in "${labels[@]}"; do
+            if ! gh label list --search "$label" | grep -q "$label"; then
+              echo "Creating missing label: $label"
+              # You can customize the color and description here
+              gh label create "$label" --color "ededed" --description "Automated maintenance label" || true
+            fi
+          done
+
       - name: Create Pull Request on Success
         if: success()
         env:
@@ -85,7 +98,7 @@ jobs:
             --title "📦 Update Dependencies ($(date +'%b %Y'))" \
             --body "$PR_BODY" \
             --head auto-update-deps \
-            --label "dependencies" || echo "PR already exists, updated via force-push."
+            --label "dependencies,github-actions" || echo "PR already exists, updated via force-push."
 
       - name: Create Issue on Failure
         if: failure() && steps.test.outcome == 'failure'
@@ -95,4 +108,4 @@ jobs:
           gh issue create \
             --title "Failed: Monthly dependency update" \
             --body "The monthly dependency update failed unit tests. Updates: ${{ env.UPDATE_REPORT }}" \
-            --label "bug,automated-issue,dependencies"
+            --label "dependencies,github-actions"
