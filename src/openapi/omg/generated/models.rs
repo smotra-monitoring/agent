@@ -111,7 +111,7 @@ pub struct StorageConfig {
 /// An endpoint to monitor (IP address, hostname, or URL)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Endpoint {
-    pub id: Option<UUIDv7>,
+    pub id: UUIDv7,
     /// IP address, hostname, or URL
     pub address: String,
     pub port: Option<i64>,

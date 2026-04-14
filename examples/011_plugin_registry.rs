@@ -48,7 +48,7 @@ impl MonitoringPlugin for DummyPlugin {
         Ok(MonitoringResult {
             id: uuid::Uuid::now_v7(),
             agent_id: *agent_id,
-            endpoint_id: endpoint.id.unwrap_or_default(),
+            endpoint_id: endpoint.id,
             check_type: CheckType::PluginCheck(PluginCheck {
                 r#type: PluginCheckType::Plugin,
                 result: plugin_result,

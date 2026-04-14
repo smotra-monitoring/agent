@@ -41,17 +41,23 @@ cache_batch_size = 100
 cache_report_interval_secs = 60
 
 # Example endpoints to monitor
+# Note: 'id' is required. It uniquely identifies the endpoint so MonitoringResults can
+# be correlated on the server. Endpoints provisioned via the API will have their id
+# returned by the server; endpoints configured manually must be assigned a UUIDv7 here.
 [[endpoints]]
+id = "019680be-0000-7000-8000-000000000001"
 address = "8.8.8.8"
 tags = ["dns", "google"]
 enabled = true  # Optional, defaults to true
 
 [[endpoints]]
+id = "019680be-0000-7000-8000-000000000002"
 address = "1.1.1.1"
 tags = ["dns", "cloudflare"]
 enabled = true
 
 [[endpoints]]
+id = "019680be-0000-7000-8000-000000000003"
 address = "example.com"
 tags = ["web"]
 # enabled = false  # Uncomment to disable this endpoint
