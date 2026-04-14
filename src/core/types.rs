@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn test_agent_status_new_with_uuid() {
-        let agent_id = Uuid::new_v4();
+        let agent_id = Uuid::now_v7();
         let status = AgentStatus::new(agent_id);
         assert_eq!(status.agent_id, agent_id, "Agent ID should match");
         assert!(!status.is_running, "Agent should not be running by default");
@@ -217,7 +217,7 @@ mod tests {
 
     #[test]
     fn test_agent_status_serialization() {
-        let agent_id = Uuid::new_v4();
+        let agent_id = Uuid::now_v7();
         let status = AgentStatus::new(agent_id);
         let json = serde_json::to_string(&status).unwrap();
         assert!(
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn test_agent_status_deserialization() {
-        let agent_id = Uuid::new_v4();
+        let agent_id = Uuid::now_v7();
         let json = format!(
             r#"{{"agent_id":"{}","agent_version":"0.1.0","config_version":0,"is_running":false,"started_at":"1970-01-01T00:00:00Z","stopped_at":null,"checks_performed":0,"checks_successful":0,"checks_failed":0,"last_report_at":"1970-01-01T00:00:00Z","failed_report_count":0,"server_connected":false,"cache_stats":{{"len":0,"capacity":0}}}}"#,
             agent_id

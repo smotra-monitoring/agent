@@ -48,7 +48,7 @@ impl PingChecker {
                 return MonitoringResult {
                     id: Uuid::new_v7(Timestamp::now(uuid::NoContext)),
                     agent_id,
-                    target: endpoint.clone(),
+                    endpoint_id: endpoint.id.unwrap_or_default(),
                     check_type: CheckType::PingCheck(PingCheck {
                         r#type: PingCheckType::Ping,
                         result: ping_result,
@@ -104,9 +104,9 @@ impl PingChecker {
         };
 
         MonitoringResult {
-            id: Uuid::new_v4(),
+            id: Uuid::now_v7(),
             agent_id,
-            target: endpoint.clone(),
+            endpoint_id: endpoint.id.unwrap_or_default(),
             check_type: CheckType::PingCheck(PingCheck {
                 r#type: PingCheckType::Ping,
                 result: ping_result,

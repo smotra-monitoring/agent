@@ -184,17 +184,15 @@ async fn send_result_batch(config: &Config, batch: &[MonitoringResult]) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{
-        CheckType, Endpoint, MonitoringResult, PingCheck, PingCheckType, PingResult,
-    };
+    use crate::core::{CheckType, MonitoringResult, PingCheck, PingCheckType, PingResult};
     use chrono::Utc;
     use uuid::Uuid;
 
     fn make_result() -> MonitoringResult {
         MonitoringResult {
-            id: Uuid::new_v4(),
-            agent_id: Uuid::new_v4(),
-            target: Endpoint::new("1.2.3.4"),
+            id: Uuid::now_v7(),
+            agent_id: Uuid::now_v7(),
+            endpoint_id: Uuid::now_v7(),
             check_type: CheckType::PingCheck(PingCheck {
                 r#type: PingCheckType::Ping,
                 result: PingResult {
@@ -314,7 +312,7 @@ mod reporter_loop_tests {
     use crate::agent_config::{Config, MonitoringConfig, ServerConfig, StorageConfig};
     use crate::cache::ResultCache;
     use crate::core::{
-        AgentStatus, CheckType, Endpoint, MonitoringResult, PingCheck, PingCheckType, PingResult,
+        AgentStatus, CheckType, MonitoringResult, PingCheck, PingCheckType, PingResult,
     };
     use parking_lot::RwLock;
     use std::sync::Arc;
@@ -323,9 +321,9 @@ mod reporter_loop_tests {
 
     fn make_ping_result(address: &str) -> MonitoringResult {
         MonitoringResult {
-            id: Uuid::new_v4(),
-            agent_id: Uuid::new_v4(),
-            target: Endpoint::new(address),
+            id: Uuid::now_v7(),
+            agent_id: Uuid::now_v7(),
+            endpoint_id: Uuid::now_v7(),
             check_type: CheckType::PingCheck(PingCheck {
                 r#type: PingCheckType::Ping,
                 result: PingResult {
@@ -362,7 +360,7 @@ mod reporter_loop_tests {
         };
         Arc::new(RwLock::new(Config {
             version: 1,
-            agent_id: Uuid::new_v4(),
+            agent_id: Uuid::now_v7(),
             agent_name: "Test Agent".to_string(),
             tags: vec![],
             monitoring: MonitoringConfig::default(),
@@ -518,7 +516,7 @@ mod reporter_loop_tests {
         let cache = make_cache(100, 3600);
         let config = Arc::new(RwLock::new(Config {
             version: 1,
-            agent_id: Uuid::new_v4(),
+            agent_id: Uuid::now_v7(),
             agent_name: "Test".to_string(),
             tags: vec![],
             monitoring: MonitoringConfig::default(),

@@ -125,7 +125,7 @@ pub struct Endpoint {
 pub struct MonitoringResult {
     pub id: UUIDv7,
     pub agent_id: UUIDv7,
-    pub target: Endpoint,
+    pub endpoint_id: UUIDv7,
     pub check_type: CheckType,
     /// Timestamp when the report was generated (RFC3339)
     pub timestamp: DateTime<Utc>,

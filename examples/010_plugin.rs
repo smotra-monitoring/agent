@@ -3,7 +3,8 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use smotra::{
-    Error, MonitoringPlugin, {CheckType, Endpoint, MonitoringResult, PluginCheck, PluginCheckType, PluginResult},
+    Error, MonitoringPlugin,
+    {CheckType, Endpoint, MonitoringResult, PluginCheck, PluginCheckType, PluginResult},
 };
 use std::collections::HashMap;
 
@@ -74,9 +75,9 @@ impl MonitoringPlugin for HttpPlugin {
                 };
 
                 let result = MonitoringResult {
-                    id: uuid::Uuid::new_v4(),
+                    id: uuid::Uuid::now_v7(),
                     agent_id: *agent_id,
-                    target: endpoint.clone(),
+                    endpoint_id: endpoint.id.unwrap_or_default(),
                     check_type: CheckType::PluginCheck(PluginCheck {
                         r#type: PluginCheckType::Plugin,
                         result: plugin_result,
@@ -110,7 +111,7 @@ async fn main() -> Result<()> {
         endpoint.port.unwrap_or(80)
     );
 
-    let agent_id = uuid::Uuid::new_v4();
+    let agent_id = uuid::Uuid::now_v7();
     let result = plugin.check(&agent_id, &endpoint).await?;
 
     println!("\nResult:");

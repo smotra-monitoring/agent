@@ -288,7 +288,7 @@ mod tests {
     #[tokio::test]
     async fn test_reload_config_success() {
         let config = Config {
-            agent_id: Uuid::new_v4(),
+            agent_id: Uuid::now_v7(),
             agent_name: "Test Agent".to_string(),
             ..Config::default()
         };
@@ -325,7 +325,7 @@ mod tests {
     #[tokio::test]
     async fn test_reload_config_validation_failure() {
         let original_config = Config {
-            agent_id: Uuid::new_v4(),
+            agent_id: Uuid::now_v7(),
             ..Config::default()
         };
 
@@ -355,7 +355,7 @@ mod tests {
     #[tokio::test]
     async fn test_reload_config_nil_agent_id() {
         let original_config = Config {
-            agent_id: Uuid::new_v4(),
+            agent_id: Uuid::now_v7(),
             ..Config::default()
         };
 
@@ -382,7 +382,7 @@ mod tests {
     #[tokio::test]
     async fn test_update_config() {
         let original_config = Config {
-            agent_id: Uuid::new_v4(),
+            agent_id: Uuid::now_v7(),
             ..Config::default()
         };
 

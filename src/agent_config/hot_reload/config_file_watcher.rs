@@ -109,7 +109,7 @@ mod tests {
         let temp_file = NamedTempFile::new().unwrap();
 
         let config = Config {
-            agent_id: uuid::Uuid::new_v4(),
+            agent_id: uuid::Uuid::now_v7(),
             ..Config::default()
         };
         config.save_to_file_secure(temp_file.path()).await.unwrap();
@@ -125,7 +125,7 @@ mod tests {
         let temp_file = NamedTempFile::new().unwrap();
 
         let config = Config {
-            agent_id: uuid::Uuid::new_v4(),
+            agent_id: uuid::Uuid::now_v7(),
             ..Config::default()
         };
         config.save_to_file_secure(temp_file.path()).await.unwrap();
@@ -146,7 +146,7 @@ mod tests {
 
         let config = Config {
             version: 1,
-            agent_id: uuid::Uuid::new_v4(),
+            agent_id: uuid::Uuid::now_v7(),
             agent_name: "Test Agent".to_string(),
             ..Config::default()
         };
@@ -163,7 +163,7 @@ mod tests {
 
         let config_new = Config {
             version: 2,
-            agent_id: uuid::Uuid::new_v4(),
+            agent_id: uuid::Uuid::now_v7(),
             agent_name: "Test Agent 2".to_string(),
             ..Config::default()
         };

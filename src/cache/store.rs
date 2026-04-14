@@ -99,7 +99,7 @@ impl ResultCache {
 
         trace!(
             result_id = %result.id,
-            target = %result.target.address,
+            endpoint_id = %result.endpoint_id,
             "Caching monitoring result"
         );
 
@@ -157,16 +157,16 @@ impl ResultCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::core::{CheckType, Endpoint, MonitoringResult, PingResult};
+    use crate::core::{CheckType, MonitoringResult, PingResult};
     use chrono::Utc;
     use uuid::Uuid;
 
-    fn make_result(address: &str) -> MonitoringResult {
+    fn make_result(endpoint_id: Uuid) -> MonitoringResult {
         use crate::core::{PingCheck, PingCheckType};
         MonitoringResult {
-            id: Uuid::new_v4(),
-            agent_id: Uuid::new_v4(),
-            target: Endpoint::new(address),
+            id: Uuid::now_v7(),
+            agent_id: Uuid::now_v7(),
+            endpoint_id,
             check_type: CheckType::PingCheck(PingCheck {
                 r#type: PingCheckType::Ping,
                 result: PingResult {
@@ -188,15 +188,15 @@ mod tests {
         #[tokio::test]
         async fn push_single_result() {
             let cache = ResultCache::new(100, Duration::from_secs(3600));
-            cache.push(make_result("1.2.3.4")).await;
+            cache.push(make_result(Uuid::now_v7())).await;
             assert_eq!(cache.len().await, 1);
         }
 
         #[tokio::test]
         async fn push_multiple_results() {
             let cache = ResultCache::new(100, Duration::from_secs(3600));
-            for i in 0..5 {
-                cache.push(make_result(&format!("10.0.0.{}", i))).await;
+            for _ in 0..5 {
+                cache.push(make_result(Uuid::now_v7())).await;
             }
             assert_eq!(cache.len().await, 5);
         }
@@ -204,10 +204,10 @@ mod tests {
         #[tokio::test]
         async fn push_evicts_oldest_when_at_capacity() {
             let cache = ResultCache::new(3, Duration::from_secs(3600));
-            let r1 = make_result("1.1.1.1");
-            let r2 = make_result("2.2.2.2");
-            let r3 = make_result("3.3.3.3");
-            let r4 = make_result("4.4.4.4");
+            let r1 = make_result(Uuid::now_v7());
+            let r2 = make_result(Uuid::now_v7());
+            let r3 = make_result(Uuid::now_v7());
+            let r4 = make_result(Uuid::now_v7());
             let first_id = r1.id;
 
             cache.push(r1).await;
@@ -231,10 +231,8 @@ mod tests {
             // max_size = 0 is treated as "no size cap" (unlimited).
             // Use cache_enabled = false (via StorageConfig) to disable caching entirely.
             let cache = ResultCache::new(0, Duration::from_secs(3600));
-            for i in 0..100 {
-                cache
-                    .push(make_result(&format!("10.0.{}.{}", i / 256, i % 256)))
-                    .await;
+            for _ in 0..100 {
+                cache.push(make_result(Uuid::now_v7())).await;
             }
             assert_eq!(
                 cache.len().await,
@@ -251,25 +249,26 @@ mod tests {
         async fn ttl_eviction_removes_stale_entries_on_push() {
             // Use a very short TTL
             let cache = ResultCache::new(100, Duration::from_millis(1));
-            cache.push(make_result("1.1.1.1")).await;
+            cache.push(make_result(Uuid::now_v7())).await;
 
             // Wait for the entry to become stale
             tokio::time::sleep(Duration::from_millis(10)).await;
 
             // Push a new entry — this should trigger eviction of stale entries
-            cache.push(make_result("2.2.2.2")).await;
+            let ep2 = Uuid::now_v7();
+            cache.push(make_result(ep2)).await;
 
             // Only the fresh entry should remain
             assert_eq!(cache.len().await, 1);
             let batch = cache.peek_batch(10).await;
-            assert_eq!(batch[0].target.address, "2.2.2.2");
+            assert_eq!(batch[0].endpoint_id, ep2);
         }
 
         #[tokio::test]
         async fn fresh_entries_not_evicted_before_ttl() {
             let cache = ResultCache::new(100, Duration::from_secs(3600));
-            cache.push(make_result("1.1.1.1")).await;
-            cache.push(make_result("2.2.2.2")).await;
+            cache.push(make_result(Uuid::now_v7())).await;
+            cache.push(make_result(Uuid::now_v7())).await;
             assert_eq!(cache.len().await, 2);
         }
     }
@@ -280,20 +279,24 @@ mod tests {
         #[tokio::test]
         async fn peek_batch_returns_first_n() {
             let cache = ResultCache::new(100, Duration::from_secs(3600));
-            for i in 0..10 {
-                cache.push(make_result(&format!("10.0.0.{}", i))).await;
+            let mut eps = vec![];
+            for _ in 0..10 {
+                let ep = Uuid::now_v7();
+                eps.push(ep);
+                cache.push(make_result(ep)).await;
             }
             let batch = cache.peek_batch(3).await;
             assert_eq!(batch.len(), 3);
-            assert_eq!(batch[0].target.address, "10.0.0.0");
-            assert_eq!(batch[1].target.address, "10.0.0.1");
-            assert_eq!(batch[2].target.address, "10.0.0.2");
+            assert_eq!(batch[0].endpoint_id, eps[0],);
+            assert_eq!(batch[1].endpoint_id, eps[1],);
+            assert_eq!(batch[2].endpoint_id, eps[2],);
         }
 
         #[tokio::test]
         async fn peek_batch_does_not_remove_entries() {
             let cache = ResultCache::new(100, Duration::from_secs(3600));
-            cache.push(make_result("1.1.1.1")).await;
+            let ep1 = Uuid::now_v7();
+            cache.push(make_result(ep1)).await;
             cache.peek_batch(1).await;
             cache.peek_batch(1).await;
             assert_eq!(cache.len().await, 1, "peek must not remove entries");
@@ -302,8 +305,10 @@ mod tests {
         #[tokio::test]
         async fn peek_batch_larger_than_cache_returns_all() {
             let cache = ResultCache::new(100, Duration::from_secs(3600));
-            cache.push(make_result("1.1.1.1")).await;
-            cache.push(make_result("2.2.2.2")).await;
+            let ep1 = Uuid::now_v7();
+            let ep2 = Uuid::now_v7();
+            cache.push(make_result(ep1)).await;
+            cache.push(make_result(ep2)).await;
             let batch = cache.peek_batch(999).await;
             assert_eq!(batch.len(), 2);
         }
@@ -322,20 +327,24 @@ mod tests {
         #[tokio::test]
         async fn drain_front_removes_n_entries() {
             let cache = ResultCache::new(100, Duration::from_secs(3600));
-            for i in 0..5 {
-                cache.push(make_result(&format!("10.0.0.{}", i))).await;
+            let mut eps = vec![];
+            for _ in 0..5 {
+                let ep = Uuid::now_v7();
+                eps.push(ep);
+                cache.push(make_result(ep)).await;
             }
             cache.drain_front(3).await;
             assert_eq!(cache.len().await, 2);
             let remaining = cache.peek_batch(2).await;
-            assert_eq!(remaining[0].target.address, "10.0.0.3");
-            assert_eq!(remaining[1].target.address, "10.0.0.4");
+            assert_eq!(remaining[0].endpoint_id, eps[3]);
+            assert_eq!(remaining[1].endpoint_id, eps[4]);
         }
 
         #[tokio::test]
         async fn drain_front_more_than_present_drains_all() {
             let cache = ResultCache::new(100, Duration::from_secs(3600));
-            cache.push(make_result("1.1.1.1")).await;
+            let ep = Uuid::now_v7();
+            cache.push(make_result(ep)).await;
             cache.drain_front(999).await;
             assert_eq!(cache.len().await, 0);
         }
@@ -350,8 +359,8 @@ mod tests {
         #[tokio::test]
         async fn peek_then_drain_semantics() {
             let cache = ResultCache::new(100, Duration::from_secs(3600));
-            let r1 = make_result("1.1.1.1");
-            let r2 = make_result("2.2.2.2");
+            let r1 = make_result(Uuid::now_v7());
+            let r2 = make_result(Uuid::now_v7());
             let id1 = r1.id;
             cache.push(r1).await;
             cache.push(r2).await;
@@ -380,8 +389,8 @@ mod tests {
                     capacity: 50
                 }
             );
-            cache.push(make_result("1.1.1.1")).await;
-            cache.push(make_result("2.2.2.2")).await;
+            cache.push(make_result(Uuid::now_v7())).await;
+            cache.push(make_result(Uuid::now_v7())).await;
             assert_eq!(
                 cache.stats().await,
                 CacheStats {
@@ -401,11 +410,10 @@ mod tests {
             let max_size = 1000;
             let cache = StdArc::new(ResultCache::new(max_size, Duration::from_secs(3600)));
             let mut handles = vec![];
-            for i in 0..max_size * 2 {
+            for _ in 0..max_size * 2 {
                 let c = StdArc::clone(&cache);
                 handles.push(tokio::spawn(async move {
-                    c.push(make_result(&format!("10.0.{}.{}", i / 256, i % 256)))
-                        .await;
+                    c.push(make_result(Uuid::now_v7())).await;
                 }));
             }
             for h in handles {
@@ -421,8 +429,8 @@ mod tests {
         #[tokio::test]
         async fn concurrent_peek_and_drain_are_consistent() {
             let cache = StdArc::new(ResultCache::new(50, Duration::from_secs(3600)));
-            for i in 0..50u32 {
-                cache.push(make_result(&format!("10.0.0.{}", i))).await;
+            for _ in 0..50u32 {
+                cache.push(make_result(Uuid::now_v7())).await;
             }
 
             let cache_clone = StdArc::clone(&cache);
