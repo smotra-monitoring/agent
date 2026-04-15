@@ -161,14 +161,21 @@ mod tests {
     fn test_endpoint_enabled_by_default() {
         let endpoint = Endpoint::new("example.com");
         assert!(endpoint.enabled, "Endpoint should be enabled by default");
-        assert_ne!(endpoint.id, Uuid::nil(), "Endpoint::new() should generate a non-nil UUID");
+        assert_ne!(
+            endpoint.id,
+            Uuid::nil(),
+            "Endpoint::new() should generate a non-nil UUID"
+        );
     }
 
     #[test]
     fn test_endpoint_new_generates_unique_ids() {
         let a = Endpoint::new("example.com");
         let b = Endpoint::new("example.com");
-        assert_ne!(a.id, b.id, "Each Endpoint::new() call must produce a distinct UUIDv7");
+        assert_ne!(
+            a.id, b.id,
+            "Each Endpoint::new() call must produce a distinct UUIDv7"
+        );
     }
 
     #[test]
@@ -182,9 +189,15 @@ tags = []
 "#;
         // The failure occurs when deserializing into a typed struct that requires `id`.
         #[derive(serde::Deserialize)]
-        struct Wrapper { #[allow(dead_code)] endpoints: Vec<crate::openapi::Endpoint> }
+        struct Wrapper {
+            #[allow(dead_code)]
+            endpoints: Vec<crate::openapi::Endpoint>,
+        }
         let typed: Result<Wrapper, _> = toml::from_str(toml_input);
-        assert!(typed.is_err(), "Deserializing an endpoint without 'id' must fail");
+        assert!(
+            typed.is_err(),
+            "Deserializing an endpoint without 'id' must fail"
+        );
     }
 
     #[test]
@@ -204,7 +217,10 @@ tags = []
             json.contains(r#""enabled":false"#),
             "Serialized JSON should contain enabled field"
         );
-        assert!(json.contains("\"id\""), "Serialized JSON should contain id field");
+        assert!(
+            json.contains("\"id\""),
+            "Serialized JSON should contain id field"
+        );
     }
 
     #[test]
