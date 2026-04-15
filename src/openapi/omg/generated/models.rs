@@ -229,7 +229,8 @@ pub struct TracerouteResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TracerouteHop {
     pub hop: i64,
-    pub address: Option<String>,
+    /// Resolved IP address of the target
+    pub resolved_ip: Option<String>,
     pub success_latencies: Option<Vec<f64>>,
     pub hostname: Option<String>,
 }
