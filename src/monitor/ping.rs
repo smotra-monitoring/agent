@@ -33,7 +33,7 @@ impl PingChecker {
     /// Perform a ping check on the given endpoint
     pub async fn check(&self, agent_id: Uuid, endpoint: &Endpoint) -> MonitoringResult {
         // Resolve the address
-        let addr = match self.resolve_address(&endpoint.address).await {
+        let addr = match self.resolve_address(&endpoint.hostname).await {
             Ok(addr) => addr,
             Err(e) => {
                 let ping_result = PingResult {
@@ -91,7 +91,7 @@ endpoint_id: endpoint.id,
 
         debug!(
             "Ping check to {} ({}): {}/{} success, avg_time={:.2?} ms",
-            endpoint.address, addr, successes, self.count, avg_response_time_ms
+            endpoint.hostname, addr, successes, self.count, avg_response_time_ms
         );
 
         let ping_result = PingResult {

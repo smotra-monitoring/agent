@@ -139,7 +139,7 @@ pub fn render_endpoints(f: &mut Frame, area: Rect, config: &Config) {
             } else {
                 format!(" [{}]", ep.tags.join(", "))
             };
-            ListItem::new(format!("{}{}{}", ep.address, port_str, tags_str))
+            ListItem::new(format!("{}{}{}", ep.hostname, port_str, tags_str))
         })
         .collect();
 

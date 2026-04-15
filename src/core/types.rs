@@ -67,10 +67,12 @@ impl MonitoringResult {
 }
 
 impl Endpoint {
-    pub fn new(address: impl Into<String>) -> Self {
+    pub fn new(hostname: impl Into<String>) -> Self {
+        let hostname = hostname.into();
         Self {
             id: Uuid::now_v7(),
-            address: address.into(),
+            resolved_ip: hostname.clone(),
+            hostname,
             port: None,
             enabled: true,
             tags: Vec::new(),
@@ -183,7 +185,8 @@ mod tests {
         // Endpoints without an id must fail at deserialization — there is no serde default.
         let toml_input = r#"
 [[endpoints]]
-address = "8.8.8.8"
+hostname = "8.8.8.8"
+resolved_ip = "8.8.8.8"
 enabled = true
 tags = []
 "#;

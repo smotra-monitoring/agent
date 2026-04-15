@@ -40,9 +40,9 @@ impl MonitoringPlugin for HttpPlugin {
         endpoint: &Endpoint,
     ) -> smotra::Result<MonitoringResult> {
         let url = if let Some(port) = endpoint.port {
-            format!("http://{}:{}", endpoint.address, port)
+            format!("http://{}:{}", endpoint.hostname, port)
         } else {
-            format!("http://{}", endpoint.address)
+            format!("http://{}", endpoint.hostname)
         };
 
         let start = std::time::Instant::now();
@@ -107,7 +107,7 @@ async fn main() -> Result<()> {
 
     println!(
         "\nTesting endpoint: {}:{}",
-        endpoint.address,
+        endpoint.hostname,
         endpoint.port.unwrap_or(80)
     );
 
