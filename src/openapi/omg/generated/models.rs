@@ -228,7 +228,7 @@ pub struct TracerouteResult {
 pub struct TracerouteHop {
     pub hop: i64,
     pub address: Option<String>,
-    pub response_time_ms: Option<f64>,
+    pub success_latencies: Option<Vec<f64>>,
     pub hostname: Option<String>,
 }
 
