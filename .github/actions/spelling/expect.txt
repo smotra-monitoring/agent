@@ -1,5 +1,6 @@
 aarch
 aws
+bincode
 Buf
 Bulima
 CLA
@@ -9,12 +10,14 @@ czf
 datacenter
 Datadog
 Debian
+Deque
 emacs
 failover
 google
 Grafana
 greenlit
 HOTRELOAD
+httpget
 IMO
 libc
 lifecycle
@@ -46,12 +49,14 @@ sighup
 smotra
 softprops
 standalone
+tcpconnect
 tempfile
 Tful
 thiserror
 tmp
 tokio
 traceroute
+udpconnect
 Utc
 Uuid
 UUIDv
