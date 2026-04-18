@@ -4,7 +4,10 @@ use anyhow::Result;
 use async_trait::async_trait;
 use smotra::{
     Error, MonitoringPlugin,
-    {CheckType, Endpoint, MonitoringResult, PluginCheck, PluginCheckType, PluginResult},
+    {
+        CheckType, Endpoint, ErrorDetails, MonitoringResult, PluginCheck, PluginCheckType,
+        PluginResult,
+    },
 };
 use std::collections::HashMap;
 
@@ -66,10 +69,12 @@ impl MonitoringPlugin for HttpPlugin {
                     plugin_version: PLUGIN_VERSION.to_string(),
                     success,
                     response_time_ms: Some(response_time_ms),
-                    error: if success {
+                    error_details: if success {
                         None
                     } else {
-                        Some(format!("HTTP {}", response.status()))
+                        Some(ErrorDetails {
+                            errors: Some(vec![format!("HTTP {}", response.status())]),
+                        })
                     },
                     data,
                 };

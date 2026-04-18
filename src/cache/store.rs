@@ -175,7 +175,7 @@ mod tests {
                     failures: 0,
                     success_latencies: vec![1.0],
                     avg_response_time_ms: Some(1.0),
-                    errors: Some(vec![]),
+                    error_details: None,
                 },
             }),
             timestamp: Utc::now(),

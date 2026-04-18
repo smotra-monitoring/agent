@@ -205,7 +205,7 @@ pub struct PingResult {
     pub failures: i64,
     pub success_latencies: Vec<f64>,
     pub avg_response_time_ms: Option<f64>,
-    pub errors: Option<Vec<String>>,
+    pub error_details: Option<ErrorDetails>,
 }
 
 /// TracerouteCheck
@@ -222,7 +222,7 @@ pub struct TracerouteResult {
     pub hops: Vec<TracerouteHop>,
     pub target_reached: bool,
     pub total_time_ms: Option<f64>,
-    pub errors: Option<Vec<String>>,
+    pub error_details: Option<ErrorDetails>,
 }
 
 /// TracerouteHop
@@ -248,7 +248,7 @@ pub struct TcpConnectCheck {
 pub struct TcpConnectResult {
     pub connected: bool,
     pub connect_time_ms: Option<f64>,
-    pub error: Option<String>,
+    pub error_details: Option<ErrorDetails>,
     pub resolved_ip: String,
 }
 
@@ -265,7 +265,7 @@ pub struct UdpConnectCheck {
 pub struct UdpConnectResult {
     pub probe_successful: bool,
     pub response_time_ms: Option<f64>,
-    pub error: Option<String>,
+    pub error_details: Option<ErrorDetails>,
     pub resolved_ip: String,
 }
 
@@ -283,7 +283,7 @@ pub struct HttpGetResult {
     pub status_code: i64,
     pub response_time_ms: Option<f64>,
     pub response_size_bytes: Option<i64>,
-    pub error: Option<String>,
+    pub error_details: Option<ErrorDetails>,
     pub success: bool,
 }
 
@@ -305,8 +305,15 @@ pub struct PluginResult {
     pub plugin_version: String,
     pub success: bool,
     pub response_time_ms: Option<f64>,
-    pub error: Option<String>,
+    pub error_details: Option<ErrorDetails>,
     pub data: std::collections::HashMap<String, String>,
+}
+
+/// Error information from a check, stored as an extensible JSON object
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ErrorDetails {
+    /// List of error messages from the check
+    pub errors: Option<Vec<String>>,
 }
 
 /// AgentHeartbeat

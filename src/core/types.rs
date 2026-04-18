@@ -8,10 +8,10 @@ use uuid::Uuid;
 pub use crate::openapi::AgentStatus;
 pub use crate::openapi::MonitoringResult;
 pub use crate::openapi::{
-    CheckType, Endpoint, HttpGetCheck, HttpGetCheckType, HttpGetResult, PingCheck, PingCheckType,
-    PingResult, PluginCheck, PluginCheckType, PluginResult, TcpConnectCheck, TcpConnectCheckType,
-    TcpConnectResult, TracerouteCheck, TracerouteCheckType, TracerouteHop, TracerouteResult,
-    UdpConnectCheck, UdpConnectCheckType, UdpConnectResult,
+    CheckType, Endpoint, ErrorDetails, HttpGetCheck, HttpGetCheckType, HttpGetResult, PingCheck,
+    PingCheckType, PingResult, PluginCheck, PluginCheckType, PluginResult, TcpConnectCheck,
+    TcpConnectCheckType, TcpConnectResult, TracerouteCheck, TracerouteCheckType, TracerouteHop,
+    TracerouteResult, UdpConnectCheck, UdpConnectCheckType, UdpConnectResult,
 };
 
 impl MonitoringResult {
@@ -43,7 +43,12 @@ impl MonitoringResult {
     pub fn error_message(&self) -> Option<String> {
         match &self.check_type {
             CheckType::PingCheck(c) => {
-                let errors = c.result.errors.as_deref().unwrap_or(&[]);
+                let errors = c
+                    .result
+                    .error_details
+                    .as_ref()
+                    .and_then(|ed| ed.errors.as_deref())
+                    .unwrap_or(&[]);
                 if errors.is_empty() {
                     None
                 } else {
@@ -51,17 +56,70 @@ impl MonitoringResult {
                 }
             }
             CheckType::TracerouteCheck(c) => {
-                let errors = c.result.errors.as_deref().unwrap_or(&[]);
+                let errors = c
+                    .result
+                    .error_details
+                    .as_ref()
+                    .and_then(|ed| ed.errors.as_deref())
+                    .unwrap_or(&[]);
                 if errors.is_empty() {
                     None
                 } else {
                     Some(errors.join("; "))
                 }
             }
-            CheckType::TcpConnectCheck(c) => c.result.error.clone(),
-            CheckType::UdpConnectCheck(c) => c.result.error.clone(),
-            CheckType::HttpGetCheck(c) => c.result.error.clone(),
-            CheckType::PluginCheck(c) => c.result.error.clone(),
+            CheckType::TcpConnectCheck(c) => {
+                let errors = c
+                    .result
+                    .error_details
+                    .as_ref()
+                    .and_then(|ed| ed.errors.as_deref())
+                    .unwrap_or(&[]);
+                if errors.is_empty() {
+                    None
+                } else {
+                    Some(errors.join("; "))
+                }
+            }
+            CheckType::UdpConnectCheck(c) => {
+                let errors = c
+                    .result
+                    .error_details
+                    .as_ref()
+                    .and_then(|ed| ed.errors.as_deref())
+                    .unwrap_or(&[]);
+                if errors.is_empty() {
+                    None
+                } else {
+                    Some(errors.join("; "))
+                }
+            }
+            CheckType::HttpGetCheck(c) => {
+                let errors = c
+                    .result
+                    .error_details
+                    .as_ref()
+                    .and_then(|ed| ed.errors.as_deref())
+                    .unwrap_or(&[]);
+                if errors.is_empty() {
+                    None
+                } else {
+                    Some(errors.join("; "))
+                }
+            }
+            CheckType::PluginCheck(c) => {
+                let errors = c
+                    .result
+                    .error_details
+                    .as_ref()
+                    .and_then(|ed| ed.errors.as_deref())
+                    .unwrap_or(&[]);
+                if errors.is_empty() {
+                    None
+                } else {
+                    Some(errors.join("; "))
+                }
+            }
         }
     }
 }

@@ -1,6 +1,6 @@
 //! ICMP ping monitoring
 
-use crate::core::{CheckType, Endpoint, MonitoringResult, PingCheck, PingCheckType, PingResult};
+use crate::core::{CheckType, Endpoint, ErrorDetails, MonitoringResult, PingCheck, PingCheckType, PingResult};
 use crate::error::{Error, Result};
 use chrono::Utc;
 use std::net::{IpAddr, ToSocketAddrs};
@@ -40,7 +40,9 @@ impl PingChecker {
                     successes: 0,
                     failures: 1,
                     success_latencies: Vec::new(),
-                    errors: Some(vec![format!("Failed to resolve address: {}", e)]),
+                    error_details: Some(ErrorDetails {
+                        errors: Some(vec![format!("Failed to resolve address: {}", e)]),
+                    }),
                     avg_response_time_ms: None,
                     resolved_ip: String::new(),
                 };
@@ -100,7 +102,13 @@ endpoint_id: endpoint.id,
             failures: failures as i64,
             success_latencies,
             avg_response_time_ms,
-            errors: Some(errors.clone()),
+            error_details: if errors.is_empty() {
+                None
+            } else {
+                Some(ErrorDetails {
+                    errors: Some(errors),
+                })
+            },
         };
 
         MonitoringResult {

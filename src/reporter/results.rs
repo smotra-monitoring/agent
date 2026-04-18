@@ -201,7 +201,7 @@ mod tests {
                     failures: 0,
                     success_latencies: vec![1.0, 2.0, 3.0],
                     avg_response_time_ms: Some(2.0),
-                    errors: Some(vec![]),
+                    error_details: None,
                 },
             }),
             timestamp: Utc::now(),
@@ -242,7 +242,7 @@ mod tests {
                 result: TcpConnectResult {
                     connected: true,
                     connect_time_ms: Some(5.0),
-                    error: None,
+                    error_details: None,
                     resolved_ip: String::new(),
                 },
             });
@@ -264,7 +264,7 @@ mod tests {
                     status_code: 200,
                     response_time_ms: Some(100.0),
                     response_size_bytes: Some(1024),
-                    error: None,
+                    error_details: None,
                     success: true,
                 },
             });
@@ -332,7 +332,7 @@ mod reporter_loop_tests {
                     failures: 0,
                     success_latencies: vec![1.0, 2.0, 3.0],
                     avg_response_time_ms: Some(2.0),
-                    errors: Some(vec![]),
+                    error_details: None,
                 },
             }),
             timestamp: chrono::Utc::now(),

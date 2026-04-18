@@ -25,9 +25,9 @@ mod reporter;
 pub use agent_config::{ClaimConfig, Config, MonitoringConfig, ServerConfig, StorageConfig};
 pub use claim::Claim;
 pub use core::{
-    Agent, AgentHealthStatus, AgentHeartbeat, AgentStatus, CheckType, Endpoint, HttpGetCheck,
-    HttpGetCheckType, HttpGetResult, MonitoringResult, PingCheck, PingCheckType, PingResult,
-    PluginCheck, PluginCheckType, PluginResult, TcpConnectCheck, TcpConnectCheckType,
+    Agent, AgentHealthStatus, AgentHeartbeat, AgentStatus, CheckType, Endpoint, ErrorDetails,
+    HttpGetCheck, HttpGetCheckType, HttpGetResult, MonitoringResult, PingCheck, PingCheckType,
+    PingResult, PluginCheck, PluginCheckType, PluginResult, TcpConnectCheck, TcpConnectCheckType,
     TcpConnectResult, TracerouteCheck, TracerouteCheckType, TracerouteHop, TracerouteResult,
     UdpConnectCheck, UdpConnectCheckType, UdpConnectResult,
 };

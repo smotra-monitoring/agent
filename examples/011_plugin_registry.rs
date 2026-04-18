@@ -41,7 +41,7 @@ impl MonitoringPlugin for DummyPlugin {
             plugin_version: "1.0.0".to_string(),
             success: true,
             response_time_ms: Some(42.0),
-            error: None,
+            error_details: None,
             data: HashMap::new(),
         };
 
