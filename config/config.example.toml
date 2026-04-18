@@ -46,21 +46,18 @@ cache_report_interval_secs = 60
 # returned by the server; endpoints configured manually must be assigned a UUIDv7 here.
 [[endpoints]]
 id = "019680be-0000-7000-8000-000000000001"
-hostname = "8.8.8.8"
-resolved_ip = "8.8.8.8"
+address = "8.8.8.8"
 tags = ["dns", "google"]
 enabled = true  # Optional, defaults to true
 
 [[endpoints]]
 id = "019680be-0000-7000-8000-000000000002"
-hostname = "1.1.1.1"
-resolved_ip = "1.1.1.1"
+address = "1.1.1.1"
 tags = ["dns", "cloudflare"]
 enabled = true
 
 [[endpoints]]
 id = "019680be-0000-7000-8000-000000000003"
-hostname = "example.com"
-resolved_ip = ""
+address = "example.com"
 tags = ["web"]
 # enabled = false  # Uncomment to disable this endpoint
