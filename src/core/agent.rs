@@ -11,6 +11,7 @@ use tracing::{error, info, warn};
 
 use super::AgentStatus;
 use crate::agent_config::Config;
+use crate::cache::ResultCache;
 use crate::error::Result;
 
 /// Main agent instance that coordinates all monitoring tasks
@@ -18,6 +19,7 @@ pub struct Agent {
     config: Arc<RwLock<Config>>,
     config_path: PathBuf,
     status: Arc<RwLock<AgentStatus>>,
+    result_cache: Arc<ResultCache>,
     shutdown_tx: broadcast::Sender<()>,
 }
 
@@ -39,10 +41,16 @@ impl Agent {
         let mut status = AgentStatus::new(config.agent_id);
         status.config_version = config.version as i64;
 
+        let result_cache = Arc::new(ResultCache::new(
+            config.storage.max_cached_results,
+            std::time::Duration::from_secs(config.storage.max_cache_age_secs),
+        ));
+
         Ok(Self {
             config: Arc::new(RwLock::new(config)),
             config_path,
             status: Arc::new(RwLock::new(status)),
+            result_cache,
             shutdown_tx,
         })
     }
@@ -67,10 +75,11 @@ impl Agent {
         let monitor_handle = {
             let config = Arc::clone(&self.config);
             let status = Arc::clone(&self.status);
+            let cache = Arc::clone(&self.result_cache);
             let mut shutdown_rx = self.subscribe_shutdown();
 
             tokio::spawn(async move {
-                crate::monitor::run_monitoring(config, status, &mut shutdown_rx).await
+                crate::monitor::run_monitoring(config, status, cache, &mut shutdown_rx).await
             })
         };
 
@@ -82,6 +91,18 @@ impl Agent {
 
             tokio::spawn(async move {
                 crate::reporter::run_reporter(config, status, &mut shutdown_rx).await
+            })
+        };
+
+        // Start result-cache reporter task
+        let result_reporter_handle = {
+            let config = Arc::clone(&self.config);
+            let status = Arc::clone(&self.status);
+            let cache = Arc::clone(&self.result_cache);
+            let shutdown_rx = self.subscribe_shutdown();
+
+            tokio::spawn(async move {
+                crate::reporter::run_result_reporter(config, cache, status, shutdown_rx).await
             })
         };
 
@@ -131,6 +152,7 @@ impl Agent {
         tokio::time::timeout(std::time::Duration::from_secs(2), async {
             let _ = monitor_handle.await;
             let _ = reporter_handle.await;
+            let _ = result_reporter_handle.await;
             let _ = heartbeat_handle.await;
             let _ = hot_reload_handle.await;
         })
@@ -266,7 +288,7 @@ mod tests {
     #[tokio::test]
     async fn test_reload_config_success() {
         let config = Config {
-            agent_id: Uuid::new_v4(),
+            agent_id: Uuid::now_v7(),
             agent_name: "Test Agent".to_string(),
             ..Config::default()
         };
@@ -303,7 +325,7 @@ mod tests {
     #[tokio::test]
     async fn test_reload_config_validation_failure() {
         let original_config = Config {
-            agent_id: Uuid::new_v4(),
+            agent_id: Uuid::now_v7(),
             ..Config::default()
         };
 
@@ -333,7 +355,7 @@ mod tests {
     #[tokio::test]
     async fn test_reload_config_nil_agent_id() {
         let original_config = Config {
-            agent_id: Uuid::new_v4(),
+            agent_id: Uuid::now_v7(),
             ..Config::default()
         };
 
@@ -360,7 +382,7 @@ mod tests {
     #[tokio::test]
     async fn test_update_config() {
         let original_config = Config {
-            agent_id: Uuid::new_v4(),
+            agent_id: Uuid::now_v7(),
             ..Config::default()
         };
 

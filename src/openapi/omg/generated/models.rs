@@ -32,8 +32,16 @@ pub struct AgentStatus {
     pub failed_report_count: i64,
     /// Whether the agent is currently connected to the server
     pub server_connected: bool,
-    /// Number of reports cached locally on the agent
-    pub cached_reports: i64,
+    pub cache_stats: AgentCacheStats,
+}
+
+/// AgentCacheStats
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentCacheStats {
+    /// Number of results currently buffered in the local cache
+    pub len: i64,
+    /// Maximum number of results the cache can hold (hard cap)
+    pub capacity: i64,
 }
 
 /// AgentConfig
@@ -100,7 +108,7 @@ pub struct StorageConfig {
     pub max_cache_age_secs: i64,
 }
 
-/// Endpoint
+/// An endpoint to monitor (IP address, hostname, or URL)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Endpoint {
     pub id: UUIDv7,
@@ -109,28 +117,28 @@ pub struct Endpoint {
     pub port: Option<i64>,
     pub enabled: bool,
     /// Tags associated with the target
-    pub tags: Option<Vec<String>>,
+    pub tags: Vec<String>,
 }
 
 /// MonitoringResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MonitoringResult {
-    /// Unique identifier for the monitoring result
-    pub id: String,
-    /// Unique identifier for the agent
-    pub agent_id: String,
-    pub target: Endpoint,
+    pub id: UUIDv7,
+    pub agent_id: UUIDv7,
+    pub endpoint_id: UUIDv7,
     pub check_type: CheckType,
     /// Timestamp when the report was generated (RFC3339)
     pub timestamp: DateTime<Utc>,
 }
 
-/// Type
+/// A batch of monitoring results submitted by an agent from its local cache.
+/// The server deduplicates entries by `MonitoringResult.id`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Type {
-    #[serde(rename = "ping")]
-    Ping,
+pub struct BatchMonitoringResults {
+    /// Ordered list of monitoring results (oldest-first)
+    pub results: Vec<MonitoringResult>,
 }
+
 /// CheckType (oneOf)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -142,48 +150,84 @@ pub enum CheckType {
     HttpGetCheck(HttpGetCheck),
     PluginCheck(PluginCheck),
 }
+/// PingCheckType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PingCheckType {
+    #[serde(rename = "ping")]
+    Ping,
+}
+/// TracerouteCheckType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TracerouteCheckType {
+    #[serde(rename = "traceroute")]
+    Traceroute,
+}
+/// TcpConnectCheckType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TcpConnectCheckType {
+    #[serde(rename = "tcpconnect")]
+    Tcpconnect,
+}
+/// UdpConnectCheckType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum UdpConnectCheckType {
+    #[serde(rename = "udpconnect")]
+    Udpconnect,
+}
+/// HttpGetCheckType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HttpGetCheckType {
+    #[serde(rename = "httpget")]
+    Httpget,
+}
+/// PluginCheckType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum PluginCheckType {
+    #[serde(rename = "plugin")]
+    Plugin,
+}
 /// PingCheck
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PingCheck {
     #[serde(rename = "type")]
-    pub r#type: Type,
+    pub r#type: PingCheckType,
     pub result: PingResult,
 }
 
 /// PingResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PingResult {
-    pub resolved_ip: Option<String>,
-    pub successes: Option<i64>,
-    pub failures: Option<i64>,
-    pub success_latencies: Option<Vec<f64>>,
-    pub avg_response_time_ms: Option<f64>,
-    pub errors: Option<Vec<String>>,
+    /// Resolved IP address of the target
+    pub resolved_ip: String,
+    pub successes: i64,
+    pub failures: i64,
+    pub success_latencies: Vec<f64>,
+    pub error_details: Option<ErrorDetails>,
 }
 
 /// TracerouteCheck
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TracerouteCheck {
     #[serde(rename = "type")]
-    pub r#type: Type,
+    pub r#type: TracerouteCheckType,
     pub result: TracerouteResult,
 }
 
 /// TracerouteResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TracerouteResult {
-    pub hops: Option<Vec<TracerouteHop>>,
-    pub target_reached: Option<bool>,
-    pub total_time_ms: Option<f64>,
-    pub errors: Option<Vec<String>>,
+    pub hops: Vec<TracerouteHop>,
+    pub target_reached: bool,
+    pub error_details: Option<ErrorDetails>,
 }
 
 /// TracerouteHop
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TracerouteHop {
-    pub hop: Option<i64>,
-    pub address: Option<String>,
-    pub response_time_ms: Option<f64>,
+    pub hop: i64,
+    /// Resolved IP address of the target
+    pub resolved_ip: Option<String>,
+    pub success_latencies: Option<Vec<f64>>,
     pub hostname: Option<String>,
 }
 
@@ -191,59 +235,59 @@ pub struct TracerouteHop {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TcpConnectCheck {
     #[serde(rename = "type")]
-    pub r#type: Type,
+    pub r#type: TcpConnectCheckType,
     pub result: TcpConnectResult,
 }
 
 /// TcpConnectResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TcpConnectResult {
-    pub connected: Option<bool>,
+    pub connected: bool,
     pub connect_time_ms: Option<f64>,
-    pub error: Option<String>,
-    pub resolved_ip: Option<String>,
+    pub error_details: Option<ErrorDetails>,
+    pub resolved_ip: String,
 }
 
 /// UdpConnectCheck
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UdpConnectCheck {
     #[serde(rename = "type")]
-    pub r#type: Type,
+    pub r#type: UdpConnectCheckType,
     pub result: UdpConnectResult,
 }
 
 /// UdpConnectResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UdpConnectResult {
-    pub probe_successful: Option<bool>,
+    pub probe_successful: bool,
     pub response_time_ms: Option<f64>,
-    pub error: Option<String>,
-    pub resolved_ip: Option<String>,
+    pub error_details: Option<ErrorDetails>,
+    pub resolved_ip: String,
 }
 
 /// HttpGetCheck
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HttpGetCheck {
     #[serde(rename = "type")]
-    pub r#type: Type,
+    pub r#type: HttpGetCheckType,
     pub result: HttpGetResult,
 }
 
 /// HttpGetResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HttpGetResult {
-    pub status_code: Option<i64>,
+    pub status_code: i64,
     pub response_time_ms: Option<f64>,
     pub response_size_bytes: Option<i64>,
-    pub error: Option<String>,
-    pub success: Option<bool>,
+    pub error_details: Option<ErrorDetails>,
+    pub success: bool,
 }
 
 /// PluginCheck
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginCheck {
     #[serde(rename = "type")]
-    pub r#type: Type,
+    pub r#type: PluginCheckType,
     pub result: PluginResult,
 }
 
@@ -253,12 +297,19 @@ pub type Data = std::collections::HashMap<String, String>;
 /// PluginResult
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PluginResult {
-    pub plugin_name: Option<String>,
-    pub plugin_version: Option<String>,
-    pub success: Option<bool>,
+    pub plugin_name: String,
+    pub plugin_version: String,
+    pub success: bool,
     pub response_time_ms: Option<f64>,
-    pub error: Option<String>,
-    pub data: Option<std::collections::HashMap<String, String>>,
+    pub error_details: Option<ErrorDetails>,
+    pub data: std::collections::HashMap<String, String>,
+}
+
+/// Error information from a check, stored as an extensible JSON object
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ErrorDetails {
+    /// List of error messages from the check
+    pub errors: Option<Vec<String>>,
 }
 
 /// AgentHeartbeat
@@ -270,6 +321,20 @@ pub struct AgentHeartbeat {
     pub memory_usage_mb: Option<f64>,
 }
 
+/// Type of check performed
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Type {
+    #[serde(rename = "icmp_ping")]
+    IcmpPing,
+    #[serde(rename = "tcp_check")]
+    TcpCheck,
+    #[serde(rename = "http_check")]
+    HttpCheck,
+    #[serde(rename = "traceroute")]
+    Traceroute,
+    #[serde(rename = "custom")]
+    Custom,
+}
 /// Additional metric-specific data
 pub type Metadata = std::collections::HashMap<String, serde_json::Value>;
 
@@ -426,6 +491,18 @@ pub struct ReportAcknowledgment {
     pub configuration_version: Option<i64>,
     /// Whether agent update is available
     pub update_available: Option<bool>,
+}
+
+/// ResultsBatchAcknowledgment
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResultsBatchAcknowledgment {
+    pub submission_id: UUIDv7,
+    /// Number of results accepted for processing
+    pub accepted: i64,
+    /// Number of results deduplicated (already known to the server)
+    pub duplicates_skipped: Option<i64>,
+    /// Timestamp when the batch was received by the server
+    pub received_at: DateTime<Utc>,
 }
 
 /// TimeRange
@@ -977,6 +1054,11 @@ pub struct UpdateAgentConfigurationRequest {
 pub struct SendAgentHeartbeatRequest {
     pub body: AgentHeartbeat,
 }
+/// SubmitAgentResultsRequest
+#[derive(Debug, Clone, Serialize)]
+pub struct SubmitAgentResultsRequest {
+    pub body: BatchMonitoringResults,
+}
 /// CreateAlertRequest
 #[derive(Debug, Clone, Serialize)]
 pub struct CreateAlertRequest {
@@ -1081,6 +1163,11 @@ pub struct GetAgentConfigurationResponse200 {
 #[derive(Debug, Clone, Deserialize)]
 pub struct UpdateAgentConfigurationResponse200 {
     pub body: AgentConfig,
+}
+/// Batch accepted for processing
+#[derive(Debug, Clone, Deserialize)]
+pub struct SubmitAgentResultsResponse202 {
+    pub body: ResultsBatchAcknowledgment,
 }
 /// Report generated successfully
 #[derive(Debug, Clone, Deserialize)]

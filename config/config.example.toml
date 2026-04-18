@@ -32,18 +32,32 @@ cache_dir = "./cache"
 max_cached_results = 10000
 max_cache_age_secs = 86400
 
+# --- Result cache settings ---
+# Set to false to disable in-memory caching and batch result reporting entirely.
+cache_enabled = true
+# How many results to include in a single POST /agent/{id}/results request.
+cache_batch_size = 100
+# How often the result reporter drains the cache and sends a batch (seconds).
+cache_report_interval_secs = 60
+
 # Example endpoints to monitor
+# Note: 'id' is required. It uniquely identifies the endpoint so MonitoringResults can
+# be correlated on the server. Endpoints provisioned via the API will have their id
+# returned by the server; endpoints configured manually must be assigned a UUIDv7 here.
 [[endpoints]]
+id = "019680be-0000-7000-8000-000000000001"
 address = "8.8.8.8"
 tags = ["dns", "google"]
 enabled = true  # Optional, defaults to true
 
 [[endpoints]]
+id = "019680be-0000-7000-8000-000000000002"
 address = "1.1.1.1"
 tags = ["dns", "cloudflare"]
 enabled = true
 
 [[endpoints]]
+id = "019680be-0000-7000-8000-000000000003"
 address = "example.com"
 tags = ["web"]
 # enabled = false  # Uncomment to disable this endpoint

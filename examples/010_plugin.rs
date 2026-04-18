@@ -3,7 +3,11 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use smotra::{
-    Error, MonitoringPlugin, {CheckType, Endpoint, MonitoringResult, PluginResult},
+    Error, MonitoringPlugin,
+    {
+        CheckType, Endpoint, ErrorDetails, MonitoringResult, PluginCheck, PluginCheckType,
+        PluginResult,
+    },
 };
 use std::collections::HashMap;
 
@@ -65,19 +69,24 @@ impl MonitoringPlugin for HttpPlugin {
                     plugin_version: PLUGIN_VERSION.to_string(),
                     success,
                     response_time_ms: Some(response_time_ms),
-                    error: if success {
+                    error_details: if success {
                         None
                     } else {
-                        Some(format!("HTTP {}", response.status()))
+                        Some(ErrorDetails {
+                            errors: Some(vec![format!("HTTP {}", response.status())]),
+                        })
                     },
                     data,
                 };
 
                 let result = MonitoringResult {
-                    id: uuid::Uuid::new_v4(),
+                    id: uuid::Uuid::now_v7(),
                     agent_id: *agent_id,
-                    target: endpoint.clone(),
-                    check_type: CheckType::Plugin(plugin_result),
+                    endpoint_id: endpoint.id,
+                    check_type: CheckType::PluginCheck(PluginCheck {
+                        r#type: PluginCheckType::Plugin,
+                        result: plugin_result,
+                    }),
                     timestamp: chrono::Utc::now(),
                 };
                 Ok(result)
@@ -107,7 +116,7 @@ async fn main() -> Result<()> {
         endpoint.port.unwrap_or(80)
     );
 
-    let agent_id = uuid::Uuid::new_v4();
+    let agent_id = uuid::Uuid::now_v7();
     let result = plugin.check(&agent_id, &endpoint).await?;
 
     println!("\nResult:");

@@ -1,13 +1,15 @@
 //! ICMP ping monitoring
 
-use crate::core::{CheckType, Endpoint, MonitoringResult, PingResult};
+use crate::core::{
+    CheckType, Endpoint, ErrorDetails, MonitoringResult, PingCheck, PingCheckType, PingResult,
+};
 use crate::error::{Error, Result};
 use chrono::Utc;
 use std::net::{IpAddr, ToSocketAddrs};
 use std::time::Duration;
 use surge_ping::{Client, Config, PingIdentifier, PingSequence};
 use tracing::debug;
-use uuid::Uuid;
+use uuid::{Timestamp, Uuid};
 
 /// Ping checker for ICMP reachability tests
 pub struct PingChecker {
@@ -40,16 +42,20 @@ impl PingChecker {
                     successes: 0,
                     failures: 1,
                     success_latencies: Vec::new(),
-                    errors: vec![format!("Failed to resolve address: {}", e)],
-                    avg_response_time_ms: None,
-                    resolved_ip: None,
+                    error_details: Some(ErrorDetails {
+                        errors: Some(vec![format!("Failed to resolve address: {}", e)]),
+                    }),
+                    resolved_ip: String::new(),
                 };
 
                 return MonitoringResult {
-                    id: Uuid::new_v4(),
+                    id: Uuid::new_v7(Timestamp::now(uuid::NoContext)),
                     agent_id,
-                    target: endpoint.clone(),
-                    check_type: CheckType::Ping(ping_result),
+                    endpoint_id: endpoint.id,
+                    check_type: CheckType::PingCheck(PingCheck {
+                        r#type: PingCheckType::Ping,
+                        result: ping_result,
+                    }),
                     timestamp: Utc::now(),
                 };
             }
@@ -92,19 +98,27 @@ impl PingChecker {
         );
 
         let ping_result = PingResult {
-            resolved_ip: Some(addr.to_string()),
-            successes,
-            failures,
+            resolved_ip: addr.to_string(),
+            successes: successes as i64,
+            failures: failures as i64,
             success_latencies,
-            avg_response_time_ms,
-            errors: errors.clone(),
+            error_details: if errors.is_empty() {
+                None
+            } else {
+                Some(ErrorDetails {
+                    errors: Some(errors),
+                })
+            },
         };
 
         MonitoringResult {
-            id: Uuid::new_v4(),
+            id: Uuid::now_v7(),
             agent_id,
-            target: endpoint.clone(),
-            check_type: CheckType::Ping(ping_result),
+            endpoint_id: endpoint.id,
+            check_type: CheckType::PingCheck(PingCheck {
+                r#type: PingCheckType::Ping,
+                result: ping_result,
+            }),
             timestamp: Utc::now(),
         }
     }

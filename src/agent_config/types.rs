@@ -106,6 +106,18 @@ pub struct StorageConfig {
 
     /// Maximum age of cached results in seconds
     pub max_cache_age_secs: u64,
+
+    /// Enable in-memory result caching and batch reporting.
+    /// When disabled, results are never buffered locally and
+    /// the result reporter loop exits immediately.
+    pub cache_enabled: bool,
+
+    /// Number of results sent to the server in a single POST request.
+    pub cache_batch_size: usize,
+
+    /// How often (in seconds) the result reporter drains the cache
+    /// and attempts to send a batch to the server.
+    pub cache_report_interval_secs: u64,
 }
 
 impl Default for StorageConfig {
@@ -114,6 +126,9 @@ impl Default for StorageConfig {
             cache_dir: "./cache".to_string(),
             max_cached_results: 10000,
             max_cache_age_secs: 86400, // 24 hours
+            cache_enabled: true,
+            cache_batch_size: 100,
+            cache_report_interval_secs: 60,
         }
     }
 }

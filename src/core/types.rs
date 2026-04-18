@@ -2,224 +2,157 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::net::IpAddr;
 use uuid::Uuid;
 
-// Re-export AgentStatus from the OpenAPI generated models so the rest of the
-// codebase gets the canonical wire-compatible type with no local duplicate.
+// Re-export from generated OpenAPI types — these are the canonical wire-level types.
 pub use crate::openapi::AgentStatus;
-
-/// Result of a monitoring check
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MonitoringResult {
-    /// Unique ID for this result
-    pub id: Uuid,
-    /// ID of the agent that performed the check
-    pub agent_id: Uuid,
-    /// Target endpoint that was checked
-    pub target: Endpoint,
-    /// Type of check performed with detailed results
-    pub check_type: CheckType,
-    /// Timestamp when the check was performed
-    pub timestamp: DateTime<Utc>,
-}
+pub use crate::openapi::MonitoringResult;
+pub use crate::openapi::{
+    CheckType, Endpoint, ErrorDetails, HttpGetCheck, HttpGetCheckType, HttpGetResult, PingCheck,
+    PingCheckType, PingResult, PluginCheck, PluginCheckType, PluginResult, TcpConnectCheck,
+    TcpConnectCheckType, TcpConnectResult, TracerouteCheck, TracerouteCheckType, TracerouteHop,
+    TracerouteResult, UdpConnectCheck, UdpConnectCheckType, UdpConnectResult,
+};
 
 impl MonitoringResult {
     /// Helper method to determine if the check was successful
     pub fn is_successful(&self) -> bool {
         match &self.check_type {
-            CheckType::Ping(result) => result.successes > 0,
-            CheckType::Traceroute(result) => result.target_reached,
-            CheckType::TcpConnect(result) => result.connected,
-            CheckType::UdpConnect(result) => result.probe_successful,
-            CheckType::HttpGet(result) => result.success,
-            CheckType::Plugin(result) => result.success,
+            CheckType::PingCheck(c) => c.result.successes > 0,
+            CheckType::TracerouteCheck(c) => c.result.target_reached,
+            CheckType::TcpConnectCheck(c) => c.result.connected,
+            CheckType::UdpConnectCheck(c) => c.result.probe_successful,
+            CheckType::HttpGetCheck(c) => c.result.success,
+            CheckType::PluginCheck(c) => c.result.success,
         }
     }
 
     /// Helper method to get the primary response time
     pub fn response_time_ms(&self) -> Option<f64> {
         match &self.check_type {
-            CheckType::Ping(result) => result.avg_response_time_ms,
-            CheckType::Traceroute(result) => result.total_time_ms,
-            CheckType::TcpConnect(result) => result.connect_time_ms,
-            CheckType::UdpConnect(result) => result.response_time_ms,
-            CheckType::HttpGet(result) => result.response_time_ms,
-            CheckType::Plugin(result) => result.response_time_ms,
+            CheckType::PingCheck(c) => {
+                let latencies = &c.result.success_latencies;
+                if latencies.is_empty() {
+                    None
+                } else {
+                    Some(latencies.iter().sum::<f64>() / latencies.len() as f64)
+                }
+            }
+            CheckType::TracerouteCheck(c) => c.result.hops.last().and_then(|h| {
+                h.success_latencies.as_deref().and_then(|latencies| {
+                    if latencies.is_empty() {
+                        None
+                    } else {
+                        let avg = latencies.iter().sum::<f64>() / latencies.len() as f64;
+                        Some(avg)
+                    }
+                })
+            }),
+            CheckType::TcpConnectCheck(c) => c.result.connect_time_ms,
+            CheckType::UdpConnectCheck(c) => c.result.response_time_ms,
+            CheckType::HttpGetCheck(c) => c.result.response_time_ms,
+            CheckType::PluginCheck(c) => c.result.response_time_ms,
         }
     }
 
     /// Helper method to get the primary error message
     pub fn error_message(&self) -> Option<String> {
         match &self.check_type {
-            CheckType::Ping(result) => {
-                if result.errors.is_empty() {
+            CheckType::PingCheck(c) => {
+                let errors = c
+                    .result
+                    .error_details
+                    .as_ref()
+                    .and_then(|ed| ed.errors.as_deref())
+                    .unwrap_or(&[]);
+                if errors.is_empty() {
                     None
                 } else {
-                    Some(result.errors.join("; "))
+                    Some(errors.join("; "))
                 }
             }
-            CheckType::Traceroute(result) => {
-                if result.errors.is_empty() {
+            CheckType::TracerouteCheck(c) => {
+                let errors = c
+                    .result
+                    .error_details
+                    .as_ref()
+                    .and_then(|ed| ed.errors.as_deref())
+                    .unwrap_or(&[]);
+                if errors.is_empty() {
                     None
                 } else {
-                    Some(result.errors.join("; "))
+                    Some(errors.join("; "))
                 }
             }
-            CheckType::TcpConnect(result) => result.error.clone(),
-            CheckType::UdpConnect(result) => result.error.clone(),
-            CheckType::HttpGet(result) => result.error.clone(),
-            CheckType::Plugin(result) => result.error.clone(),
+            CheckType::TcpConnectCheck(c) => {
+                let errors = c
+                    .result
+                    .error_details
+                    .as_ref()
+                    .and_then(|ed| ed.errors.as_deref())
+                    .unwrap_or(&[]);
+                if errors.is_empty() {
+                    None
+                } else {
+                    Some(errors.join("; "))
+                }
+            }
+            CheckType::UdpConnectCheck(c) => {
+                let errors = c
+                    .result
+                    .error_details
+                    .as_ref()
+                    .and_then(|ed| ed.errors.as_deref())
+                    .unwrap_or(&[]);
+                if errors.is_empty() {
+                    None
+                } else {
+                    Some(errors.join("; "))
+                }
+            }
+            CheckType::HttpGetCheck(c) => {
+                let errors = c
+                    .result
+                    .error_details
+                    .as_ref()
+                    .and_then(|ed| ed.errors.as_deref())
+                    .unwrap_or(&[]);
+                if errors.is_empty() {
+                    None
+                } else {
+                    Some(errors.join("; "))
+                }
+            }
+            CheckType::PluginCheck(c) => {
+                let errors = c
+                    .result
+                    .error_details
+                    .as_ref()
+                    .and_then(|ed| ed.errors.as_deref())
+                    .unwrap_or(&[]);
+                if errors.is_empty() {
+                    None
+                } else {
+                    Some(errors.join("; "))
+                }
+            }
         }
     }
-}
-
-/// Type of monitoring check with detailed results
-// NOTE: We do not derive `Eq` here because the enum variants contain types with floating point fields (e.g., `f64` for response times).
-// Rust's `Eq` trait cannot be implemented for types containing floats due to the possibility of NaN values, which do not satisfy equality.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum CheckType {
-    Ping(PingResult),
-    Traceroute(TracerouteResult),
-    TcpConnect(TcpConnectResult),
-    UdpConnect(UdpConnectResult),
-    HttpGet(HttpGetResult),
-    Plugin(PluginResult),
-}
-
-/// Result of a ping check
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct PingResult {
-    /// Resolved IP address
-    pub resolved_ip: Option<String>,
-    /// Number of successfully received replies
-    pub successes: u32,
-    /// Number of timeouts or other ICMP related errors
-    pub failures: u32,
-    /// Latency for each successful check in milliseconds
-    pub success_latencies: Vec<f64>,
-    /// Average response time in milliseconds
-    pub avg_response_time_ms: Option<f64>,
-    /// ICMP error messages
-    pub errors: Vec<String>,
-}
-
-/// Result of a traceroute check
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TracerouteResult {
-    /// List of hops in the traceroute
-    pub hops: Vec<TracerouteHop>,
-    /// Whether the target was reached
-    pub target_reached: bool,
-    /// Total time for the traceroute
-    pub total_time_ms: Option<f64>,
-    /// Any errors encountered
-    pub errors: Vec<String>,
-}
-
-/// Traceroute hop information
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TracerouteHop {
-    /// Hop number (TTL)
-    pub hop: u8,
-    /// IP address of the hop
-    pub address: Option<IpAddr>,
-    /// Response time in milliseconds
-    pub response_time_ms: Option<f64>,
-    /// Hostname if resolved
-    pub hostname: Option<String>,
-}
-
-/// Result of a TCP connection check
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct TcpConnectResult {
-    /// Whether the connection was successful
-    pub connected: bool,
-    /// Time to establish connection in milliseconds
-    pub connect_time_ms: Option<f64>,
-    /// Error message if connection failed
-    pub error: Option<String>,
-    /// Resolved IP address
-    pub resolved_ip: Option<String>,
-}
-
-/// Result of a UDP connection check
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct UdpConnectResult {
-    /// Whether the UDP probe was successful
-    pub probe_successful: bool,
-    /// Response time in milliseconds
-    pub response_time_ms: Option<f64>,
-    /// Error message if probe failed
-    pub error: Option<String>,
-    /// Resolved IP address
-    pub resolved_ip: Option<String>,
-}
-
-/// Result of an HTTP GET check
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct HttpGetResult {
-    /// HTTP status code
-    pub status_code: Option<u16>,
-    /// Response time in milliseconds
-    pub response_time_ms: Option<f64>,
-    /// Size of response body in bytes
-    pub response_size_bytes: Option<usize>,
-    /// Error message if request failed
-    pub error: Option<String>,
-    /// Whether the request was successful
-    pub success: bool,
-}
-
-/// Result of a plugin check
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct PluginResult {
-    /// Name of the plugin
-    pub plugin_name: String,
-    /// Version of the plugin
-    pub plugin_version: String,
-    /// Whether the check was successful
-    pub success: bool,
-    /// Response time in milliseconds
-    pub response_time_ms: Option<f64>,
-    /// Error message if check failed
-    pub error: Option<String>,
-    /// Plugin-specific data
-    pub data: std::collections::HashMap<String, String>,
-}
-
-/// Endpoint to monitor
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Endpoint {
-    /// Target address (hostname or IP)
-    pub address: String,
-    /// Optional port number
-    pub port: Option<u16>,
-    /// Tags for organizing endpoints
-    pub tags: Vec<String>,
-    /// Whether this endpoint is enabled for monitoring
-    #[serde(default = "default_enabled")]
-    pub enabled: bool,
-}
-
-/// Default value for enabled field
-fn default_enabled() -> bool {
-    true
 }
 
 impl Endpoint {
     pub fn new(address: impl Into<String>) -> Self {
         Self {
+            id: Uuid::now_v7(),
             address: address.into(),
             port: None,
-            tags: Vec::new(),
             enabled: true,
+            tags: Vec::new(),
         }
     }
 
     pub fn with_port(mut self, port: u16) -> Self {
-        self.port = Some(port);
+        self.port = Some(port as i64);
         self
     }
 
@@ -293,16 +226,52 @@ impl Default for AgentHeartbeat {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use uuid::Uuid;
 
     #[test]
     fn test_endpoint_enabled_by_default() {
         let endpoint = Endpoint::new("example.com");
         assert!(endpoint.enabled, "Endpoint should be enabled by default");
+        assert_ne!(
+            endpoint.id,
+            Uuid::nil(),
+            "Endpoint::new() should generate a non-nil UUID"
+        );
+    }
+
+    #[test]
+    fn test_endpoint_new_generates_unique_ids() {
+        let a = Endpoint::new("example.com");
+        let b = Endpoint::new("example.com");
+        assert_ne!(
+            a.id, b.id,
+            "Each Endpoint::new() call must produce a distinct UUIDv7"
+        );
+    }
+
+    #[test]
+    fn test_endpoint_missing_id_fails_deserialization() {
+        // Endpoints without an id must fail at deserialization — there is no serde default.
+        let toml_input = r#"
+[[endpoints]]
+address = "8.8.8.8"
+enabled = true
+tags = []
+"#;
+        // The failure occurs when deserializing into a typed struct that requires `id`.
+        #[derive(serde::Deserialize)]
+        struct Wrapper {
+            #[allow(dead_code)]
+            endpoints: Vec<crate::openapi::Endpoint>,
+        }
+        let typed: Result<Wrapper, _> = toml::from_str(toml_input);
+        assert!(
+            typed.is_err(),
+            "Deserializing an endpoint without 'id' must fail"
+        );
     }
 
     #[test]
@@ -315,27 +284,6 @@ mod tests {
     }
 
     #[test]
-    fn test_endpoint_deserialization_with_enabled() {
-        let json = r#"{"address": "example.com", "port": null, "tags": [], "enabled": false}"#;
-        let endpoint: Endpoint = serde_json::from_str(json).unwrap();
-        assert!(
-            !endpoint.enabled,
-            "Deserialized endpoint should be disabled"
-        );
-    }
-
-    #[test]
-    fn test_endpoint_deserialization_without_enabled() {
-        // When enabled field is missing, it should default to true
-        let json = r#"{"address": "example.com", "port": null, "tags": []}"#;
-        let endpoint: Endpoint = serde_json::from_str(json).unwrap();
-        assert!(
-            endpoint.enabled,
-            "Endpoint without enabled field should default to true"
-        );
-    }
-
-    #[test]
     fn test_endpoint_serialization() {
         let endpoint = Endpoint::new("example.com").with_enabled(false);
         let json = serde_json::to_string(&endpoint).unwrap();
@@ -343,11 +291,31 @@ mod tests {
             json.contains(r#""enabled":false"#),
             "Serialized JSON should contain enabled field"
         );
+        assert!(
+            json.contains("\"id\""),
+            "Serialized JSON should contain id field"
+        );
+    }
+
+    #[test]
+    fn test_endpoint_with_port() {
+        let endpoint = Endpoint::new("example.com").with_port(8080);
+        assert_eq!(endpoint.port, Some(8080i64), "Port should be set as i64");
+    }
+
+    #[test]
+    fn test_endpoint_with_tags() {
+        let endpoint = Endpoint::new("example.com").with_tags(vec!["db".to_string()]);
+        assert_eq!(
+            endpoint.tags,
+            vec!["db".to_string()],
+            "Tags should be set correctly"
+        );
     }
 
     #[test]
     fn test_agent_status_new_with_uuid() {
-        let agent_id = Uuid::new_v4();
+        let agent_id = Uuid::now_v7();
         let status = AgentStatus::new(agent_id);
         assert_eq!(status.agent_id, agent_id, "Agent ID should match");
         assert!(!status.is_running, "Agent should not be running by default");
@@ -357,12 +325,15 @@ mod tests {
             env!("CARGO_PKG_VERSION"),
             "agent_version should match package version"
         );
-        assert_eq!(status.config_version, 0, "config_version should default to 0");
+        assert_eq!(
+            status.config_version, 0,
+            "config_version should default to 0"
+        );
     }
 
     #[test]
     fn test_agent_status_serialization() {
-        let agent_id = Uuid::new_v4();
+        let agent_id = Uuid::now_v7();
         let status = AgentStatus::new(agent_id);
         let json = serde_json::to_string(&status).unwrap();
         assert!(
@@ -381,9 +352,9 @@ mod tests {
 
     #[test]
     fn test_agent_status_deserialization() {
-        let agent_id = Uuid::new_v4();
+        let agent_id = Uuid::now_v7();
         let json = format!(
-            r#"{{"agent_id":"{}","agent_version":"0.1.0","config_version":0,"is_running":false,"started_at":"1970-01-01T00:00:00Z","stopped_at":null,"checks_performed":0,"checks_successful":0,"checks_failed":0,"last_report_at":"1970-01-01T00:00:00Z","failed_report_count":0,"server_connected":false,"cached_reports":0}}"#,
+            r#"{{"agent_id":"{}","agent_version":"0.1.0","config_version":0,"is_running":false,"started_at":"1970-01-01T00:00:00Z","stopped_at":null,"checks_performed":0,"checks_successful":0,"checks_failed":0,"last_report_at":"1970-01-01T00:00:00Z","failed_report_count":0,"server_connected":false,"cache_stats":{{"len":0,"capacity":0}}}}"#,
             agent_id
         );
         let status: AgentStatus = serde_json::from_str(&json).unwrap();

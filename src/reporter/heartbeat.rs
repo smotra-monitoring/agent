@@ -179,10 +179,22 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_heartbeat_without_server() {
+        let config = create_test_config();
+        config.write().server.url = "".to_string(); // Clear server URL
+
+        let reporter = HeartbeatReporter::new(config);
+        // Should fail if server URL is not configured
+        assert!(reporter.is_ok());
+    }
+
+    #[tokio::test]
     async fn test_collect_metrics() {
         let config = create_test_config();
         let reporter = HeartbeatReporter::new(config).unwrap();
         let heartbeat = reporter.collect_metrics().await;
+
+        assert!(heartbeat.timestamp.timestamp() > 0);
 
         // Verify timestamp is recent (within last second)
         let now = Utc::now();

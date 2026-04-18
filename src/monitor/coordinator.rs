@@ -1,6 +1,7 @@
 //! Monitoring task coordination and execution
 
 use crate::agent_config::Config;
+use crate::cache::ResultCache;
 use crate::core::AgentStatus;
 use crate::error::Result;
 use crate::monitor::PingChecker;
@@ -23,6 +24,7 @@ type ResultSender = mpsc::UnboundedSender<MonitoringResult>;
 pub async fn run_monitoring(
     agent_config: Arc<RwLock<Config>>,
     agent_status: Arc<RwLock<AgentStatus>>,
+    result_cache: Arc<ResultCache>,
     agent_shutdown_rx: &mut broadcast::Receiver<()>,
 ) -> Result<()> {
     info!("Starting monitoring tasks");
@@ -42,6 +44,7 @@ pub async fn run_monitoring(
     // Process results
     let result_handle = {
         let agent_status = Arc::clone(&agent_status);
+        let result_cache = Arc::clone(&result_cache);
         let mut agent_shutdown_rx = agent_shutdown_rx.resubscribe();
 
         tokio::spawn(async move {
@@ -49,12 +52,22 @@ pub async fn run_monitoring(
                 tokio::select! {
                     Some(result) = result_rx.recv() => {
                         // Update statistics
-                        let mut s = agent_status.write();
-                        s.checks_performed += 1;
-                        if result.is_successful() {
-                            s.checks_successful += 1;
-                        } else {
-                            s.checks_failed += 1;
+                        {
+                            let mut s = agent_status.write();
+                            s.checks_performed += 1;
+                            if result.is_successful() {
+                                s.checks_successful += 1;
+                            } else {
+                                s.checks_failed += 1;
+                            }
+                        }
+                        result_cache.push(result).await;
+                        // Reflect current cache depth in agent status (after push to avoid off-by-one)
+                        let stats = result_cache.stats().await;
+                        {
+                            let mut s = agent_status.write();
+                            s.cache_stats.len = stats.len as i64;
+                            s.cache_stats.capacity = stats.capacity as i64;
                         }
                     }
                     _ = agent_shutdown_rx.recv() => {

@@ -3,7 +3,8 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use smotra::{
-    MonitoringPlugin, PluginRegistry, {CheckType, Endpoint, MonitoringResult, PluginResult},
+    MonitoringPlugin, PluginRegistry,
+    {CheckType, Endpoint, MonitoringResult, PluginCheck, PluginCheckType, PluginResult},
 };
 use std::collections::HashMap;
 
@@ -40,15 +41,18 @@ impl MonitoringPlugin for DummyPlugin {
             plugin_version: "1.0.0".to_string(),
             success: true,
             response_time_ms: Some(42.0),
-            error: None,
+            error_details: None,
             data: HashMap::new(),
         };
 
         Ok(MonitoringResult {
-            id: uuid::Uuid::new_v4(),
+            id: uuid::Uuid::now_v7(),
             agent_id: *agent_id,
-            target: endpoint.clone(),
-            check_type: CheckType::Plugin(plugin_result),
+            endpoint_id: endpoint.id,
+            check_type: CheckType::PluginCheck(PluginCheck {
+                r#type: PluginCheckType::Plugin,
+                result: plugin_result,
+            }),
             timestamp: chrono::Utc::now(),
         })
     }
@@ -98,7 +102,7 @@ async fn main() -> Result<()> {
     // Use a plugin
     println!("\nUsing 'ssl_checker' plugin...");
     if let Some(plugin) = registry.get("ssl_checker") {
-        let agent_id = uuid::Uuid::new_v4();
+        let agent_id = uuid::Uuid::now_v7();
         let endpoint = Endpoint::new("example.com").with_port(443);
 
         let result = plugin.check(&agent_id, &endpoint).await?;

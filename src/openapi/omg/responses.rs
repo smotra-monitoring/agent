@@ -36,7 +36,7 @@
 //!
 //! See [docs/OPENAPI_CODE_GENERATION.md] for more details.
 
-use super::generated::models::{AgentStatus, Error};
+use super::generated::models::{AgentCacheStats, AgentStatus, Error};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -86,7 +86,7 @@ impl Default for AgentStatus {
             last_report_at: DateTime::<Utc>::UNIX_EPOCH,
             failed_report_count: 0,
             server_connected: false,
-            cached_reports: 0,
+            cache_stats: AgentCacheStats { len: 0, capacity: 0 },
         }
     }
 }

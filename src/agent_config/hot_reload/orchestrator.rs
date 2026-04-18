@@ -229,7 +229,7 @@ mod tests {
 
         Config {
             version,
-            agent_id: uuid::Uuid::new_v4(),
+            agent_id: uuid::Uuid::now_v7(),
             monitoring: MonitoringConfig {
                 interval_secs,
                 ..MonitoringConfig::default()
@@ -244,7 +244,7 @@ mod tests {
         // Create a temporary config file
         let temp_file = NamedTempFile::new().unwrap();
         let config = Config {
-            agent_id: uuid::Uuid::new_v4(),
+            agent_id: uuid::Uuid::now_v7(),
             ..Config::default()
         };
         config.save_to_file_secure(temp_file.path()).await.unwrap();
