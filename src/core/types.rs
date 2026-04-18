@@ -30,8 +30,24 @@ impl MonitoringResult {
     /// Helper method to get the primary response time
     pub fn response_time_ms(&self) -> Option<f64> {
         match &self.check_type {
-            CheckType::PingCheck(c) => c.result.avg_response_time_ms,
-            CheckType::TracerouteCheck(c) => c.result.total_time_ms,
+            CheckType::PingCheck(c) => {
+                let latencies = &c.result.success_latencies;
+                if latencies.is_empty() {
+                    None
+                } else {
+                    Some(latencies.iter().sum::<f64>() / latencies.len() as f64)
+                }
+            }
+            CheckType::TracerouteCheck(c) => c.result.hops.last().and_then(|h| {
+                h.success_latencies.as_deref().and_then(|latencies| {
+                    if latencies.is_empty() {
+                        None
+                    } else {
+                        let avg = latencies.iter().sum::<f64>() / latencies.len() as f64;
+                        Some(avg)
+                    }
+                })
+            }),
             CheckType::TcpConnectCheck(c) => c.result.connect_time_ms,
             CheckType::UdpConnectCheck(c) => c.result.response_time_ms,
             CheckType::HttpGetCheck(c) => c.result.response_time_ms,

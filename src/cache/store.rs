@@ -174,7 +174,6 @@ mod tests {
                     successes: 1,
                     failures: 0,
                     success_latencies: vec![1.0],
-                    avg_response_time_ms: Some(1.0),
                     error_details: None,
                 },
             }),

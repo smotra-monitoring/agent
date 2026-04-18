@@ -202,7 +202,6 @@ pub struct PingResult {
     pub successes: i64,
     pub failures: i64,
     pub success_latencies: Vec<f64>,
-    pub avg_response_time_ms: Option<f64>,
     pub error_details: Option<ErrorDetails>,
 }
 
@@ -219,7 +218,6 @@ pub struct TracerouteCheck {
 pub struct TracerouteResult {
     pub hops: Vec<TracerouteHop>,
     pub target_reached: bool,
-    pub total_time_ms: Option<f64>,
     pub error_details: Option<ErrorDetails>,
 }
 
