@@ -108,14 +108,12 @@ pub struct StorageConfig {
     pub max_cache_age_secs: i64,
 }
 
-/// An endpoint to monitor
+/// An endpoint to monitor (IP address, hostname, or URL)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Endpoint {
     pub id: UUIDv7,
-    /// Original monitoring target hostname, IP address, or URL as configured
-    pub hostname: String,
-    /// Resolved IP address of the hostname (populated after DNS resolution)
-    pub resolved_ip: String,
+    /// IP address, hostname, or URL
+    pub address: String,
     pub port: Option<i64>,
     pub enabled: bool,
     /// Tags associated with the target
