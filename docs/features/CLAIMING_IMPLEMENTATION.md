@@ -111,6 +111,7 @@ These generated types are available through `use crate::openapi;` and should be 
 - `sha2 = "0.10"`: SHA-256 hashing
 - `hex = "0.4"`: Hexadecimal encoding
 - `hostname = "0.4"`: System hostname retrieval
+- `if-addrs = "0"`: Cross-platform network interface enumeration (IP discovery)
 - All dependencies properly integrated
 
 ### 6. Testing
@@ -239,7 +240,8 @@ X-API-KEY: <api-key-received-during-claiming>
 ### Endpoints
 
 1. **POST /api/v1/agent/register** (No authentication required)
-   - Request: `{ agentId, claimTokenHash, hostname, agentVersion }`
+   - Request: `{ agentId, claimTokenHash, hostname, agentVersion, ipAddresses }`
+   - `ipAddresses`: array of `{ ip, iface, family, recommended }` — all non-loopback, non-link-local interfaces; `recommended=true` marks the OS-selected source IP toward the server (UDP socket routing-table probe, no traffic sent)
    - Response: `{ status, pollUrl, claimUrl, expiresAt }`
 
 2. **GET /api/v1/agent/{agentId}/claim-status** (No authentication required during claiming)
@@ -262,7 +264,7 @@ X-API-KEY: <api-key-received-during-claiming>
 - **Unit Tests**: 15 tests
 - **Integration Tests**: 6 tests
 - **Total Tests**: 37 (all passing)
-- **Dependencies Added**: 3 (sha2, hex, hostname)
+- **Dependencies Added**: 4 (sha2, hex, hostname, if-addrs)
 
 ## Acceptance Criteria Met
 

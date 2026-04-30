@@ -111,8 +111,12 @@ mod tests {
     #[test]
     fn test_agent_registration_serialization() {
         let agent_id = Uuid::now_v7();
-        let registration =
-            AgentSelfRegistration::new(agent_id, "abc123".to_string(), "test-host".to_string());
+        let registration = AgentSelfRegistration::new(
+            agent_id,
+            "abc123".to_string(),
+            "test-host".to_string(),
+            vec![],
+        );
 
         let json = serde_json::to_value(&registration).unwrap();
 
@@ -120,6 +124,7 @@ mod tests {
         assert_eq!(json["claimTokenHash"], "abc123");
         assert_eq!(json["hostname"], "test-host");
         assert!(json["agentVersion"].is_string());
+        assert_eq!(json["ipAddresses"], serde_json::json!([]));
     }
 
     #[test]
@@ -174,8 +179,12 @@ mod tests {
             .await;
 
         let client = reqwest::Client::new();
-        let registration =
-            AgentSelfRegistration::new(agent_id, "test_hash".to_string(), "test-host".to_string());
+        let registration = AgentSelfRegistration::new(
+            agent_id,
+            "test_hash".to_string(),
+            "test-host".to_string(),
+            vec![],
+        );
 
         let result = register_with_retry(&client, &server.url(), registration, 3).await;
 
@@ -208,8 +217,12 @@ mod tests {
             .await;
 
         let client = reqwest::Client::new();
-        let registration =
-            AgentSelfRegistration::new(agent_id, "test_hash".to_string(), "test-host".to_string());
+        let registration = AgentSelfRegistration::new(
+            agent_id,
+            "test_hash".to_string(),
+            "test-host".to_string(),
+            vec![],
+        );
 
         // First registration
         let result1 = register_agent(&client, &server.url(), registration.clone()).await;

@@ -1,6 +1,7 @@
 //! Agent claiming workflow module
 
 mod display;
+mod network;
 mod polling;
 mod registration;
 mod token;

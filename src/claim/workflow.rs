@@ -69,8 +69,32 @@ impl<'a> Claim<'a> {
             .map(|h| h.to_string_lossy().to_string())
             .unwrap_or_else(|_| "unknown".to_string());
 
+        // Collect non-loopback, non-link-local interfaces.
+        // The recommended flag is set to the source IP the OS routing table
+        // would select for connections toward the server (Option A — UDP socket
+        // trick, zero traffic sent).
+        let ip_addresses = super::network::collect_interfaces(server_url);
+        if ip_addresses.is_empty() {
+            tracing::error!(
+                "No routable network interfaces found; server may be unable to reach agent"
+            );
+            return Err(Error::Network(
+                "No routable network interfaces found".to_string(),
+            ));
+        } else {
+            match ip_addresses.iter().find(|i| i.recommended) {
+                Some(r) => {
+                    info!(ip = %r.ip, iface = %r.iface, "Recommended agent IP toward server")
+                }
+                None => tracing::warn!(
+                    "Could not determine recommended IP (routing table probe failed)"
+                ),
+            }
+        }
+
         // Create registration
-        let registration = AgentSelfRegistration::new(agent_id, claim_token_hash, hostname);
+        let registration =
+            AgentSelfRegistration::new(agent_id, claim_token_hash, hostname, ip_addresses);
 
         // Create HTTP client
         let client = reqwest::Client::builder()
