@@ -35,10 +35,7 @@ fn routing_table_source_ip(server_addr: &str) -> Option<IpAddr> {
 /// Falls back to the original string if parsing fails.
 fn extract_host_port(url: &str) -> String {
     // Strip scheme
-    let without_scheme = url
-        .find("://")
-        .map(|i| &url[i + 3..])
-        .unwrap_or(url);
+    let without_scheme = url.find("://").map(|i| &url[i + 3..]).unwrap_or(url);
 
     // Strip path/query/fragment
     let host_port = without_scheme
@@ -107,7 +104,7 @@ pub fn collect_interfaces(server_url: &str) -> Vec<openapi::AgentNetworkInterfac
                 IpAddr::V6(_) => openapi::IpAddressFamily::Ipv6,
             };
 
-            let recommended = recommended_ip.map_or(false, |rec| rec == ip);
+            let recommended = recommended_ip == Some(ip);
 
             Some(openapi::AgentNetworkInterface {
                 ip: ip.to_string(),
@@ -139,10 +136,7 @@ mod tests {
 
         #[test]
         fn test_http_url_no_path() {
-            assert_eq!(
-                extract_host_port("http://10.0.0.1:80"),
-                "10.0.0.1:80"
-            );
+            assert_eq!(extract_host_port("http://10.0.0.1:80"), "10.0.0.1:80");
         }
 
         #[test]
