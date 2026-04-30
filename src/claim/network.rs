@@ -160,12 +160,14 @@ mod tests {
 
         #[test]
         fn test_link_local_start() {
+            assert!(is_ipv4_link_local(&Ipv4Addr::new(169, 254, 0, 0)));
             assert!(is_ipv4_link_local(&Ipv4Addr::new(169, 254, 0, 1)));
         }
 
         #[test]
         fn test_link_local_end() {
             assert!(is_ipv4_link_local(&Ipv4Addr::new(169, 254, 255, 254)));
+            assert!(is_ipv4_link_local(&Ipv4Addr::new(169, 254, 255, 255)));
         }
 
         #[test]
@@ -183,6 +185,8 @@ mod tests {
 
         #[test]
         fn test_fe80_is_link_local() {
+            let addr: Ipv6Addr = "fe80::0".parse().unwrap();
+            assert!(is_ipv6_link_local(&addr));
             let addr: Ipv6Addr = "fe80::1".parse().unwrap();
             assert!(is_ipv6_link_local(&addr));
         }
@@ -200,6 +204,8 @@ mod tests {
             assert!(!is_ipv6_link_local(&addr));
             let addr2: Ipv6Addr = "fc00::1".parse().unwrap();
             assert!(!is_ipv6_link_local(&addr2));
+            let addr3: Ipv6Addr = "dead:beef::1".parse().unwrap();
+            assert!(!is_ipv6_link_local(&addr3));
         }
     }
 
