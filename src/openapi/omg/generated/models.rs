@@ -3,7 +3,7 @@
 //!
 
 use chrono::{DateTime, Utc};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// AgentStatus
@@ -154,37 +154,37 @@ pub enum CheckType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PingCheckType {
     #[serde(rename = "ping")]
-    Ping
+    Ping,
 }
 /// TracerouteCheckType
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TracerouteCheckType {
     #[serde(rename = "traceroute")]
-    Traceroute
+    Traceroute,
 }
 /// TcpConnectCheckType
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TcpConnectCheckType {
     #[serde(rename = "tcpconnect")]
-    Tcpconnect
+    Tcpconnect,
 }
 /// UdpConnectCheckType
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UdpConnectCheckType {
     #[serde(rename = "udpconnect")]
-    Udpconnect
+    Udpconnect,
 }
 /// HttpGetCheckType
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HttpGetCheckType {
     #[serde(rename = "httpget")]
-    Httpget
+    Httpget,
 }
 /// PluginCheckType
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PluginCheckType {
     #[serde(rename = "plugin")]
-    Plugin
+    Plugin,
 }
 /// PingCheck
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -333,7 +333,7 @@ pub enum Type {
     #[serde(rename = "traceroute")]
     Traceroute,
     #[serde(rename = "custom")]
-    Custom
+    Custom,
 }
 /// Additional metric-specific data
 pub type Metadata = std::collections::HashMap<String, serde_json::Value>;
@@ -598,7 +598,7 @@ pub enum Severity {
     #[serde(rename = "warning")]
     Warning,
     #[serde(rename = "info")]
-    Info
+    Info,
 }
 /// Alert
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -644,7 +644,7 @@ pub enum Operator {
     #[serde(rename = "equals")]
     Equals,
     #[serde(rename = "not_equals")]
-    NotEquals
+    NotEquals,
 }
 /// Aggregation
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -658,7 +658,7 @@ pub enum Aggregation {
     #[serde(rename = "sum")]
     Sum,
     #[serde(rename = "count")]
-    Count
+    Count,
 }
 /// Filters
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -687,46 +687,6 @@ pub struct NotificationChannel {
     pub r#type: Type,
     /// Channel-specific configuration
     pub configuration: Option<std::collections::HashMap<String, serde_json::Value>>,
-}
-
-/// GrantType
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum GrantType {
-    #[serde(rename = "authorization_code")]
-    AuthorizationCode
-}
-/// AuthorizationCodeTokenRequest
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuthorizationCodeTokenRequest {
-    pub grant_type: GrantType,
-    /// Authorization code from callback
-    pub code: String,
-    /// Must match original authorization request
-    pub redirect_uri: String,
-    pub client_id: String,
-    /// Required for confidential clients
-    pub client_secret: Option<String>,
-    /// PKCE code verifier
-    pub code_verifier: Option<String>,
-}
-
-/// RefreshTokenRequest
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RefreshTokenRequest {
-    pub grant_type: GrantType,
-    pub refresh_token: String,
-    /// Optional scope restriction
-    pub scope: Option<String>,
-}
-
-/// ClientCredentialsTokenRequest
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClientCredentialsTokenRequest {
-    pub grant_type: GrantType,
-    pub client_id: String,
-    pub client_secret: String,
-    /// Space-separated list of requested scopes
-    pub scope: Option<String>,
 }
 
 /// TokenResponse
@@ -805,7 +765,7 @@ pub enum Plan {
     #[serde(rename = "professional")]
     Professional,
     #[serde(rename = "enterprise")]
-    Enterprise
+    Enterprise,
 }
 /// Settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -863,7 +823,7 @@ pub enum AgentHealthStatus {
     #[serde(rename = "healthy")]
     Healthy,
     #[serde(rename = "degraded")]
-    Degraded
+    Degraded,
 }
 /// Status of a monitoring check
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -875,13 +835,13 @@ pub enum MetricStatus {
     #[serde(rename = "degraded")]
     Degraded,
     #[serde(rename = "unknown")]
-    Unknown
+    Unknown,
 }
 /// Status of agent registration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RegistrationStatus {
     #[serde(rename = "pending_claim")]
-    PendingClaim
+    PendingClaim,
 }
 /// IP address family (IPv4 or IPv6)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -889,25 +849,25 @@ pub enum IpAddressFamily {
     #[serde(rename = "ipv4")]
     Ipv4,
     #[serde(rename = "ipv6")]
-    Ipv6
+    Ipv6,
 }
 /// Pending claim status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClaimStatusPendingEnum {
     #[serde(rename = "pending_claim")]
-    PendingClaim
+    PendingClaim,
 }
 /// Claimed status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClaimStatusClaimedEnum {
     #[serde(rename = "claimed")]
-    Claimed
+    Claimed,
 }
 /// Status in claim response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClaimResponseStatus {
     #[serde(rename = "claimed")]
-    Claimed
+    Claimed,
 }
 /// Report acknowledgment status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -915,7 +875,7 @@ pub enum ReportAckStatus {
     #[serde(rename = "accepted")]
     Accepted,
     #[serde(rename = "queued")]
-    Queued
+    Queued,
 }
 /// Metric status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -927,7 +887,7 @@ pub enum AggregatedMetricStatus {
     #[serde(rename = "degraded")]
     Degraded,
     #[serde(rename = "unknown")]
-    Unknown
+    Unknown,
 }
 /// Alert status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -937,7 +897,7 @@ pub enum AlertStatus {
     #[serde(rename = "acknowledged")]
     Acknowledged,
     #[serde(rename = "resolved")]
-    Resolved
+    Resolved,
 }
 /// User account status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -947,7 +907,7 @@ pub enum UserStatus {
     #[serde(rename = "inactive")]
     Inactive,
     #[serde(rename = "suspended")]
-    Suspended
+    Suspended,
 }
 /// Updated user status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -957,7 +917,7 @@ pub enum UpdateUserStatus {
     #[serde(rename = "inactive")]
     Inactive,
     #[serde(rename = "suspended")]
-    Suspended
+    Suspended,
 }
 /// Organization status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -967,7 +927,7 @@ pub enum OrganizationStatus {
     #[serde(rename = "suspended")]
     Suspended,
     #[serde(rename = "trial")]
-    Trial
+    Trial,
 }
 /// System health status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -977,7 +937,7 @@ pub enum SystemHealthStatus {
     #[serde(rename = "degraded")]
     Degraded,
     #[serde(rename = "unhealthy")]
-    Unhealthy
+    Unhealthy,
 }
 /// Component health status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -987,7 +947,7 @@ pub enum ComponentHealthStatus {
     #[serde(rename = "degraded")]
     Degraded,
     #[serde(rename = "unhealthy")]
-    Unhealthy
+    Unhealthy,
 }
 /// UUID version 7 as per RFC 4122
 pub type UUIDv7 = Uuid;
@@ -1021,27 +981,62 @@ pub struct AcknowledgeAlertRequestBody {
     pub note: Option<String>,
 }
 
-/// Hint about token type
+/// OAuth2 grant type
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum GrantType {
+    #[serde(rename = "authorization_code")]
+    AuthorizationCode,
+    #[serde(rename = "refresh_token")]
+    RefreshToken,
+}
+/// Oauth2TokenRequestBody
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Oauth2TokenRequestBody {
+    /// Identity provider name. Must match a provider configured on the server.
+    /// Built-in values: okta, auth0, azure, google, github.
+    pub provider: String,
+    /// OAuth2 grant type
+    pub grant_type: GrantType,
+    /// Authorization code (required for authorization_code grant)
+    pub code: Option<String>,
+    /// Must exactly match the redirect_uri used in the authorization request (required for authorization_code grant)
+    pub redirect_uri: Option<String>,
+    /// PKCE code verifier (required for authorization_code grant)
+    pub code_verifier: Option<String>,
+    /// Refresh token (required for refresh_token grant)
+    pub refresh_token: Option<String>,
+    /// Optional scope restriction (refresh_token grant only)
+    pub scope: Option<String>,
+}
+
+/// Optional hint about the token type
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TokenTypeHint {
     #[serde(rename = "access_token")]
     AccessToken,
     #[serde(rename = "refresh_token")]
-    RefreshToken
+    RefreshToken,
 }
 /// Oauth2RevokeRequestBody
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Oauth2RevokeRequestBody {
+    /// Identity provider name. Must match a provider configured on the server.
+    /// Built-in values: okta, auth0, azure, google, github.
+    pub provider: String,
     /// Token to revoke
     pub token: String,
-    /// Hint about token type
+    /// Optional hint about the token type
     pub token_type_hint: Option<TokenTypeHint>,
 }
 
 /// LogoutRequestBody
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogoutRequestBody {
-    /// Where to redirect after logout
+    /// Identity provider name. Must match a provider configured on the server.
+    /// Built-in values: okta, auth0, azure, google, github.
+    pub provider: String,
+    /// Optional URI to redirect to after IDP logout completes.
+    /// Forwarded to the IDP end-session endpoint as post_logout_redirect_uri.
     pub post_logout_redirect_uri: Option<String>,
 }
 
@@ -1103,7 +1098,7 @@ pub struct AcknowledgeAlertRequest {
 /// Oauth2TokenRequest
 #[derive(Debug, Clone, Serialize)]
 pub struct Oauth2TokenRequest {
-    pub body: serde_json::Value,
+    pub body: Oauth2TokenRequestBody,
 }
 /// Oauth2RevokeRequest
 #[derive(Debug, Clone, Serialize)]
@@ -1240,12 +1235,17 @@ pub struct AcknowledgeAlertResponse200 {
 pub struct Oauth2TokenResponse200 {
     pub body: TokenResponse,
 }
+/// Token revoked (or acknowledged as no-op for providers without revocation support).
+#[derive(Debug, Clone, Deserialize)]
+pub struct Oauth2RevokeResponse200 {
+    pub body: serde_json::Value,
+}
 /// User information retrieved
 #[derive(Debug, Clone, Deserialize)]
 pub struct GetUserInfoResponse200 {
     pub body: UserInfo,
 }
-/// Logout successful
+/// Logout acknowledged (providers without end-session endpoint, e.g. GitHub).
 #[derive(Debug, Clone, Deserialize)]
 pub struct LogoutResponse200 {
     pub body: serde_json::Value,
