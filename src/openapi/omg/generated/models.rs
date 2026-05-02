@@ -374,6 +374,21 @@ pub struct AgentRegistration {
     pub tags: Option<std::collections::HashMap<String, String>>,
 }
 
+/// AgentNetworkInterface
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentNetworkInterface {
+    /// IP address of the network interface (IPv4 or IPv6, excluding loopback and link-local)
+    pub ip: String,
+    /// Name of the network interface
+    pub iface: String,
+    pub family: IpAddressFamily,
+    /// Whether this address is recommended for the server to use when communicating
+    /// with the agent. Determined by the agent using the OS routing table: the source
+    /// IP the OS selects when opening a connection toward the server is marked as
+    /// recommended. Only one entry will have recommended=true.
+    pub recommended: bool,
+}
+
 /// AgentSelfRegistration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentSelfRegistration {
@@ -387,6 +402,14 @@ pub struct AgentSelfRegistration {
     /// Version of the agent software
     #[serde(rename = "agentVersion")]
     pub agent_version: String,
+    /// List of all non-loopback, non-link-local network interfaces on the agent host.
+    /// Loopback (127.x.x.x / ::1) and link-local (169.254.x.x / fe80::/10) addresses
+    /// are excluded. The server should store all addresses and allow the operator to
+    /// select the preferred one during the claim process. The entry with
+    /// recommended=true reflects the OS-selected source IP for connections toward
+    /// the server (determined via routing table, no traffic sent).
+    #[serde(rename = "ipAddresses")]
+    pub ip_addresses: Vec<AgentNetworkInterface>,
 }
 
 /// AgentRegistrationResponse
@@ -666,46 +689,6 @@ pub struct NotificationChannel {
     pub configuration: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
 
-/// GrantType
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum GrantType {
-    #[serde(rename = "authorization_code")]
-    AuthorizationCode,
-}
-/// AuthorizationCodeTokenRequest
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AuthorizationCodeTokenRequest {
-    pub grant_type: GrantType,
-    /// Authorization code from callback
-    pub code: String,
-    /// Must match original authorization request
-    pub redirect_uri: String,
-    pub client_id: String,
-    /// Required for confidential clients
-    pub client_secret: Option<String>,
-    /// PKCE code verifier
-    pub code_verifier: Option<String>,
-}
-
-/// RefreshTokenRequest
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RefreshTokenRequest {
-    pub grant_type: GrantType,
-    pub refresh_token: String,
-    /// Optional scope restriction
-    pub scope: Option<String>,
-}
-
-/// ClientCredentialsTokenRequest
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClientCredentialsTokenRequest {
-    pub grant_type: GrantType,
-    pub client_id: String,
-    pub client_secret: String,
-    /// Space-separated list of requested scopes
-    pub scope: Option<String>,
-}
-
 /// TokenResponse
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TokenResponse {
@@ -860,6 +843,14 @@ pub enum RegistrationStatus {
     #[serde(rename = "pending_claim")]
     PendingClaim,
 }
+/// IP address family (IPv4 or IPv6)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum IpAddressFamily {
+    #[serde(rename = "ipv4")]
+    Ipv4,
+    #[serde(rename = "ipv6")]
+    Ipv6,
+}
 /// Pending claim status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClaimStatusPendingEnum {
@@ -990,7 +981,35 @@ pub struct AcknowledgeAlertRequestBody {
     pub note: Option<String>,
 }
 
-/// Hint about token type
+/// OAuth2 grant type
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum GrantType {
+    #[serde(rename = "authorization_code")]
+    AuthorizationCode,
+    #[serde(rename = "refresh_token")]
+    RefreshToken,
+}
+/// Oauth2TokenRequestBody
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Oauth2TokenRequestBody {
+    /// Identity provider name. Must match a provider configured on the server.
+    /// Built-in values: okta, auth0, azure, google, github.
+    pub provider: String,
+    /// OAuth2 grant type
+    pub grant_type: GrantType,
+    /// Authorization code (required for authorization_code grant)
+    pub code: Option<String>,
+    /// Must exactly match the redirect_uri used in the authorization request (required for authorization_code grant)
+    pub redirect_uri: Option<String>,
+    /// PKCE code verifier (required for authorization_code grant)
+    pub code_verifier: Option<String>,
+    /// Refresh token (required for refresh_token grant)
+    pub refresh_token: Option<String>,
+    /// Optional scope restriction (refresh_token grant only)
+    pub scope: Option<String>,
+}
+
+/// Optional hint about the token type
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TokenTypeHint {
     #[serde(rename = "access_token")]
@@ -1001,16 +1020,23 @@ pub enum TokenTypeHint {
 /// Oauth2RevokeRequestBody
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Oauth2RevokeRequestBody {
+    /// Identity provider name. Must match a provider configured on the server.
+    /// Built-in values: okta, auth0, azure, google, github.
+    pub provider: String,
     /// Token to revoke
     pub token: String,
-    /// Hint about token type
+    /// Optional hint about the token type
     pub token_type_hint: Option<TokenTypeHint>,
 }
 
 /// LogoutRequestBody
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogoutRequestBody {
-    /// Where to redirect after logout
+    /// Identity provider name. Must match a provider configured on the server.
+    /// Built-in values: okta, auth0, azure, google, github.
+    pub provider: String,
+    /// Optional URI to redirect to after IDP logout completes.
+    /// Forwarded to the IDP end-session endpoint as post_logout_redirect_uri.
     pub post_logout_redirect_uri: Option<String>,
 }
 
@@ -1072,7 +1098,7 @@ pub struct AcknowledgeAlertRequest {
 /// Oauth2TokenRequest
 #[derive(Debug, Clone, Serialize)]
 pub struct Oauth2TokenRequest {
-    pub body: serde_json::Value,
+    pub body: Oauth2TokenRequestBody,
 }
 /// Oauth2RevokeRequest
 #[derive(Debug, Clone, Serialize)]
@@ -1209,12 +1235,17 @@ pub struct AcknowledgeAlertResponse200 {
 pub struct Oauth2TokenResponse200 {
     pub body: TokenResponse,
 }
+/// Token revoked (or acknowledged as no-op for providers without revocation support).
+#[derive(Debug, Clone, Deserialize)]
+pub struct Oauth2RevokeResponse200 {
+    pub body: serde_json::Value,
+}
 /// User information retrieved
 #[derive(Debug, Clone, Deserialize)]
 pub struct GetUserInfoResponse200 {
     pub body: UserInfo,
 }
-/// Logout successful
+/// Logout acknowledged (providers without end-session endpoint, e.g. GitHub).
 #[derive(Debug, Clone, Deserialize)]
 pub struct LogoutResponse200 {
     pub body: serde_json::Value,
