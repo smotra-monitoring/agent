@@ -1,17 +1,16 @@
 //! Common types used throughout the agent
 
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 // Re-export from generated OpenAPI types — these are the canonical wire-level types.
 pub use crate::openapi::AgentStatus;
 pub use crate::openapi::MonitoringResult;
 pub use crate::openapi::{
-    CheckType, Endpoint, ErrorDetails, HttpGetCheck, HttpGetCheckType, HttpGetResult, PingCheck,
-    PingCheckType, PingResult, PluginCheck, PluginCheckType, PluginResult, TcpConnectCheck,
-    TcpConnectCheckType, TcpConnectResult, TracerouteCheck, TracerouteCheckType, TracerouteHop,
-    TracerouteResult, UdpConnectCheck, UdpConnectCheckType, UdpConnectResult,
+    AgentHealthStatus, AgentHeartbeat, CheckType, Endpoint, ErrorDetails, HttpGetCheck,
+    HttpGetCheckType, HttpGetResult, PingCheck, PingCheckType, PingResult, PluginCheck,
+    PluginCheckType, PluginResult, TcpConnectCheck, TcpConnectCheckType, TcpConnectResult,
+    TracerouteCheck, TracerouteCheckType, TracerouteHop, TracerouteResult, UdpConnectCheck,
+    UdpConnectCheckType, UdpConnectResult,
 };
 
 impl MonitoringResult {
@@ -164,65 +163,6 @@ impl Endpoint {
     pub fn with_enabled(mut self, enabled: bool) -> Self {
         self.enabled = enabled;
         self
-    }
-}
-
-/// Agent heartbeat status
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
-#[serde(rename_all = "lowercase")]
-pub enum AgentHealthStatus {
-    #[default]
-    Healthy,
-    Degraded,
-}
-
-/// Agent heartbeat data sent to the server
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AgentHeartbeat {
-    /// Timestamp when the heartbeat was generated
-    pub timestamp: DateTime<Utc>,
-    /// Current health status of the agent
-    #[serde(default)]
-    pub status: AgentHealthStatus,
-    /// CPU usage percentage (0.0 to 100.0)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cpu_usage_percent: Option<f32>,
-    /// Memory usage percentage (0.0 to 100.0)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub memory_usage_percent: Option<f32>,
-}
-
-impl AgentHeartbeat {
-    /// Create a new heartbeat with the current timestamp
-    pub fn new() -> Self {
-        Self {
-            timestamp: Utc::now(),
-            status: AgentHealthStatus::Healthy,
-            cpu_usage_percent: None,
-            memory_usage_percent: None,
-        }
-    }
-
-    /// Create a heartbeat with system metrics
-    pub fn with_metrics(cpu_usage: Option<f32>, memory_usage: Option<f32>) -> Self {
-        Self {
-            timestamp: Utc::now(),
-            status: AgentHealthStatus::Healthy,
-            cpu_usage_percent: cpu_usage,
-            memory_usage_percent: memory_usage,
-        }
-    }
-
-    /// Set the health status
-    pub fn with_status(mut self, status: AgentHealthStatus) -> Self {
-        self.status = status;
-        self
-    }
-}
-
-impl Default for AgentHeartbeat {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

@@ -315,10 +315,17 @@ pub struct ErrorDetails {
 /// AgentHeartbeat
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentHeartbeat {
+    /// Agent-local timestamp when the heartbeat was generated (RFC3339)
     pub timestamp: DateTime<Utc>,
-    pub status: Option<AgentHealthStatus>,
-    pub cpu_usage_percent: Option<f64>,
-    pub memory_usage_mb: Option<f64>,
+    pub status: AgentHealthStatus,
+    /// CPU utilisation percentage (0.0–100.0)
+    pub cpu_usage_percent: f64,
+    /// Resident memory currently in use (MB)
+    pub memory_usage_mb: f64,
+    /// Total physical memory available (MB)
+    pub memory_total_mb: f64,
+    /// System uptime in seconds
+    pub system_uptime_secs: i64,
 }
 
 /// Type of check performed
