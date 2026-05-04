@@ -43,6 +43,7 @@ impl HeartbeatReporter {
     async fn collect_metrics(&self) -> AgentHeartbeat {
         let cpu_usage_percent = self.get_cpu_usage().await;
         let (memory_usage_mb, memory_total_mb) = self.get_memory_mb().await;
+        let system_uptime_secs = self.get_uptime_secs().await;
 
         // Determine health status based on metrics
         let mut status = AgentHealthStatus::Healthy;
@@ -61,6 +62,7 @@ impl HeartbeatReporter {
             cpu_usage_percent,
             memory_usage_mb,
             memory_total_mb,
+            system_uptime_secs,
         }
     }
 
@@ -138,6 +140,11 @@ impl HeartbeatReporter {
         let usage_mb = system.used_memory() as f64 / 1024.0 / 1024.0;
         (usage_mb, total_mb)
     }
+
+    /// Get system uptime in seconds. Returns 0 on unsupported platforms.
+    async fn get_uptime_secs(&self) -> i64 {
+        System::uptime() as i64
+    }
 }
 
 #[cfg(test)]
@@ -201,6 +208,7 @@ mod tests {
             cpu_usage_percent: 45.5,
             memory_usage_mb: 512.0,
             memory_total_mb: 8192.0,
+            system_uptime_secs: 3600,
         };
         let json = serde_json::to_string(&heartbeat).unwrap();
 
@@ -210,12 +218,14 @@ mod tests {
         assert!(json.contains("cpu_usage_percent"));
         assert!(json.contains("memory_usage_mb"));
         assert!(json.contains("memory_total_mb"));
+        assert!(json.contains("system_uptime_secs"));
 
         // Verify deserialization works
         let deserialized: AgentHeartbeat = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.cpu_usage_percent, 45.5);
         assert_eq!(deserialized.memory_usage_mb, 512.0);
         assert_eq!(deserialized.memory_total_mb, 8192.0);
+        assert_eq!(deserialized.system_uptime_secs, 3600);
     }
 
     #[test]
@@ -226,6 +236,7 @@ mod tests {
             cpu_usage_percent: 0.0,
             memory_usage_mb: 0.0,
             memory_total_mb: 0.0,
+            system_uptime_secs: 0,
         };
         assert!(matches!(heartbeat.status, AgentHealthStatus::Healthy));
     }
@@ -238,6 +249,7 @@ mod tests {
             cpu_usage_percent: 95.0,
             memory_usage_mb: 7500.0,
             memory_total_mb: 8192.0,
+            system_uptime_secs: 86400,
         };
         assert!(matches!(heartbeat.status, AgentHealthStatus::Degraded));
     }
@@ -253,6 +265,9 @@ mod tests {
         let (usage_mb, total_mb) = reporter.get_memory_mb().await;
         assert!(usage_mb >= 0.0, "Memory usage should be non-negative");
         assert!(total_mb >= 0.0, "Total memory should be non-negative");
+
+        let uptime = reporter.get_uptime_secs().await;
+        assert!(uptime >= 0, "System uptime should be non-negative");
     }
 
     #[tokio::test]

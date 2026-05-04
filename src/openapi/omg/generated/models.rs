@@ -324,6 +324,8 @@ pub struct AgentHeartbeat {
     pub memory_usage_mb: f64,
     /// Total physical memory available (MB)
     pub memory_total_mb: f64,
+    /// System uptime in seconds
+    pub system_uptime_secs: i64,
 }
 
 /// Type of check performed
