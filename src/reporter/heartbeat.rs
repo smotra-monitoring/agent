@@ -3,6 +3,7 @@
 use crate::agent_config::Config;
 use crate::core::{AgentHealthStatus, AgentHeartbeat};
 use crate::error::{Error, Result};
+use chrono::Utc;
 use parking_lot::RwLock;
 use std::sync::Arc;
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
@@ -39,27 +40,28 @@ impl HeartbeatReporter {
     }
 
     /// Collect current system metrics for heartbeat
-    pub async fn collect_metrics(&self) -> AgentHeartbeat {
-        let cpu_usage = self.get_cpu_usage().await;
-        let memory_usage = self.get_memory_usage().await;
-
-        let mut heartbeat = AgentHeartbeat::with_metrics(cpu_usage, memory_usage);
+    async fn collect_metrics(&self) -> AgentHeartbeat {
+        let cpu_usage_percent = self.get_cpu_usage().await;
+        let (memory_usage_mb, memory_total_mb) = self.get_memory_mb().await;
 
         // Determine health status based on metrics
-        if let Some(cpu) = cpu_usage {
-            if cpu > 90.0 {
-                heartbeat = heartbeat.with_status(AgentHealthStatus::Degraded);
-            }
+        let mut status = AgentHealthStatus::Healthy;
+
+        if cpu_usage_percent > 90.0 {
+            status = AgentHealthStatus::Degraded;
         }
 
-        if let Some(mem) = memory_usage {
-            // If memory usage is above 90%, consider degraded
-            if mem > 90.0 {
-                heartbeat = heartbeat.with_status(AgentHealthStatus::Degraded);
-            }
+        if memory_total_mb > 0.0 && (memory_usage_mb / memory_total_mb) * 100.0 > 90.0 {
+            status = AgentHealthStatus::Degraded;
         }
 
-        heartbeat
+        AgentHeartbeat {
+            timestamp: Utc::now(),
+            status,
+            cpu_usage_percent,
+            memory_usage_mb,
+            memory_total_mb,
+        }
     }
 
     /// Send heartbeat to the server
@@ -114,41 +116,27 @@ impl HeartbeatReporter {
         }
     }
 
-    /// Get current CPU usage percentage
-    async fn get_cpu_usage(&self) -> Option<f32> {
+    /// Get current CPU usage percentage (0.0–100.0)
+    async fn get_cpu_usage(&self) -> f64 {
         let mut system = self.system.lock().await;
-
-        // Refresh CPU info
         system.refresh_cpu_all();
-
-        // Get global CPU usage
         let cpu_usage = system.global_cpu_usage();
-
+        // global_cpu_usage() returns f32; 0.0 on the first sample (no delta yet)
         if cpu_usage.is_finite() && cpu_usage >= 0.0 {
-            Some(cpu_usage)
+            cpu_usage as f64
         } else {
-            None
+            0.0
         }
     }
 
-    /// Get current memory usage in MB
-    async fn get_memory_usage(&self) -> Option<f32> {
+    /// Get current memory usage and total memory in megabytes.
+    /// Returns (usage_mb, total_mb); both are 0.0 on unsupported platforms.
+    async fn get_memory_mb(&self) -> (f64, f64) {
         let mut system = self.system.lock().await;
-
-        // Refresh memory info
         system.refresh_memory();
-
-        // Get total and used memory
-        let total_memory = system.total_memory();
-        let used_memory = system.used_memory();
-
-        if total_memory > 0 {
-            // Calculate percentage
-            let memory_percent = (used_memory as f64 / total_memory as f64) * 100.0;
-            Some(memory_percent as f32)
-        } else {
-            None
-        }
+        let total_mb = system.total_memory() as f64 / 1024.0 / 1024.0;
+        let usage_mb = system.used_memory() as f64 / 1024.0 / 1024.0;
+        (usage_mb, total_mb)
     }
 }
 
@@ -207,50 +195,64 @@ mod tests {
 
     #[test]
     fn test_heartbeat_serialization() {
-        let heartbeat = AgentHeartbeat::with_metrics(Some(45.5), Some(512.0));
+        let heartbeat = AgentHeartbeat {
+            timestamp: Utc::now(),
+            status: AgentHealthStatus::Healthy,
+            cpu_usage_percent: 45.5,
+            memory_usage_mb: 512.0,
+            memory_total_mb: 8192.0,
+        };
         let json = serde_json::to_string(&heartbeat).unwrap();
 
         // Verify JSON contains expected fields
         assert!(json.contains("timestamp"));
         assert!(json.contains("status"));
         assert!(json.contains("cpu_usage_percent"));
-        assert!(json.contains("memory_usage_percent"));
+        assert!(json.contains("memory_usage_mb"));
+        assert!(json.contains("memory_total_mb"));
 
         // Verify deserialization works
         let deserialized: AgentHeartbeat = serde_json::from_str(&json).unwrap();
-        assert_eq!(deserialized.cpu_usage_percent, Some(45.5));
-        assert_eq!(deserialized.memory_usage_percent, Some(512.0));
+        assert_eq!(deserialized.cpu_usage_percent, 45.5);
+        assert_eq!(deserialized.memory_usage_mb, 512.0);
+        assert_eq!(deserialized.memory_total_mb, 8192.0);
     }
 
     #[test]
     fn test_heartbeat_default_status() {
-        let heartbeat = AgentHeartbeat::new();
-        assert_eq!(heartbeat.status, AgentHealthStatus::Healthy);
+        let heartbeat = AgentHeartbeat {
+            timestamp: Utc::now(),
+            status: AgentHealthStatus::Healthy,
+            cpu_usage_percent: 0.0,
+            memory_usage_mb: 0.0,
+            memory_total_mb: 0.0,
+        };
+        assert!(matches!(heartbeat.status, AgentHealthStatus::Healthy));
     }
 
     #[test]
     fn test_heartbeat_with_status() {
-        let heartbeat = AgentHeartbeat::new().with_status(AgentHealthStatus::Degraded);
-        assert_eq!(heartbeat.status, AgentHealthStatus::Degraded);
+        let heartbeat = AgentHeartbeat {
+            timestamp: Utc::now(),
+            status: AgentHealthStatus::Degraded,
+            cpu_usage_percent: 95.0,
+            memory_usage_mb: 7500.0,
+            memory_total_mb: 8192.0,
+        };
+        assert!(matches!(heartbeat.status, AgentHealthStatus::Degraded));
     }
 
     #[tokio::test]
     async fn test_system_metrics_collection() {
         let reporter = HeartbeatReporter::new(create_test_config()).unwrap();
 
-        // Get CPU usage
         let cpu = reporter.get_cpu_usage().await;
-        if let Some(cpu_val) = cpu {
-            assert!(cpu_val >= 0.0, "CPU usage should be non-negative");
-            assert!(cpu_val <= 100.0, "CPU usage should not exceed 100%");
-        }
+        assert!(cpu >= 0.0, "CPU usage should be non-negative");
+        assert!(cpu <= 100.0, "CPU usage should not exceed 100%");
 
-        // Get memory usage
-        let mem = reporter.get_memory_usage().await;
-        if let Some(mem_val) = mem {
-            assert!(mem_val > 0.0, "Memory usage should be positive");
-            assert!(mem_val <= 100.0, "Memory usage should not exceed 100%");
-        }
+        let (usage_mb, total_mb) = reporter.get_memory_mb().await;
+        assert!(usage_mb >= 0.0, "Memory usage should be non-negative");
+        assert!(total_mb >= 0.0, "Total memory should be non-negative");
     }
 
     #[tokio::test]
