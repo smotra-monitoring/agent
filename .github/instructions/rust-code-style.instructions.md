@@ -4,7 +4,23 @@ applyTo: "**/*.rs"
 
 # Code Organization
 
-- **Module Structure**: `mod.rs` files should contain only module declarations (`mod`) and re-exports (`pub use`). No functional code (implementations, functions, structs) should be placed in `mod.rs` files — these belong in dedicated files within the module directory.
+## mod.rs — Re-exports Only
+
+**CRITICAL**: `mod.rs` files MUST contain **only** module declarations (`mod`) and re-exports (`pub use`). No structs, enums, traits, `impl` blocks, functions, or any other functional code is allowed in `mod.rs`. Place all implementation in dedicated files within the module directory.
+
+```rust
+// ✅ CORRECT — mod.rs
+pub mod loader;
+pub mod types;
+pub use loader::AgentConfig;
+pub use types::ConfigError;
+
+// ❌ WRONG — do not put any of this in mod.rs
+pub struct AgentConfig { /* ... */ }   // belongs in types.rs
+pub fn load_config() { /* ... */ }     // belongs in loader.rs
+impl AgentConfig { /* ... */ }         // belongs in types.rs
+```
+
 - **Visibility**: Make methods and functions private by default. Only mark items as `pub` when they are explicitly needed as part of the public API. Avoid proliferating `pub fn` unnecessarily — every public item increases the API surface and maintenance burden. Ask yourself: "Does this need to be public, or is it an implementation detail?"
 - `utilities` module — private support functions for the containing module only.
 - `support` module — external functions usable by other crates in the cargo workspace.
