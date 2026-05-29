@@ -2,9 +2,10 @@ aarch
 aws
 bincode
 Buf
-Bulima
+Bulma
 CLA
 cloudfront
+codegen
 conifg
 czf
 datacenter
@@ -20,6 +21,7 @@ HOTRELOAD
 httpget
 iface
 IMO
+justfile
 libc
 lifecycle
 mcp
@@ -27,6 +29,7 @@ mockall
 modelcontextprotocol
 MQTT
 Newtype
+nocapture
 OAuth
 omg
 openapi
@@ -37,6 +40,7 @@ proptest
 quickcheck
 RAII
 Ratatui
+Refactors
 reqwest
 Rhai
 roadmap
@@ -65,5 +69,4 @@ vec
 versioning
 wontfix
 workflows
-workspaces
 yml
