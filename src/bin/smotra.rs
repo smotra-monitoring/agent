@@ -2,6 +2,7 @@
 
 use clap::Parser;
 use smotra::{Agent, Claim, Config, Endpoint, Result};
+use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 use tracing::{error, info};
 
@@ -18,23 +19,50 @@ struct Cli {
     #[arg(short, long, default_value = "info")]
     log_level: String,
 
+    /// Write logs to a file (append mode) instead of stdout.
+    /// Useful when not running under systemd or when a persistent log file is preferred.
+    #[arg(long)]
+    log_file: Option<PathBuf>,
+
     /// Generate default configuration and exit
     #[arg(long)]
     gen_config: bool,
 }
 
-/// Initializes the tracing subscriber using the provided log level.
+/// Initializes the tracing subscriber.
+///
+/// When `log_file` is provided, logs are appended to that file with ANSI disabled.
+/// When logging to stdout, ANSI colours are enabled only when stdout is a TTY so
+/// that journal entries (under systemd `StandardOutput=journal`) remain clean.
 /// `RUST_LOG` environment variable takes precedence over `log_level`.
-fn init_tracing(log_level: &str) {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(log_level)),
-        )
-        .with_target(true)
-        .with_thread_ids(true)
-        .with_line_number(true)
-        .init();
+fn init_tracing(log_level: &str, log_file: Option<&Path>) {
+    let filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new(log_level));
+
+    if let Some(path) = log_file {
+        let file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .unwrap_or_else(|e| panic!("Failed to open log file {}: {}", path.display(), e));
+
+        tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .with_target(true)
+            .with_thread_ids(true)
+            .with_line_number(true)
+            .with_ansi(false)
+            .with_writer(std::sync::Mutex::new(file))
+            .init();
+    } else {
+        tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .with_target(true)
+            .with_thread_ids(true)
+            .with_line_number(true)
+            .with_ansi(std::io::stderr().is_terminal())
+            .init();
+    }
 }
 
 /// Generates a default configuration file at `path` with a sample endpoint and exits.
@@ -112,7 +140,7 @@ fn print_info(config: &Config) -> Result<()> {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    init_tracing(&cli.log_level);
+    init_tracing(&cli.log_level, cli.log_file.as_deref());
 
     if cli.gen_config {
         return generate_config(&cli.config).await;

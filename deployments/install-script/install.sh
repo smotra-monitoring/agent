@@ -136,7 +136,7 @@ detect_platform() {
 check_privileges() {
     if [ "$(id -u)" -ne 0 ]; then
         warn "Not running as root. ICMP ping monitoring requires elevated privileges."
-        warn "You may need to run 'sudo setcap cap_net_raw+ep $INSTALL_DIR/agent' after installation."
+        warn "You may need to run 'sudo setcap cap_net_raw+ep $INSTALL_DIR/smotra' after installation."
     fi
 }
 
@@ -244,8 +244,7 @@ generate_config() {
         return
     fi
 
-    smotra --gen-config
-    mv config.toml "$CONFIG_DIR/config.toml"
+    "$INSTALL_DIR/smotra" --gen-config --config "$CONFIG_DIR/config.toml"
     chmod 640 "$CONFIG_DIR/config.toml"
     info "Configuration file created at $CONFIG_DIR/config.toml"
 }

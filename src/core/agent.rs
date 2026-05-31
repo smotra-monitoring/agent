@@ -125,6 +125,11 @@ impl Agent {
             })
         };
 
+        // Pin a sigterm future that resolves on SIGTERM (Unix) or never (other platforms).
+        // We pin it so it can be polled across loop iterations without being recreated.
+        let sigterm = wait_sigterm();
+        tokio::pin!(sigterm);
+
         // Wait for shutdown signal or process config reloads
         loop {
             tokio::select! {
@@ -139,7 +144,12 @@ impl Agent {
                     break;
                 }
                 _ = tokio::signal::ctrl_c() => {
-                    info!("Ctrl+C received, shutting down");
+                    info!("SIGINT received, shutting down");
+                    let _ = self.shutdown_tx.send(());
+                    break;
+                }
+                _ = &mut sigterm => {
+                    info!("SIGTERM received, shutting down");
                     let _ = self.shutdown_tx.send(());
                     break;
                 }
@@ -277,6 +287,31 @@ impl Agent {
     pub fn config_clone(&self) -> Config {
         self.config.read().clone()
     }
+}
+
+/// Returns a future that resolves when SIGTERM is received (Unix) or never (other platforms).
+///
+/// By pinning this future before the main `select!` loop, the signal listener is created
+/// once and reused across every loop iteration rather than being recreated each time.
+#[cfg(unix)]
+async fn wait_sigterm() {
+    use tokio::signal::unix::{SignalKind, signal};
+    match signal(SignalKind::terminate()) {
+        Ok(mut stream) => {
+            stream.recv().await;
+        }
+        Err(e) => {
+            // If we can't install the handler, log and park forever so the process
+            // can still be stopped via SIGINT / shutdown broadcast.
+            tracing::warn!("Failed to install SIGTERM handler: {}", e);
+            std::future::pending::<()>().await;
+        }
+    }
+}
+
+#[cfg(not(unix))]
+async fn wait_sigterm() {
+    std::future::pending::<()>().await;
 }
 
 #[cfg(test)]
