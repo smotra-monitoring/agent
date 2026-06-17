@@ -119,14 +119,12 @@ pub async fn run_ui_loop(
                             config_scroll_offset = 0;
                         }
                     }
-                    KeyCode::Char('s') => {
-                        if !status.is_running {
-                            // Start agent in background
-                            let agent = Arc::clone(&agent);
-                            tokio::spawn(async move {
-                                let _ = agent.start().await;
-                            });
-                        }
+                    KeyCode::Char('s') if !status.is_running => {
+                        // Start agent in background
+                        let agent = Arc::clone(&agent);
+                        tokio::spawn(async move {
+                            let _ = agent.start().await;
+                        });
                     }
                     _ => {}
                 }
