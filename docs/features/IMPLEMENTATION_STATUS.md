@@ -97,8 +97,16 @@ Interactive TUI with Ratatui:
 - ✅ Commands: `tui`, `status`, `validate-config`, `gen-config`
 
 #### `agent-updater` Binary
-- ⏳ Placeholder/stub implementation
-- Auto-update functionality to be implemented
+- ✅ Implemented update checking mode (`--check-only`)
+- ✅ Shared updater logic with daemon task (version check, download, checksum verify)
+- ✅ Binary replacement using `self-replace`
+- ✅ OS-specific restart trigger flow
+
+#### Daemon Self-Upgrade Task
+- ✅ Tokio background update checker task
+- ✅ Containerized runtime detection and auto-disable
+- ✅ Config-driven update URL and polling interval
+- ✅ Graceful shutdown integration with agent lifecycle
 
 ## Testing
 
@@ -108,6 +116,8 @@ Interactive TUI with Ratatui:
 - ✅ Unit tests for claim workflow
 - ✅ Integration tests for claiming workflow with mock server
 - ✅ Integration tests for heartbeat functionality
+- ✅ Unit tests for updater internals (version checks, checksum, extraction)
+- ✅ Integration tests for release version/checksum download flow
 
 ### ⏳ Needs Expansion
 - ⏳ End-to-end monitoring tests
@@ -124,6 +134,7 @@ Interactive TUI with Ratatui:
 - ✅ [CLAIMING_IMPLEMENTATION.md](CLAIMING_IMPLEMENTATION.md) - Registration details
 - ✅ [ROADMAP.md](ROADMAP.md) - Development plans
 - ✅ [OPENAPI_CODE_GENERATION.md](OPENAPI_CODE_GENERATION.md) - Type generation workflow
+- ✅ [SELF_UPGRADE.md](SELF_UPGRADE.md) - Self-upgrade behavior and configuration
 - ✅ OpenAPI specification (api/openapi/api/spec.yaml) with OMG type generation
 - ✅ Configuration examples (config.example.toml)
 - ✅ Example code (examples/010_plugin.rs, examples/002_heartbeat_demo.rs)
