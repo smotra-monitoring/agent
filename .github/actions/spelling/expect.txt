@@ -12,6 +12,7 @@ datacenter
 Datadog
 Debian
 Deque
+dockerenv
 emacs
 failover
 google
