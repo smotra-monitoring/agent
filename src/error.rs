@@ -47,6 +47,9 @@ pub enum Error {
     #[error("Registration expired")]
     ClaimExpired,
 
+    #[error("Self-upgrade error: {0}")]
+    SelfUpgrade(String),
+
     #[error("Unknown error: {0}")]
     Unknown(String),
 }

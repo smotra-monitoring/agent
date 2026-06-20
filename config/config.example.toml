@@ -32,6 +32,11 @@ cache_dir = "./cache"
 max_cached_results = 10000
 max_cache_age_secs = 86400
 
+[update]
+enabled = false
+check_url = "https://github.com/smotra-monitoring/agent"
+check_interval_secs = 3600
+
 # --- Result cache settings ---
 # Set to false to disable in-memory caching and batch result reporting entirely.
 cache_enabled = true

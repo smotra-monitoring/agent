@@ -22,6 +22,8 @@ mod monitor;
 mod plugin;
 mod reporter;
 
+pub mod updater;
+
 pub use agent_config::{ClaimConfig, Config, MonitoringConfig, ServerConfig, StorageConfig};
 pub use claim::Claim;
 pub use core::{

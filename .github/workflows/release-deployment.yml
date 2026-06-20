@@ -88,6 +88,8 @@ jobs:
             target: x86_64-pc-windows-msvc
           - os: windows-latest
             target: x86_64-pc-windows-gnu
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
 
     steps:
       - uses: actions/checkout@v4
@@ -114,14 +116,14 @@ jobs:
           echo '[target.aarch64-unknown-linux-gnu]' >> .cargo/config.toml
           echo 'linker = "aarch64-linux-gnu-gcc"' >> .cargo/config.toml
           
-      - name: Update version in Cargo.toml to match release tag
+      - name: Update version in Cargo.toml to match release tag (Unix)
         if: matrix.os != 'windows-latest'
         run: |
           TAG_VERSION="${{ github.ref_name }}"
           TAG_VERSION="${TAG_VERSION#v}"
           sed -i.bak "s/^version = \".*\"/version = \"${TAG_VERSION}\"/" Cargo.toml
 
-      - name: Update version in Cargo.toml to match release tag
+      - name: Update version in Cargo.toml to match release tag (Windows)
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |

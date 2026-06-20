@@ -57,6 +57,7 @@ pub struct AgentConfig {
     pub monitoring: MonitoringConfig,
     pub server: ServerConfig,
     pub storage: StorageConfig,
+    pub update: UpdateConfig,
     /// Endpoints to monitor
     pub endpoints: Vec<Endpoint>,
 }
@@ -106,6 +107,17 @@ pub struct StorageConfig {
     pub max_cached_results: i64,
     /// Maximum age of cached results in seconds (e.g., 86400 = 24 hours)
     pub max_cache_age_secs: i64,
+}
+
+/// UpdateConfig
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateConfig {
+    /// Enables self-upgrade checks when true
+    pub enabled: bool,
+    /// Base URL where release metadata and artifacts are hosted
+    pub check_url: String,
+    /// Periodic self-upgrade check interval in seconds
+    pub check_interval_secs: i64,
 }
 
 /// An endpoint to monitor (IP address, hostname, or URL)

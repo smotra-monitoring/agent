@@ -128,6 +128,18 @@ impl Config {
             ));
         }
 
+        if self.update.check_url.is_empty() {
+            return Err(Error::Config(
+                "update check_url cannot be empty".to_string(),
+            ));
+        }
+
+        if self.update.check_interval_secs <= 0 {
+            return Err(Error::Config(
+                "update check_interval_secs must be greater than 0".to_string(),
+            ));
+        }
+
         Ok(())
     }
 
@@ -273,5 +285,32 @@ mod tests {
             Some("sk_integration_test".to_string())
         );
         assert_eq!(loaded_config.agent_name, "Integration Test Agent");
+    }
+
+    #[test]
+    fn test_validate_fails_when_update_url_is_empty() {
+        let mut config = Config {
+            agent_id: Uuid::now_v7(),
+            ..Default::default()
+        };
+        config.update.check_url = String::new();
+
+        let result = config.validate();
+        assert!(result.is_err(), "empty update.check_url should fail validation");
+    }
+
+    #[test]
+    fn test_validate_fails_when_update_interval_is_zero() {
+        let mut config = Config {
+            agent_id: Uuid::now_v7(),
+            ..Default::default()
+        };
+        config.update.check_interval_secs = 0;
+
+        let result = config.validate();
+        assert!(
+            result.is_err(),
+            "zero update.check_interval_secs should fail validation"
+        );
     }
 }

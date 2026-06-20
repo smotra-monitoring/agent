@@ -114,6 +114,14 @@ impl Agent {
             tokio::spawn(async move { crate::reporter::run_heartbeat(config, shutdown_rx).await })
         };
 
+        // Start updater task
+        let updater_handle = {
+            let config = Arc::clone(&self.config);
+            let shutdown_rx = self.subscribe_shutdown();
+
+            tokio::spawn(async move { crate::updater::run_update_checker(config, shutdown_rx).await })
+        };
+
         // Start config hot-reload task
         let hot_reload_handle = {
             let config_path = self.config_path.clone();
@@ -164,6 +172,7 @@ impl Agent {
             let _ = reporter_handle.await;
             let _ = result_reporter_handle.await;
             let _ = heartbeat_handle.await;
+            let _ = updater_handle.await;
             let _ = hot_reload_handle.await;
         })
         .await
