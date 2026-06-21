@@ -38,7 +38,7 @@ async fn download_release_binary_downloads_verifies_and_extracts() {
     hasher.update(&archive);
     let digest = hex::encode(hasher.finalize());
 
-    let artifact_path = format!("/releases/v{}/{}", version, artifact_name);
+    let artifact_path = format!("/releases/download/v{}/{}", version, artifact_name);
     let checksum_path = format!("{}.sha256", artifact_path);
 
     let _artifact_mock = server
