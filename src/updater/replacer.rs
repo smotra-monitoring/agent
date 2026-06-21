@@ -27,7 +27,7 @@ pub fn trigger_restart() -> Result<()> {
 
     #[cfg(target_os = "macos")]
     {
-        if is_managed_by_launchd() {
+        if super::environment::is_managed_by_launchd() {
             // simply exit and let launchd restart us
             std::process::exit(0);
         } else {
@@ -45,34 +45,25 @@ pub fn trigger_restart() -> Result<()> {
 
     #[cfg(target_os = "linux")]
     {
-        let _ = Command::new("systemctl")
-            .args(["restart", "smotra"])
-            .spawn();
+        if super::environment::is_managed_by_systemd() {
+            // simply exit and let systemd restart us
+            std::process::exit(0);
+        } else {
+            // untested behavior
+            use std::process::Stdio;
+
+            let current_exe = std::env::current_exe().map_err(|e| {
+                Error::Unknown(format!("failed to resolve current executable path: {}", e))
+            })?;
+
+            Command::new(current_exe)
+                .stdin(Stdio::inherit())
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
+                .spawn()
+                .map_err(|e| Error::Unknown(format!("failed to spawn restarter: {}", e)))?;
+        }
     }
 
     std::process::exit(0);
-}
-
-#[cfg(target_os = "macos")]
-pub fn is_managed_by_launchd() -> bool {
-    use sysinfo::{Pid, System};
-
-    let mut s = System::new();
-    s.refresh_processes();
-
-    // Get the current process ID
-    let current_pid = sysinfo::get_current_pid().ok();
-
-    if let Some(pid) = current_pid {
-        if let Some(process) = s.process(pid) {
-            // Get the parent process
-            if let Some(parent_pid) = process.parent() {
-                if let Some(parent) = s.process(parent_pid) {
-                    // launchd usually has the name "launchd"
-                    return parent.name().to_lowercase().contains("launchd");
-                }
-            }
-        }
-    }
-    false
 }
