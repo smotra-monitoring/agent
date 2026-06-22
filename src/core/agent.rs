@@ -120,7 +120,7 @@ impl Agent {
             let shutdown_rx = self.subscribe_shutdown();
 
             tokio::spawn(async move {
-                crate::self_updater::run_update_checker(config, shutdown_rx).await
+                crate::self_upgrade::run_update_checker(config, shutdown_rx).await
             })
         };
 

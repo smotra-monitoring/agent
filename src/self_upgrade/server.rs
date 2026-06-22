@@ -1,4 +1,5 @@
 use super::environment::is_containerized;
+use super::replacer;
 use super::{download_release_binary, fetch_latest_version, is_newer_than_current};
 use crate::agent_config::Config;
 use crate::error::Result;
@@ -47,7 +48,7 @@ pub async fn run_update_checker(
                                 info!("New version {} detected. Starting upgrade", latest_version);
                                 match download_release_binary(&client, &cfg.update.github_repo_url, &latest_version).await {
                                     Ok(new_binary) => {
-                                        if let Err(e) = super::replace_binary_and_restart(&new_binary) {
+                                        if let Err(e) = replacer::replace_binary_and_restart(&new_binary) {
                                             error!("Failed to replace/restart after update: {}", e);
                                         }
                                     }

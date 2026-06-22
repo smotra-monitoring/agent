@@ -2,7 +2,7 @@
 
 use clap::Parser;
 use semver::Version;
-use smotra::self_updater::{
+use smotra::self_upgrade::{
     download_release_binary, fetch_latest_version, replace_binary_and_restart,
 };
 use smotra::Error;

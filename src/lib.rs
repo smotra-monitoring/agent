@@ -22,7 +22,7 @@ mod monitor;
 mod plugin;
 mod reporter;
 
-pub mod self_updater;
+pub mod self_upgrade;
 
 pub use agent_config::{ClaimConfig, Config, MonitoringConfig, ServerConfig, StorageConfig};
 pub use claim::Claim;
