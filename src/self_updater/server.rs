@@ -1,7 +1,7 @@
+use super::environment::is_containerized;
 use super::{download_release_binary, fetch_latest_version, is_newer_than_current};
 use crate::agent_config::Config;
 use crate::error::Result;
-use crate::updater::environment::is_containerized;
 use parking_lot::RwLock;
 use std::sync::Arc;
 use tokio::sync::broadcast;

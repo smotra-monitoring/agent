@@ -3,7 +3,7 @@ use flate2::Compression;
 use mockito::Server;
 use semver::Version;
 use sha2::{Digest, Sha256};
-use smotra::updater::{download_release_binary, fetch_latest_version};
+use smotra::self_updater::{download_release_binary, fetch_latest_version};
 use std::io::Cursor;
 use tar::Builder;
 

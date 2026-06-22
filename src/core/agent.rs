@@ -119,9 +119,9 @@ impl Agent {
             let config = Arc::clone(&self.config);
             let shutdown_rx = self.subscribe_shutdown();
 
-            tokio::spawn(
-                async move { crate::updater::run_update_checker(config, shutdown_rx).await },
-            )
+            tokio::spawn(async move {
+                crate::self_updater::run_update_checker(config, shutdown_rx).await
+            })
         };
 
         // Start config hot-reload task

@@ -2,7 +2,9 @@
 
 use clap::Parser;
 use semver::Version;
-use smotra::updater::{download_release_binary, fetch_latest_version, replace_binary_and_restart};
+use smotra::self_updater::{
+    download_release_binary, fetch_latest_version, replace_binary_and_restart,
+};
 use smotra::Error;
 use smotra::Result;
 use std::path::PathBuf;
