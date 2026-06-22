@@ -296,7 +296,10 @@ mod tests {
         config.update.check_url = String::new();
 
         let result = config.validate();
-        assert!(result.is_err(), "empty update.check_url should fail validation");
+        assert!(
+            result.is_err(),
+            "empty update.check_url should fail validation"
+        );
     }
 
     #[test]

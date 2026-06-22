@@ -26,7 +26,7 @@ pub enum ReloadTrigger {
     /// SIGHUP signal received (Unix only)
     Signal,
     /// Server reported a new config version (future implementation)
-    #[expect(unused)]
+    #[allow(dead_code)]
     ServerVersionChange(u32),
 }
 

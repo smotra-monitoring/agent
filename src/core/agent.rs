@@ -119,7 +119,9 @@ impl Agent {
             let config = Arc::clone(&self.config);
             let shutdown_rx = self.subscribe_shutdown();
 
-            tokio::spawn(async move { crate::updater::run_update_checker(config, shutdown_rx).await })
+            tokio::spawn(
+                async move { crate::updater::run_update_checker(config, shutdown_rx).await },
+            )
         };
 
         // Start config hot-reload task
@@ -304,7 +306,7 @@ impl Agent {
 /// once and reused across every loop iteration rather than being recreated each time.
 #[cfg(unix)]
 async fn wait_sigterm() {
-    use tokio::signal::unix::{SignalKind, signal};
+    use tokio::signal::unix::{signal, SignalKind};
     match signal(SignalKind::terminate()) {
         Ok(mut stream) => {
             stream.recv().await;
