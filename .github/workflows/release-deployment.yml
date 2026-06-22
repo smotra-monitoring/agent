@@ -93,11 +93,15 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
+          targets: ${{ matrix.target }}
+
+      # 2. Add caching to make subsequent runs much faster
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
       
       - name: Install musl tools
         if: matrix.target == 'x86_64-unknown-linux-musl'
@@ -162,7 +166,7 @@ jobs:
             > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip.sha256
 
       - name: Upload artifacts (Unix)
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: matrix.os != 'windows-latest'
         with:
           name: release-${{ matrix.target }}
@@ -171,7 +175,7 @@ jobs:
             target/${{ matrix.target }}/release/${{ github.event.repository.name }}-*.tar.gz.sha256
 
       - name: Upload artifacts (Windows)
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: matrix.os == 'windows-latest'
         with:
           name: release-${{ matrix.target }}
@@ -189,7 +193,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           pattern: release-*
@@ -257,7 +261,7 @@ jobs:
         # If gh-pages doesn't exist, create it manually first
         
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           pattern: release-*
