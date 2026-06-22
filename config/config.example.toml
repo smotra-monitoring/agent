@@ -32,7 +32,7 @@ cache_dir = "./cache"
 max_cached_results = 10000
 max_cache_age_secs = 86400
 
-[update]
+[self_update]
 enabled = false
 github_repo_url = "https://github.com/smotra-monitoring/agent"
 check_interval_secs = 3600

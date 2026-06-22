@@ -57,7 +57,7 @@ pub struct AgentConfig {
     pub monitoring: MonitoringConfig,
     pub server: ServerConfig,
     pub storage: StorageConfig,
-    pub update: UpdateConfig,
+    pub update: SelfUpdateConfig,
     /// Endpoints to monitor
     pub endpoints: Vec<Endpoint>,
 }
@@ -109,9 +109,9 @@ pub struct StorageConfig {
     pub max_cache_age_secs: i64,
 }
 
-/// UpdateConfig
+/// SelfUpdateConfig
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UpdateConfig {
+pub struct SelfUpdateConfig {
     /// Enables self-upgrade checks when true
     pub enabled: bool,
     /// GitHub repository URL for checking latest releases (must be a public repo)
