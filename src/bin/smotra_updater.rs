@@ -14,7 +14,7 @@ use tracing::{error, info};
 struct Cli {
     /// Update server URL
     #[arg(short, long)]
-    server: String,
+    server_url: String,
 
     /// Current version
     #[arg(short, long)]
@@ -45,8 +45,8 @@ async fn main() -> Result<()> {
 
     let client = reqwest::Client::builder().build()?;
 
-    info!("Checking for updates at {}", cli.server);
-    let latest = fetch_latest_version(&client, &cli.server).await?;
+    info!("Checking for updates at {}", cli.server_url);
+    let latest = fetch_latest_version(&client, &cli.server_url).await?;
     let update_available = latest > current_version;
 
     if cli.check_only {
@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
     }
 
     info!("Downloading update {}", latest);
-    let extracted_binary = download_release_binary(&client, &cli.server, &latest).await?;
+    let extracted_binary = download_release_binary(&client, &cli.server_url, &latest).await?;
 
     if !extracted_binary.starts_with(&cli.install_dir) {
         info!(
