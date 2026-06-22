@@ -34,7 +34,7 @@ max_cache_age_secs = 86400
 
 [update]
 enabled = false
-check_url = "https://github.com/smotra-monitoring/agent"
+github_repo_url = "https://github.com/smotra-monitoring/agent"
 check_interval_secs = 3600
 
 # --- Result cache settings ---

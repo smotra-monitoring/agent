@@ -128,7 +128,7 @@ impl Config {
             ));
         }
 
-        if self.update.check_url.is_empty() {
+        if self.update.github_repo_url.is_empty() {
             return Err(Error::Config(
                 "update check_url cannot be empty".to_string(),
             ));
@@ -293,7 +293,7 @@ mod tests {
             agent_id: Uuid::now_v7(),
             ..Default::default()
         };
-        config.update.check_url = String::new();
+        config.update.github_repo_url = String::new();
 
         let result = config.validate();
         assert!(

@@ -114,8 +114,8 @@ pub struct StorageConfig {
 pub struct UpdateConfig {
     /// Enables self-upgrade checks when true
     pub enabled: bool,
-    /// Base URL where release metadata and artifacts are hosted
-    pub check_url: String,
+    /// GitHub repository URL for checking latest releases (must be a public repo)
+    pub github_repo_url: String,
     /// Periodic self-upgrade check interval in seconds
     pub check_interval_secs: i64,
 }

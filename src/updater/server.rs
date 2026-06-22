@@ -40,12 +40,12 @@ pub async fn run_update_checker(
                     continue;
                 }
 
-                match fetch_latest_version(&client, &cfg.update.check_url).await {
+                match fetch_latest_version(&client, &cfg.update.github_repo_url).await {
                     Ok(latest_version) => {
                         match is_newer_than_current(&latest_version) {
                             Ok(true) => {
                                 info!("New version {} detected. Starting upgrade", latest_version);
-                                match download_release_binary(&client, &cfg.update.check_url, &latest_version).await {
+                                match download_release_binary(&client, &cfg.update.github_repo_url, &latest_version).await {
                                     Ok(new_binary) => {
                                         if let Err(e) = super::replace_binary_and_restart(&new_binary) {
                                             error!("Failed to replace/restart after update: {}", e);

@@ -59,7 +59,7 @@ impl Default for openapi::UpdateConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            check_url: "https://github.com/smotra-monitoring/agent".to_string(),
+            github_repo_url: "https://github.com/smotra-monitoring/agent".to_string(),
             check_interval_secs: 3600,
         }
     }
