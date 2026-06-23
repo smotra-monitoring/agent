@@ -17,7 +17,7 @@ jobs:
 
     steps:
     - name: checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Run clippy
       run: cargo clippy --verbose -- -D warnings
@@ -38,7 +38,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       
       - name: Get the release version from the tag
         id: version
@@ -90,7 +90,7 @@ jobs:
             target: x86_64-pc-windows-gnu
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -190,7 +190,7 @@ jobs:
       contents: write
       deployments: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Download artifacts
         uses: actions/download-artifact@v8
@@ -254,7 +254,7 @@ jobs:
       deployments: write
     steps:
       - name: Checkout gh-pages branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           ref: gh-pages
           path: gh-pages
@@ -268,7 +268,7 @@ jobs:
           merge-multiple: true
         
       - name: Checkout main branch for install script
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           path: main
         
