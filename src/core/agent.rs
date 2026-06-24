@@ -295,7 +295,7 @@ impl Agent {
 /// once and reused across every loop iteration rather than being recreated each time.
 #[cfg(unix)]
 async fn wait_sigterm() {
-    use tokio::signal::unix::{SignalKind, signal};
+    use tokio::signal::unix::{signal, SignalKind};
     match signal(SignalKind::terminate()) {
         Ok(mut stream) => {
             stream.recv().await;
