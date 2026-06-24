@@ -1,34 +1,24 @@
 use crate::error::{Error, Result};
+use octocrab::Octocrab;
 use semver::Version;
 
-pub async fn fetch_latest_version(client: &reqwest::Client, check_url: &str) -> Result<Version> {
-    let base = check_url.trim_end_matches('/');
-    let version_url = format!("{}/releases/latest/version.txt", base);
+use super::github::parse_github_url;
 
-    let response = client
-        .get(&version_url)
-        .send()
+pub async fn fetch_latest_version(octocrab: &Octocrab, repo_url: &str) -> Result<Version> {
+    let (owner, repo) = parse_github_url(repo_url)?;
+
+    let release = octocrab
+        .repos(&owner, &repo)
+        .releases()
+        .get_latest()
         .await
-        .map_err(|e| Error::Network(format!("Failed to fetch latest version: {}", e)))?;
+        .map_err(|e| Error::GithubApi(format!("Failed to fetch latest release: {}", e)))?;
 
-    if !response.status().is_success() {
-        return Err(Error::Network(format!(
-            "Version endpoint returned HTTP {}",
-            response.status()
-        )));
-    }
-
-    let raw = response
-        .text()
-        .await
-        .map_err(|e| Error::Network(format!("Failed to read version response: {}", e)))?;
-
-    let normalized = raw.trim().trim_start_matches('v');
+    let normalized = release.tag_name.trim().trim_start_matches('v');
     Version::parse(normalized).map_err(|e| {
         Error::Config(format!(
-            "Invalid latest version fetched from server '{}': {}",
-            raw.trim(),
-            e
+            "Invalid version in GitHub release tag '{}': {}",
+            release.tag_name, e
         ))
     })
 }

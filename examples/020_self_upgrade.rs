@@ -1,13 +1,13 @@
 //! Agent auto-updater binary
 
 use clap::Parser;
+use octocrab::Octocrab;
 use semver::Version;
 use smotra::self_upgrade::{
     download_release_binary, fetch_latest_version, replace_binary_and_restart,
 };
 use smotra::Error;
 use smotra::Result;
-use std::path::PathBuf;
 use tracing::{error, info};
 
 #[derive(Parser)]
@@ -21,10 +21,6 @@ struct Cli {
     /// Current version
     #[arg(short, long)]
     version: String,
-
-    /// Installation directory
-    #[arg(short, long, default_value = ".")]
-    install_dir: PathBuf,
 
     /// Check for updates only (don't install)
     #[arg(long)]
@@ -45,10 +41,12 @@ async fn main() -> Result<()> {
     let current_version = Version::parse(cli.version.trim_start_matches('v'))
         .map_err(|e| Error::Config(format!("invalid --version '{}': {}", cli.version, e)))?;
 
-    let client = reqwest::Client::builder().build()?;
+    let octocrab = Octocrab::builder()
+        .build()
+        .map_err(|e| Error::GithubApi(format!("Failed to initialize GitHub client: {}", e)))?;
 
     info!("Checking for updates at {}", cli.server_url);
-    let latest = fetch_latest_version(&client, &cli.server_url).await?;
+    let latest = fetch_latest_version(&octocrab, &cli.server_url).await?;
     let update_available = latest > current_version;
 
     if cli.check_only {
@@ -72,14 +70,7 @@ async fn main() -> Result<()> {
     }
 
     info!("Downloading update {}", latest);
-    let extracted_binary = download_release_binary(&client, &cli.server_url, &latest).await?;
-
-    if !extracted_binary.starts_with(&cli.install_dir) {
-        info!(
-            "Downloaded binary is in temporary directory: {}",
-            extracted_binary.display()
-        );
-    }
+    let extracted_binary = download_release_binary(&octocrab, &cli.server_url, &latest).await?;
 
     if let Err(e) = replace_binary_and_restart(&extracted_binary) {
         error!("Update failed: {}", e);

@@ -2,7 +2,8 @@ use super::environment::is_containerized;
 use super::replacer;
 use super::{download_release_binary, fetch_latest_version, is_newer_than_current};
 use crate::agent_config::Config;
-use crate::error::Result;
+use crate::error::{Error, Result};
+use octocrab::Octocrab;
 use parking_lot::RwLock;
 use std::sync::Arc;
 use tokio::sync::broadcast;
@@ -18,7 +19,9 @@ pub async fn run_update_checker(
         return Ok(());
     }
 
-    let client = reqwest::Client::builder().build()?;
+    let octocrab = Octocrab::builder()
+        .build()
+        .map_err(|e| Error::GithubApi(format!("Failed to initialize GitHub client: {}", e)))?;
 
     let mut current_interval_secs = normalize_interval(config.read().update.check_interval_secs);
     let mut iv = interval(std::time::Duration::from_secs(current_interval_secs));
@@ -41,12 +44,12 @@ pub async fn run_update_checker(
                     continue;
                 }
 
-                match fetch_latest_version(&client, &cfg.update.github_repo_url).await {
+                match fetch_latest_version(&octocrab, &cfg.update.github_repo_url).await {
                     Ok(latest_version) => {
                         match is_newer_than_current(&latest_version) {
                             Ok(true) => {
                                 info!("New version {} detected. Starting upgrade", latest_version);
-                                match download_release_binary(&client, &cfg.update.github_repo_url, &latest_version).await {
+                                match download_release_binary(&octocrab, &cfg.update.github_repo_url, &latest_version).await {
                                     Ok(new_binary) => {
                                         if let Err(e) = replacer::replace_binary_and_restart(&new_binary) {
                                             error!("Failed to replace/restart after update: {}", e);

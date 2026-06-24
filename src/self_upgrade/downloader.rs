@@ -1,5 +1,6 @@
 use crate::error::{Error, Result};
 use flate2::read::GzDecoder;
+use octocrab::Octocrab;
 use semver::Version;
 use sha2::{Digest, Sha256};
 use std::fs::File;
@@ -8,23 +9,74 @@ use tar::Archive;
 use tokio::fs;
 use uuid::Uuid;
 
+use super::github::parse_github_url;
+
 pub async fn download_release_binary(
-    client: &reqwest::Client,
-    check_url: &str,
+    octocrab: &Octocrab,
+    repo_url: &str,
     version: &Version,
 ) -> Result<PathBuf> {
-    let base = check_url.trim_end_matches('/');
-    let target = release_target();
+    let (owner, repo) = parse_github_url(repo_url)?;
     let version_str = version.to_string();
-    let artifact_name = format!("agent-v{}-{}.tar.gz", version_str, target);
-    let release_url = format!(
-        "{}/releases/download/v{}/{}",
-        base, version_str, artifact_name
-    );
-    let checksum_url = format!("{}.sha256", release_url);
+    let target = release_target();
+    let artifact_name = format!("smotra-v{}-{}.tar.gz", version_str, target);
+    let checksum_name = format!("{}.sha256", artifact_name);
+    let tag = format!("v{}", version_str);
 
-    let archive_bytes = download_bytes(client, &release_url).await?;
-    let checksum_text = download_text(client, &checksum_url).await?;
+    let release = octocrab
+        .repos(&owner, &repo)
+        .releases()
+        .get_by_tag(&tag)
+        .await
+        .map_err(|e| Error::GithubApi(format!("Failed to fetch release '{}': {}", tag, e)))?;
+
+    let archive_asset = release
+        .assets
+        .iter()
+        .find(|a| a.name == artifact_name)
+        .ok_or_else(|| {
+            Error::SelfUpgrade(format!(
+                "Release '{}' does not contain expected asset '{}'",
+                tag, artifact_name
+            ))
+        })?;
+
+    let checksum_asset = release
+        .assets
+        .iter()
+        .find(|a| a.name == checksum_name)
+        .ok_or_else(|| {
+            Error::SelfUpgrade(format!(
+                "Release '{}' does not contain expected checksum asset '{}'",
+                tag, checksum_name
+            ))
+        })?;
+
+    let archive_bytes = octocrab
+        .download(
+            archive_asset.browser_download_url.as_str(),
+            "application/octet-stream",
+        )
+        .await
+        .map_err(|e| {
+            Error::GithubApi(format!(
+                "Failed to download asset '{}': {}",
+                artifact_name, e
+            ))
+        })?;
+
+    let checksum_bytes = octocrab
+        .download(checksum_asset.browser_download_url.as_str(), "text/plain")
+        .await
+        .map_err(|e| {
+            Error::GithubApi(format!(
+                "Failed to download checksum '{}': {}",
+                checksum_name, e
+            ))
+        })?;
+
+    let checksum_text = String::from_utf8(checksum_bytes)
+        .map_err(|e| Error::Config(format!("Checksum file is not valid UTF-8: {}", e)))?;
 
     verify_sha256(&archive_bytes, &checksum_text)?;
 
@@ -118,35 +170,6 @@ fn set_executable_permissions_if_needed(path: &Path) -> Result<()> {
 #[cfg(not(unix))]
 fn set_executable_permissions_if_needed(_path: &Path) -> Result<()> {
     Ok(())
-}
-
-async fn download_bytes(client: &reqwest::Client, url: &str) -> Result<Vec<u8>> {
-    let response = client
-        .get(url)
-        .send()
-        .await
-        .map_err(|e| Error::Network(format!("Failed to download '{}': {}", url, e)))?;
-
-    if !response.status().is_success() {
-        return Err(Error::Network(format!(
-            "Download '{}' returned HTTP {}",
-            url,
-            response.status()
-        )));
-    }
-
-    let body = response
-        .bytes()
-        .await
-        .map_err(|e| Error::Network(format!("Failed to read body '{}': {}", url, e)))?;
-
-    Ok(body.to_vec())
-}
-
-async fn download_text(client: &reqwest::Client, url: &str) -> Result<String> {
-    let bytes = download_bytes(client, url).await?;
-    String::from_utf8(bytes)
-        .map_err(|e| Error::Config(format!("Expected UTF-8 text at '{}': {}", url, e)))
 }
 
 fn release_target() -> &'static str {

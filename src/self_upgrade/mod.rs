@@ -1,6 +1,7 @@
 mod checker;
 mod downloader;
 mod environment;
+mod github;
 mod replacer;
 mod server;
 
