@@ -86,7 +86,10 @@ impl Default for AgentStatus {
             last_report_at: DateTime::<Utc>::UNIX_EPOCH,
             failed_report_count: 0,
             server_connected: false,
-            cache_stats: AgentCacheStats { len: 0, capacity: 0 },
+            cache_stats: AgentCacheStats {
+                len: 0,
+                capacity: 0,
+            },
         }
     }
 }
