@@ -19,8 +19,6 @@ pub async fn download_release_binary(
     let (owner, repo) = parse_github_url(repo_url)?;
     let version_str = version.to_string();
     let target = release_target();
-    let artifact_name = format!("smotra-v{}-{}.tar.gz", version_str, target);
-    let checksum_name = format!("{}.sha256", artifact_name);
     let tag = format!("v{}", version_str);
 
     let release = octocrab
@@ -38,19 +36,21 @@ pub async fn download_release_binary(
         })
         .ok_or_else(|| {
             Error::SelfUpgrade(format!(
-                "Release '{}' does not contain expected asset '{}'",
-                tag, artifact_name
+                "Release '{}' does not contain archive (.tar.gz) for platform '{}'",
+                tag, target
             ))
         })?;
 
     let checksum_asset = release
         .assets
         .iter()
-        .find(|a| a.name == checksum_name)
+        .find(|a| {
+            a.name.contains(target) && a.name.contains(&version_str) && a.name.ends_with(".sha256")
+        })
         .ok_or_else(|| {
             Error::SelfUpgrade(format!(
-                "Release '{}' does not contain expected checksum asset '{}'",
-                tag, checksum_name
+                "Release '{}' does not contain checksum (.sha256) for platform '{}'",
+                tag, target
             ))
         })?;
 
@@ -63,7 +63,7 @@ pub async fn download_release_binary(
         .map_err(|e| {
             Error::GithubApi(format!(
                 "Failed to download asset '{}': {}",
-                artifact_name, e
+                archive_asset.name, e
             ))
         })?;
 
@@ -73,7 +73,7 @@ pub async fn download_release_binary(
         .map_err(|e| {
             Error::GithubApi(format!(
                 "Failed to download checksum '{}': {}",
-                checksum_name, e
+                checksum_asset.name, e
             ))
         })?;
 
@@ -90,7 +90,7 @@ pub async fn download_release_binary(
         ))
     })?;
 
-    let archive_path = tmp_dir.join(&artifact_name);
+    let archive_path = tmp_dir.join(&archive_asset.name);
     fs::write(&archive_path, &archive_bytes)
         .await
         .map_err(|e| {
