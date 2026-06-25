@@ -181,9 +181,9 @@ async fn download_release_binary_downloads_verifies_and_extracts() {
 }
 
 fn build_archive_with_binary(name: &str, body: &[u8]) -> Vec<u8> {
-    let mut tar_payload = Vec::new();
+    let mut compressed_payload = Vec::new();
     {
-        let encoder = GzEncoder::new(&mut tar_payload, Compression::default());
+        let encoder = GzEncoder::new(&mut compressed_payload, Compression::default());
         let mut tar = Builder::new(encoder);
         let mut header = tar::Header::new_gnu();
         header.set_size(body.len() as u64);
@@ -196,7 +196,7 @@ fn build_archive_with_binary(name: &str, body: &[u8]) -> Vec<u8> {
         let _sink = encoder.finish().expect("finalize gzip stream");
     }
 
-    tar_payload
+    compressed_payload
 }
 
 fn test_binary_name() -> &'static str {
