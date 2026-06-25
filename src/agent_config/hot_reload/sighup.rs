@@ -49,6 +49,8 @@ pub async fn handle_sighup(
 
 /// Handle SIGHUP signal (no-op on non-Unix systems)
 #[cfg(not(unix))]
+use tracing::warn;
+#[cfg(not(unix))]
 pub async fn handle_sighup(
     _reload_tx: mpsc::UnboundedSender<ReloadTrigger>,
     mut shutdown_rx: broadcast::Receiver<()>,
