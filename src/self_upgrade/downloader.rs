@@ -33,7 +33,9 @@ pub async fn download_release_binary(
     let archive_asset = release
         .assets
         .iter()
-        .find(|a| a.name == artifact_name)
+        .find(|a| {
+            a.name.contains(target) && a.name.contains(&version_str) && a.name.ends_with(".tar.gz")
+        })
         .ok_or_else(|| {
             Error::SelfUpgrade(format!(
                 "Release '{}' does not contain expected asset '{}'",
