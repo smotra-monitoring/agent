@@ -218,7 +218,7 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
             ASSET_DIR="artifacts"
-            for file in $(ls ${ASSET_DIR}/*.tar.gz); do
+            for file in $(ls ${ASSET_DIR}/*.tar.gz,${ASSET_DIR}/*.zip,${ASSET_DIR}/*.sha256); do
               gh release upload ${RELEASE_TAG} "${file}" --clobber
             done
 
