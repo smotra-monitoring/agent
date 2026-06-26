@@ -59,7 +59,7 @@ The agent consists of:
 - **`smotra_agent`** - Core monitoring library
 - **`agent`** - Main daemon process
 - **`agent-cli`** - Interactive TUI for monitoring and configuration
-- **`agent-updater`** - Auto-update tool (stub)
+- **`smotra-updater`** - Auto-update tool and daemon self-upgrade helper
 
 ## 🔧 Basic Configuration
 
@@ -94,6 +94,7 @@ enabled = true
 - **[Project Structure](PROJECT_STRUCTURE.md)** - Code organization and architecture
 - **[Implementation Status](IMPLEMENTATION_STATUS.md)** - Current implementation status and roadmap
 - **[Claiming Implementation](CLAIMING_IMPLEMENTATION.md)** - Agent registration details
+- **[Self Upgrade](features/SELF_UPGRADE.md)** - Background update checks and restart flow
 - **[Development Roadmap](ROADMAP.md)** - Development plans and upcoming features
 
 ## 🔐 Agent Registration & Claiming

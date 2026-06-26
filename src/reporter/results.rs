@@ -364,6 +364,7 @@ mod reporter_loop_tests {
             monitoring: MonitoringConfig::default(),
             server,
             storage,
+            update: Default::default(),
             endpoints: vec![],
         }))
     }
@@ -526,6 +527,7 @@ mod reporter_loop_tests {
                 cache_enabled: false,
                 ..StorageConfig::default()
             },
+            update: Default::default(),
             endpoints: vec![],
         }));
 

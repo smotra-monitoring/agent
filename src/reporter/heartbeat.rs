@@ -162,6 +162,7 @@ mod tests {
             monitoring: MonitoringConfig::default(),
             server: ServerConfig::default(),
             storage: StorageConfig::default(),
+            update: Default::default(),
             endpoints: vec![],
         }))
     }

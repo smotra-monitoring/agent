@@ -163,7 +163,7 @@ mod tests {
                 pending.status,
                 openapi::ClaimStatusPendingEnum::PendingClaim
             ),
-            "expected status to be PendingClaim"
+            "expected status to be Pending_claim"
         );
 
         assert_eq!(

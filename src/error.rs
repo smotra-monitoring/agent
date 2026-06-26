@@ -47,6 +47,12 @@ pub enum Error {
     #[error("Registration expired")]
     ClaimExpired,
 
+    #[error("Self-upgrade error: {0}")]
+    SelfUpgrade(String),
+
+    #[error("Github API error: {0}")]
+    GithubApi(String),
+
     #[error("Unknown error: {0}")]
     Unknown(String),
 }

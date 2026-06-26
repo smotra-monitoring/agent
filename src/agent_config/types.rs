@@ -2,6 +2,7 @@
 
 use super::server_config::ServerConfig;
 use crate::core::Endpoint;
+use crate::openapi;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use uuid::Uuid;
@@ -31,6 +32,9 @@ pub struct Config {
     /// Local storage configuration
     pub storage: StorageConfig,
 
+    /// Self-upgrade configuration (OpenAPI-generated type)
+    pub update: openapi::SelfUpdateConfig,
+
     /// Endpoints to monitor
     pub endpoints: Vec<Endpoint>,
 }
@@ -45,7 +49,18 @@ impl Default for Config {
             monitoring: MonitoringConfig::default(),
             server: ServerConfig::default(),
             storage: StorageConfig::default(),
+            update: openapi::SelfUpdateConfig::default(),
             endpoints: Vec::new(),
+        }
+    }
+}
+
+impl Default for openapi::SelfUpdateConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            github_repo_url: "https://github.com/smotra-monitoring/agent".to_string(),
+            check_interval_secs: 3600,
         }
     }
 }
