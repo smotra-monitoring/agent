@@ -1,9 +1,6 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
   release:
     types: ['published']
 
@@ -17,7 +14,7 @@ jobs:
 
     steps:
     - name: checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Run clippy
       run: cargo clippy --verbose --all-targets --all-features  -- -D warnings
@@ -38,7 +35,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       
       - name: Get the release version from the tag
         id: version
@@ -92,14 +89,18 @@ jobs:
             target: aarch64-pc-windows-msvc
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       
       - name: Install Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
+          targets: ${{ matrix.target }}
+
+      # 2. Add caching to make subsequent runs much faster
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
       
       - name: Install musl tools
         if: matrix.target == 'x86_64-unknown-linux-musl'
@@ -164,7 +165,7 @@ jobs:
             > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip.sha256
 
       - name: Upload artifacts (Unix)
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: matrix.os != 'windows-latest'
         with:
           name: release-${{ matrix.target }}
@@ -173,7 +174,7 @@ jobs:
             target/${{ matrix.target }}/release/${{ github.event.repository.name }}-*.tar.gz.sha256
 
       - name: Upload artifacts (Windows)
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: matrix.os == 'windows-latest'
         with:
           name: release-${{ matrix.target }}
@@ -188,10 +189,10 @@ jobs:
       contents: write
       deployments: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           pattern: release-*
@@ -252,21 +253,21 @@ jobs:
       deployments: write
     steps:
       - name: Checkout gh-pages branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           ref: gh-pages
           path: gh-pages
         # If gh-pages doesn't exist, create it manually first
         
       - name: Download artifacts
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           path: artifacts
           pattern: release-*
           merge-multiple: true
         
       - name: Checkout main branch for install script
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           path: main
         

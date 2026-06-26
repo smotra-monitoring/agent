@@ -1,0 +1,17 @@
+name: Unit tests
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened]
+    
+jobs:
+  unit-test:
+    name: Tests and Lints
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo test --all-targets --all-features
+      - run: cargo fmt --all -- --check
+
+      
