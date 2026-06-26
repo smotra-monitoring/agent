@@ -1,7 +1,7 @@
 //! Monitoring coordination and task management
 
-mod coordinator;
 mod ping;
+mod server;
 
-pub use coordinator::run_monitoring;
 pub use ping::PingChecker;
+pub use server::run_monitoring;

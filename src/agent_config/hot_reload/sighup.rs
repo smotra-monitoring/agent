@@ -8,7 +8,7 @@ use tracing::info;
 
 use crate::error::{Error, Result};
 
-use super::orchestrator::ReloadTrigger;
+use super::server::ReloadTrigger;
 
 /// Handle SIGHUP signal and trigger config reload
 ///

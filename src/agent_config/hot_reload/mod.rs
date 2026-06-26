@@ -30,7 +30,7 @@
 //! - Simplifies error handling and shutdown coordination
 
 mod config_file_watcher;
-mod orchestrator;
+mod server;
 mod sighup;
 
-pub use orchestrator::run_hot_reload;
+pub use server::run_hot_reload;

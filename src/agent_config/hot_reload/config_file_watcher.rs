@@ -12,7 +12,7 @@ use tracing::{error, info};
 
 use crate::error::{Error, Result};
 
-use super::orchestrator::ReloadTrigger;
+use super::server::ReloadTrigger;
 
 /// Configuration file watcher
 ///
