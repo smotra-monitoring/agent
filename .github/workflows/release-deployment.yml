@@ -188,6 +188,9 @@ jobs:
     permissions:
       contents: write
       deployments: write
+    environment:
+      name: release
+      url: ${{ steps.deployment.outputs.environment_url }}
     steps:
       - uses: actions/checkout@v7
 
@@ -197,15 +200,6 @@ jobs:
           path: artifacts
           pattern: release-*
           merge-multiple: true
-
-      - name: start deployment
-        uses: bobheadxi/deployments@v1
-        id: deployment
-        with:
-          step: start
-          token: ${{ secrets.GITHUB_TOKEN }}
-          env: release
-          desc: "run_id: ${{ github.run_id }}, ref: ${{ github.ref }}"
 
       - name: Debug info
         run: |
@@ -222,35 +216,15 @@ jobs:
               gh release upload ${RELEASE_TAG} "${file}" --clobber
             done
 
-      - name: Create checksums.txt
-        run: |
-          cd artifacts
-          find . -name "*.sha256" -exec cat {} \; >> checksums.txt
-
-      - name: Upload checksums.txt
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          gh release upload ${RELEASE_TAG} "artifacts/checksums.txt" --clobber
-
-      - name: finish deployment
-        uses: bobheadxi/deployments@v1
-        if: always()
-        with:
-          step: finish
-          token: ${{ secrets.GITHUB_TOKEN }}
-          status: ${{ job.status }}
-          env: ${{ steps.deployment.outputs.env }}
-          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
-
-
+            
   deploy-gh-pages:
     needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write  # Required for GitHub Pages deployment
       deployments: write
+    environment:
+      name: gh-pages
     steps:
       - name: Checkout gh-pages branch
         uses: actions/checkout@v7
@@ -327,35 +301,15 @@ jobs:
           </html>
           EOF
         
-      - name: start deployment
-        uses: bobheadxi/deployments@v1
-        id: deployment
-        with:
-          step: start
-          token: ${{ secrets.GITHUB_TOKEN }}
-          env: gh-pages
-          desc: "run_id: ${{ github.run_id }}, ref: ${{ github.ref }}"
-
       - name: Commit and push to gh-pages
         run: |
           cd gh-pages
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
-          git add .
-          git commit -m "Release ${{ github.ref_name }}" || echo "No changes to commit"
+          git commit -a -m "Release ${{ github.ref_name }}" || echo "No changes to commit"
           git push origin gh-pages
         
       # - name: Create GitHub Release
       #   uses: softprops/action-gh-release@v1
       #   with:
       #     files: gh-pages/releases/${{ github.ref_name }}/*
-
-      - name: finish deployment
-        uses: bobheadxi/deployments@v1
-        if: always()
-        with:
-          step: finish
-          token: ${{ secrets.GITHUB_TOKEN }}
-          status: ${{ job.status }}
-          env: ${{ steps.deployment.outputs.env }}
-          deployment_id: ${{ steps.deployment.outputs.deployment_id }}
