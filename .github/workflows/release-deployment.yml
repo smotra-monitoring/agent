@@ -259,7 +259,7 @@ jobs:
               <p>Latest Version: <strong>${VERSION}</strong></p>
               
               <h2>Quick Install</h2>
-              <pre><code>curl -fsSL https://install.smotra.net/install.sh | sh</code></pre>
+              <pre><code>curl -fsSL https://install.smotra.net/smotra.sh | sh</code></pre>
               
               <h2>Documentation</h2>
               <p>Visit <a href="https://github.com/${{ github.event.repository.owner.login }}/${{ github.event.repository.name }}">GitHub Repository</a> for full documentation.</p>
