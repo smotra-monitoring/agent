@@ -20,7 +20,11 @@ pub fn is_managed_by_launchd() -> bool {
             if let Some(parent_pid) = process.parent() {
                 if let Some(parent) = s.process(parent_pid) {
                     // launchd usually has the name "launchd"
-                    return parent.name().to_lowercase().contains("launchd");
+                    return parent
+                        .name()
+                        .to_string_lossy()
+                        .to_lowercase()
+                        .contains("launchd");
                 }
             }
         }
