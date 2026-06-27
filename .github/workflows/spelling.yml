@@ -68,6 +68,8 @@ on:
     types:
     - 'created'
 
+if: ${{ !github.event.pull_request.draft }}
+
 jobs:
   spelling:
     name: Check Spelling
