@@ -224,23 +224,7 @@ jobs:
     permissions:
       contents: write  # Required for GitHub Pages deployment
       deployments: write
-    environment:
-      name: gh-pages
     steps:
-      - name: Checkout gh-pages branch
-        uses: actions/checkout@v7
-        with:
-          ref: gh-pages
-          path: gh-pages
-        # If gh-pages doesn't exist, create it manually first
-        
-      - name: Download artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: artifacts
-          pattern: release-*
-          merge-multiple: true
-        
       - name: Checkout main branch for install script
         uses: actions/checkout@v7
         with:
@@ -249,32 +233,12 @@ jobs:
       - name: Organize release files
         run: |
           VERSION="${{ github.ref_name }}"
-          cd gh-pages
-          
-          # Create release directory
-          mkdir -p "releases/${VERSION}"
-          
-          # Move all artifacts to release directory
-          find ../artifacts -name "*.tar.gz*" -exec mv {} "releases/${VERSION}/" \;
-          
-          # Create manifest.json
-          cat > "releases/${VERSION}/manifest.json" <<EOF
-          {
-            "version": "${VERSION#v}",
-            "released_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "checksums": {},
-            "targets": []
-          }
-          EOF
-          
-          # Update latest directory
-          mkdir -p "releases/latest"
-          echo "${VERSION}" > "releases/latest/version.txt"
-          cp "releases/${VERSION}/manifest.json" "releases/latest/manifest.json"
-          
+          mkdir html
+          cd html
+                    
           # Copy install script from main branch
-          cp ../main/deployments/install-script/install.sh install.sh
-          chmod +x install.sh
+          cp ../main/deployments/install-script/smotra.sh smotra.sh
+          chmod +x smotra.sh
           
           # Create index.html for documentation
           cat > index.html <<EOF
@@ -302,15 +266,15 @@ jobs:
           </html>
           EOF
         
-      - name: Commit and push to gh-pages
-        run: |
-          cd gh-pages
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-          git commit -a -m "Release ${{ github.ref_name }}" || echo "No changes to commit"
-          git push origin gh-pages
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: './html/' # Upload html directory (or your build folder if using a generator)
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
         
-      # - name: Create GitHub Release
-      #   uses: softprops/action-gh-release@v1
-      #   with:
-      #     files: gh-pages/releases/${{ github.ref_name }}/*
