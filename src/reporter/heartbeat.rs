@@ -1,11 +1,12 @@
 //! Heartbeat reporting to central server
 
 use crate::agent_config::Config;
-use crate::core::{AgentHealthStatus, AgentHeartbeat};
+use crate::core::{AgentHealthStatus, AgentHeartbeat, AgentMetrics};
 use crate::error::{Error, Result};
 use chrono::Utc;
 use parking_lot::RwLock;
 use std::sync::Arc;
+use std::time::Instant;
 use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
 use tokio::sync::Mutex;
 use tracing::{debug, error, warn};
@@ -18,6 +19,7 @@ use tracing::{debug, error, warn};
 pub struct HeartbeatReporter {
     config: Arc<RwLock<Config>>,
     system: Mutex<System>,
+    started_at: Instant,
 }
 
 impl HeartbeatReporter {
@@ -36,6 +38,7 @@ impl HeartbeatReporter {
         Ok(Self {
             config,
             system: Mutex::new(system),
+            started_at: Instant::now(),
         })
     }
 
@@ -44,25 +47,29 @@ impl HeartbeatReporter {
         let cpu_usage_percent = self.get_cpu_usage().await;
         let (memory_usage_mb, memory_total_mb) = self.get_memory_mb().await;
         let system_uptime_secs = self.get_uptime_secs().await;
+        let agent_uptime_secs = self.started_at.elapsed().as_secs() as i64;
 
         // Determine health status based on metrics
-        let mut status = AgentHealthStatus::Healthy;
+        let mut health_status = AgentHealthStatus::Healthy;
 
         if cpu_usage_percent > 90.0 {
-            status = AgentHealthStatus::Degraded;
+            health_status = AgentHealthStatus::Degraded;
         }
 
         if memory_total_mb > 0.0 && (memory_usage_mb / memory_total_mb) * 100.0 > 90.0 {
-            status = AgentHealthStatus::Degraded;
+            health_status = AgentHealthStatus::Degraded;
         }
 
         AgentHeartbeat {
             timestamp: Utc::now(),
-            status,
-            cpu_usage_percent,
-            memory_usage_mb,
-            memory_total_mb,
-            system_uptime_secs,
+            health_status,
+            metrics: AgentMetrics {
+                agent_uptime_secs,
+                cpu_usage_percent,
+                memory_usage_mb,
+                memory_total_mb,
+                system_uptime_secs,
+            },
         }
     }
 
@@ -205,17 +212,22 @@ mod tests {
     fn test_heartbeat_serialization() {
         let heartbeat = AgentHeartbeat {
             timestamp: Utc::now(),
-            status: AgentHealthStatus::Healthy,
-            cpu_usage_percent: 45.5,
-            memory_usage_mb: 512.0,
-            memory_total_mb: 8192.0,
-            system_uptime_secs: 3600,
+            health_status: AgentHealthStatus::Healthy,
+            metrics: AgentMetrics {
+                agent_uptime_secs: 3600,
+                cpu_usage_percent: 45.5,
+                memory_usage_mb: 512.0,
+                memory_total_mb: 8192.0,
+                system_uptime_secs: 86400,
+            },
         };
         let json = serde_json::to_string(&heartbeat).unwrap();
 
         // Verify JSON contains expected fields
         assert!(json.contains("timestamp"));
-        assert!(json.contains("status"));
+        assert!(json.contains("health_status"));
+        assert!(json.contains("metrics"));
+        assert!(json.contains("agent_uptime_secs"));
         assert!(json.contains("cpu_usage_percent"));
         assert!(json.contains("memory_usage_mb"));
         assert!(json.contains("memory_total_mb"));
@@ -223,36 +235,49 @@ mod tests {
 
         // Verify deserialization works
         let deserialized: AgentHeartbeat = serde_json::from_str(&json).unwrap();
-        assert_eq!(deserialized.cpu_usage_percent, 45.5);
-        assert_eq!(deserialized.memory_usage_mb, 512.0);
-        assert_eq!(deserialized.memory_total_mb, 8192.0);
-        assert_eq!(deserialized.system_uptime_secs, 3600);
+        assert_eq!(deserialized.metrics.agent_uptime_secs, 3600);
+        assert_eq!(deserialized.metrics.cpu_usage_percent, 45.5);
+        assert_eq!(deserialized.metrics.memory_usage_mb, 512.0);
+        assert_eq!(deserialized.metrics.memory_total_mb, 8192.0);
+        assert_eq!(deserialized.metrics.system_uptime_secs, 86400);
     }
 
     #[test]
     fn test_heartbeat_default_status() {
         let heartbeat = AgentHeartbeat {
             timestamp: Utc::now(),
-            status: AgentHealthStatus::Healthy,
-            cpu_usage_percent: 0.0,
-            memory_usage_mb: 0.0,
-            memory_total_mb: 0.0,
-            system_uptime_secs: 0,
+            health_status: AgentHealthStatus::Healthy,
+            metrics: AgentMetrics {
+                agent_uptime_secs: 0,
+                cpu_usage_percent: 0.0,
+                memory_usage_mb: 0.0,
+                memory_total_mb: 0.0,
+                system_uptime_secs: 0,
+            },
         };
-        assert!(matches!(heartbeat.status, AgentHealthStatus::Healthy));
+        assert!(matches!(
+            heartbeat.health_status,
+            AgentHealthStatus::Healthy
+        ));
     }
 
     #[test]
     fn test_heartbeat_with_status() {
         let heartbeat = AgentHeartbeat {
             timestamp: Utc::now(),
-            status: AgentHealthStatus::Degraded,
-            cpu_usage_percent: 95.0,
-            memory_usage_mb: 7500.0,
-            memory_total_mb: 8192.0,
-            system_uptime_secs: 86400,
+            health_status: AgentHealthStatus::Degraded,
+            metrics: AgentMetrics {
+                agent_uptime_secs: 0,
+                cpu_usage_percent: 95.0,
+                memory_usage_mb: 7500.0,
+                memory_total_mb: 8192.0,
+                system_uptime_secs: 86400,
+            },
         };
-        assert!(matches!(heartbeat.status, AgentHealthStatus::Degraded));
+        assert!(matches!(
+            heartbeat.health_status,
+            AgentHealthStatus::Degraded
+        ));
     }
 
     #[tokio::test]
@@ -278,7 +303,7 @@ mod tests {
 
         // Verify the heartbeat was created successfully with valid status
         // Status can be either Healthy or Degraded depending on system load
-        match heartbeat.status {
+        match heartbeat.health_status {
             AgentHealthStatus::Healthy | AgentHealthStatus::Degraded => {
                 // Both are valid
             }

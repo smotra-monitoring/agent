@@ -324,12 +324,11 @@ pub struct ErrorDetails {
     pub errors: Option<Vec<String>>,
 }
 
-/// AgentHeartbeat
+/// AgentMetrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AgentHeartbeat {
-    /// Agent-local timestamp when the heartbeat was generated (RFC3339)
-    pub timestamp: DateTime<Utc>,
-    pub status: AgentHealthStatus,
+pub struct AgentMetrics {
+    /// How long the agent process has been running in seconds
+    pub agent_uptime_secs: i64,
     /// CPU utilisation percentage (0.0–100.0)
     pub cpu_usage_percent: f64,
     /// Resident memory currently in use (MB)
@@ -338,6 +337,16 @@ pub struct AgentHeartbeat {
     pub memory_total_mb: f64,
     /// System uptime in seconds
     pub system_uptime_secs: i64,
+}
+
+/// AgentHeartbeat
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentHeartbeat {
+    /// Agent-local timestamp when the heartbeat was generated (RFC3339)
+    pub timestamp: DateTime<Utc>,
+    pub health_status: AgentHealthStatus,
+    /// System resource utilisation metrics
+    pub metrics: AgentMetrics,
 }
 
 /// Type of check performed
