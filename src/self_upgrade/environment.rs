@@ -6,10 +6,11 @@ pub fn is_containerized() -> bool {
 
 #[cfg(target_os = "macos")]
 pub fn is_managed_by_launchd() -> bool {
-    use sysinfo::{Pid, System};
+    use sysinfo::{Pid, ProcessesToUpdate, System};
 
     let mut s = System::new();
-    s.refresh_processes();
+    // ProcessesToUpdate::All and true to clear out dead processes
+    s.refresh_processes(ProcessesToUpdate::All, true);
 
     // Get the current process ID
     let current_pid = sysinfo::get_current_pid().ok();
@@ -20,7 +21,11 @@ pub fn is_managed_by_launchd() -> bool {
             if let Some(parent_pid) = process.parent() {
                 if let Some(parent) = s.process(parent_pid) {
                     // launchd usually has the name "launchd"
-                    return parent.name().to_lowercase().contains("launchd");
+                    return parent
+                        .name()
+                        .to_string_lossy()
+                        .to_lowercase()
+                        .contains("launchd");
                 }
             }
         }

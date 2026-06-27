@@ -29,6 +29,7 @@ pub fn trigger_restart(current_exe: &Path) -> Result<()> {
             .args(["/C", &script])
             .spawn()
             .map_err(|e| Error::SelfUpgrade(format!("failed to spawn restarter: {}", e)))?;
+        Ok(())
     }
 
     #[cfg(target_os = "macos")]
@@ -44,6 +45,7 @@ pub fn trigger_restart(current_exe: &Path) -> Result<()> {
                 .spawn()
                 .map_err(|e| Error::SelfUpgrade(format!("failed to spawn restarter: {}", e)))?;
         }
+        Ok(())
     }
 
     #[cfg(target_os = "linux")]

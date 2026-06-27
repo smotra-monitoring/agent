@@ -190,7 +190,7 @@ jobs:
       deployments: write
     environment:
       name: release
-      url: ${{ steps.deployment.outputs.environment_url }}
+      url: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
     steps:
       - uses: actions/checkout@v7
 
@@ -211,11 +211,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
-            ASSET_DIR="artifacts"
-            for file in $(ls ${ASSET_DIR}/*.tar.gz,${ASSET_DIR}/*.zip,${ASSET_DIR}/*.sha256); do
-              gh release upload ${RELEASE_TAG} "${file}" --clobber
-            done
-
+          # Use a standard shell glob array or separate arguments
+          for file in artifacts/*.tar.gz artifacts/*.zip artifacts/*.sha256; do
+            # Ensure the file actually exists before trying to upload
+            [ -e "$file" ] || continue
+            gh release upload "${RELEASE_TAG}" "${file}" --clobber
+          done
             
   deploy-gh-pages:
     needs: build
