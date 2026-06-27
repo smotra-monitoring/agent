@@ -218,12 +218,13 @@ jobs:
             gh release upload "${RELEASE_TAG}" "${file}" --clobber
           done
             
-  deploy-gh-pages:
+  deploy-github-pages:
     needs: build
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Required for GitHub Pages deployment
-      deployments: write
+      contents: read
+      pages: write
+      id-token: write
     steps:
       - name: Checkout main branch for install script
         uses: actions/checkout@v7
