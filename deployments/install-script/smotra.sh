@@ -12,6 +12,8 @@ CACHE_DIR="${CACHE_DIR:-/var/cache/smotra}"
 BASE_URL="${SMOTRA_INSTALL_URL:-https://install.smotra.net}"
 VERSION="${SMOTRA_VERSION:-latest}"
 SERVER_URL=""
+UNINSTALL=0
+PURGE=0
 
 # Colors for output
 RED='\033[0;31m'
@@ -49,6 +51,14 @@ parse_args() {
                 INSTALL_DIR="$2"
                 shift 2
                 ;;
+            --uninstall)
+                UNINSTALL=1
+                shift
+                ;;
+            --purge)
+                PURGE=1
+                shift
+                ;;
             --help)
                 cat <<EOF
 Smotra Agent Install Script
@@ -61,6 +71,8 @@ Options:
   --server URL       Server URL (e.g., https://api.smotra.net)
   --version VERSION  Install specific version (default: latest)
   --install-dir DIR  Installation directory (default: /usr/local/bin)
+  --uninstall        Uninstall the agent
+  --purge            Remove configuration and cache when used with --uninstall
   --help            Show this help message
 
 Environment Variables:
@@ -78,6 +90,12 @@ Examples:
 
   # Install specific version
   curl -fsSL https://install.smotra.net/smotra.sh | sh -s -- --version v0.1.0
+
+  # Uninstall
+  curl -fsSL https://install.smotra.net/smotra.sh | sh -s -- --uninstall
+
+  # Uninstall and remove config/cache
+  curl -fsSL https://install.smotra.net/smotra.sh | sh -s -- --uninstall --purge
 EOF
                 exit 0
                 ;;
@@ -220,7 +238,6 @@ install_binaries() {
     # Install binaries
     install -D -m 755 "$TMPDIR/smotra" "$INSTALL_DIR/smotra"
     install -D -m 755 "$TMPDIR/smotra-cli" "$INSTALL_DIR/smotra-cli"
-    install -D -m 755 "$TMPDIR/smotra-updater" "$INSTALL_DIR/smotra-updater"
 
     # Set capabilities for ICMP (Linux only)
     if [ "$OS" = "linux" ] && command -v setcap >/dev/null 2>&1 && [ "$(id -u)" -eq 0 ]; then
@@ -325,6 +342,61 @@ EOF
     info "Load with: launchctl load ~/Library/LaunchAgents/net.smotra.agent.plist"
 }
 
+# Uninstall agent, service files, and optionally config/cache
+uninstall() {
+    info "Uninstalling Smotra Agent..."
+
+    # Stop and disable systemd service (Linux)
+    if [ -f /etc/systemd/system/smotra.service ]; then
+        if command -v systemctl >/dev/null 2>&1; then
+            info "Stopping and disabling systemd service..."
+            systemctl stop smotra 2>/dev/null || true
+            systemctl disable smotra 2>/dev/null || true
+        fi
+        rm -f /etc/systemd/system/smotra.service
+        if command -v systemctl >/dev/null 2>&1; then
+            systemctl daemon-reload
+        fi
+        info "Systemd service removed"
+    fi
+
+    # Stop and unload launchd service (macOS)
+    LAUNCHD_PLIST="$HOME/Library/LaunchAgents/net.smotra.agent.plist"
+    if [ -f "$LAUNCHD_PLIST" ]; then
+        info "Unloading launchd service..."
+        launchctl unload "$LAUNCHD_PLIST" 2>/dev/null || true
+        rm -f "$LAUNCHD_PLIST"
+        info "Launchd service removed"
+    fi
+
+    # Remove binaries
+    for binary in smotra smotra-cli; do
+        if [ -f "$INSTALL_DIR/$binary" ]; then
+            rm -f "$INSTALL_DIR/$binary"
+            info "Removed $INSTALL_DIR/$binary"
+        fi
+    done
+
+    # Remove config and cache only when --purge is specified
+    if [ "$PURGE" -eq 1 ]; then
+        if [ -d "$CONFIG_DIR" ]; then
+            rm -rf "$CONFIG_DIR"
+            info "Removed configuration directory: $CONFIG_DIR"
+        fi
+        if [ -d "$CACHE_DIR" ]; then
+            rm -rf "$CACHE_DIR"
+            info "Removed cache directory: $CACHE_DIR"
+        fi
+    else
+        warn "Configuration and cache directories were kept."
+        warn "  Config: $CONFIG_DIR"
+        warn "  Cache:  $CACHE_DIR"
+        warn "Run with --purge to remove them as well."
+    fi
+
+    info "Smotra Agent uninstalled successfully"
+}
+
 # Print post-install instructions
 print_instructions() {
     cat <<EOF
@@ -334,7 +406,6 @@ ${GREEN}✓ Smotra Agent installed successfully!${NC}
 Binaries installed:
   - $INSTALL_DIR/smotra
   - $INSTALL_DIR/smotra-cli
-  - $INSTALL_DIR/smotra-updater
 
 Configuration:
   - Config file: $CONFIG_DIR/config.toml
@@ -371,6 +442,13 @@ main() {
     info ""
 
     parse_args "$@"
+
+    if [ "$UNINSTALL" -eq 1 ]; then
+        detect_platform
+        uninstall
+        return
+    fi
+
     detect_platform
     check_privileges
     check_dependencies
