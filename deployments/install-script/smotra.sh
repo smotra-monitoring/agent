@@ -1,7 +1,7 @@
 #!/bin/sh
 # Smotra Agent Quick Install Script
-# Usage: curl -fsSL https://install.smotra.net/agent.sh | sh
-# Usage with options: curl -fsSL https://install.smotra.net/agent.sh | sh -s -- --server https://api.smotra.net
+# Usage: curl -fsSL https://install.smotra.net/smotra.sh | sh
+# Usage with options: curl -fsSL https://install.smotra.net/smotra.sh | sh -s -- --server https://api.smotra.net
 
 set -e
 
@@ -54,8 +54,8 @@ parse_args() {
 Smotra Agent Install Script
 
 Usage: 
-  curl -fsSL https://install.smotra.net/agent.sh | sh
-  curl -fsSL https://install.smotra.net/agent.sh | sh -s -- [options]
+  curl -fsSL https://install.smotra.net/smotra.sh | sh
+  curl -fsSL https://install.smotra.net/smotra.sh | sh -s -- [options]
 
 Options:
   --server URL       Server URL (e.g., https://api.smotra.net)
@@ -71,13 +71,13 @@ Environment Variables:
 
 Examples:
   # Install latest version
-  curl -fsSL https://install.smotra.net/agent.sh | sh
+  curl -fsSL https://install.smotra.net/smotra.sh | sh
 
   # Install with server URL
-  curl -fsSL https://install.smotra.net/agent.sh | sh -s -- --server https://api.smotra.net
+  curl -fsSL https://install.smotra.net/smotra.sh | sh -s -- --server https://api.smotra.net
 
   # Install specific version
-  curl -fsSL https://install.smotra.net/agent.sh | sh -s -- --version v0.1.0
+  curl -fsSL https://install.smotra.net/smotra.sh | sh -s -- --version v0.1.0
 EOF
                 exit 0
                 ;;
