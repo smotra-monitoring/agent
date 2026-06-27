@@ -6,11 +6,11 @@ use uuid::Uuid;
 pub use crate::openapi::AgentStatus;
 pub use crate::openapi::MonitoringResult;
 pub use crate::openapi::{
-    AgentHealthStatus, AgentHeartbeat, CheckType, Endpoint, ErrorDetails, HttpGetCheck,
-    HttpGetCheckType, HttpGetResult, PingCheck, PingCheckType, PingResult, PluginCheck,
-    PluginCheckType, PluginResult, TcpConnectCheck, TcpConnectCheckType, TcpConnectResult,
-    TracerouteCheck, TracerouteCheckType, TracerouteHop, TracerouteResult, UdpConnectCheck,
-    UdpConnectCheckType, UdpConnectResult,
+    AgentHealthStatus, AgentHeartbeat, AgentMetrics, CheckType, Endpoint, ErrorDetails,
+    HttpGetCheck, HttpGetCheckType, HttpGetResult, PingCheck, PingCheckType, PingResult,
+    PluginCheck, PluginCheckType, PluginResult, TcpConnectCheck, TcpConnectCheckType,
+    TcpConnectResult, TracerouteCheck, TracerouteCheckType, TracerouteHop, TracerouteResult,
+    UdpConnectCheck, UdpConnectCheckType, UdpConnectResult,
 };
 
 impl MonitoringResult {
