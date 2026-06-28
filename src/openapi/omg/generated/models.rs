@@ -9,7 +9,6 @@ use uuid::Uuid;
 /// AgentStatus
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentStatus {
-    pub agent_id: UUIDv7,
     /// Version of the agent
     pub agent_version: String,
     /// Version of the agent configuration
@@ -57,7 +56,7 @@ pub struct AgentConfig {
     pub monitoring: MonitoringConfig,
     pub server: ServerConfig,
     pub storage: StorageConfig,
-    pub update: SelfUpdateConfig,
+    pub self_upgrade: SelfUpgradeConfig,
     /// Endpoints to monitor
     pub endpoints: Vec<Endpoint>,
 }
@@ -109,9 +108,9 @@ pub struct StorageConfig {
     pub max_cache_age_secs: i64,
 }
 
-/// SelfUpdateConfig
+/// SelfUpgradeConfig
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SelfUpdateConfig {
+pub struct SelfUpgradeConfig {
     /// Enables self-upgrade checks when true
     pub enabled: bool,
     /// GitHub repository URL for checking latest releases (must be a public repo)
@@ -324,12 +323,22 @@ pub struct ErrorDetails {
     pub errors: Option<Vec<String>>,
 }
 
+/// AgentHeartbeat
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentHeartbeat {
+    /// Agent-local timestamp when the heartbeat was generated (RFC3339)
+    pub timestamp: DateTime<Utc>,
+    pub health_status: AgentHealthStatus,
+    pub metrics: AgentMetrics,
+    pub agent_status: AgentStatus,
+}
+
 /// AgentMetrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentMetrics {
-    /// How long the agent process has been running in seconds
+    /// How long the agent process has been running in seconds; useful for detecting crashes and restarts
     pub agent_uptime_secs: i64,
-    /// CPU utilisation percentage (0.0–100.0)
+    /// CPU utilization percentage (0.0–100.0)
     pub cpu_usage_percent: f64,
     /// Resident memory currently in use (MB)
     pub memory_usage_mb: f64,
@@ -337,16 +346,6 @@ pub struct AgentMetrics {
     pub memory_total_mb: f64,
     /// System uptime in seconds
     pub system_uptime_secs: i64,
-}
-
-/// AgentHeartbeat
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AgentHeartbeat {
-    /// Agent-local timestamp when the heartbeat was generated (RFC3339)
-    pub timestamp: DateTime<Utc>,
-    pub health_status: AgentHealthStatus,
-    /// System resource utilisation metrics
-    pub metrics: AgentMetrics,
 }
 
 /// Type of check performed
@@ -415,6 +414,45 @@ pub struct AgentNetworkInterface {
     /// IP the OS selects when opening a connection toward the server is marked as
     /// recommended. Only one entry will have recommended=true.
     pub recommended: bool,
+}
+
+/// Agent
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Agent {
+    pub id: UUIDv7,
+    /// Section (organizational unit) this agent belongs to
+    #[serde(rename = "sectionId")]
+    pub section_id: String,
+    /// Human-readable agent name
+    pub name: String,
+    /// Current configuration version
+    #[serde(rename = "configVersion")]
+    pub config_version: i64,
+    /// Version of the agent software, null if not yet reported
+    #[serde(rename = "agentVersion")]
+    pub agent_version: Option<String>,
+    /// Network interfaces reported by the agent
+    #[serde(rename = "ipAddresses")]
+    pub ip_addresses: Option<Vec<AgentNetworkInterface>>,
+    /// Timestamp of the last heartbeat received from the agent
+    #[serde(rename = "lastSeenAt")]
+    pub last_seen_at: Option<DateTime<Utc>>,
+    /// Timestamp of the last monitoring result submission
+    #[serde(rename = "lastResultSubmittedAt")]
+    pub last_result_submitted_at: Option<DateTime<Utc>>,
+    /// Timestamp when the agent was registered
+    #[serde(rename = "createdAt")]
+    pub created_at: DateTime<Utc>,
+    /// Timestamp when the agent record was last updated
+    #[serde(rename = "updatedAt")]
+    pub updated_at: DateTime<Utc>,
+}
+
+/// AgentListResponse
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentListResponse {
+    pub agents: Vec<Agent>,
+    pub pagination: Pagination,
 }
 
 /// AgentSelfRegistration
@@ -530,18 +568,6 @@ pub struct RetryPolicy {
     pub max_retries: Option<i64>,
     pub retry_delay_seconds: Option<i64>,
     pub backoff_multiplier: Option<f64>,
-}
-
-/// ReportAcknowledgment
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ReportAcknowledgment {
-    pub request_id: UUIDv7,
-    pub status: ReportAckStatus,
-    pub received_at: DateTime<Utc>,
-    /// Latest configuration version available
-    pub configuration_version: Option<i64>,
-    /// Whether agent update is available
-    pub update_available: Option<bool>,
 }
 
 /// ResultsBatchAcknowledgment
@@ -720,17 +746,14 @@ pub struct NotificationChannel {
 /// TokenResponse
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TokenResponse {
-    /// JWT access token
-    pub access_token: String,
-    pub token_type: String,
-    /// Token lifetime in seconds
-    pub expires_in: i64,
-    /// Refresh token (only for authorization_code grant)
-    pub refresh_token: Option<String>,
-    /// Space-separated list of granted scopes
-    pub scope: Option<String>,
-    /// OpenID Connect ID token (if openid scope requested)
-    pub id_token: Option<String>,
+    /// Server-managed opaque session token. Use as a Bearer token in the
+    /// Authorization header for all subsequent requests.
+    /// Format: st_live_<hex> (production) or st_test_<hex> (dev/test).
+    pub opaque_token: String,
+    /// Hard expiry time (ISO 8601). The session will never be valid after
+    /// this timestamp regardless of activity. Use this to schedule a
+    /// proactive re-login in the client (e.g. at the midpoint).
+    pub expires_at: DateTime<Utc>,
 }
 
 /// UserInfo
@@ -1009,60 +1032,35 @@ pub struct AcknowledgeAlertRequestBody {
     pub note: Option<String>,
 }
 
-/// OAuth2 grant type
+/// OAuth2 grant type (only authorization_code is supported here)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum GrantType {
     #[serde(rename = "authorization_code")]
     AuthorizationCode,
-    #[serde(rename = "refresh_token")]
-    RefreshToken,
 }
 /// Oauth2TokenRequestBody
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Oauth2TokenRequestBody {
-    /// Identity provider name. Must match a provider configured on the server.
-    /// Built-in values: okta, auth0, azure, google, github.
-    pub provider: String,
-    /// OAuth2 grant type
+    /// OAuth2 grant type (only authorization_code is supported here)
     pub grant_type: GrantType,
-    /// Authorization code (required for authorization_code grant)
-    pub code: Option<String>,
-    /// Must exactly match the redirect_uri used in the authorization request (required for authorization_code grant)
-    pub redirect_uri: Option<String>,
-    /// PKCE code verifier (required for authorization_code grant)
-    pub code_verifier: Option<String>,
-    /// Refresh token (required for refresh_token grant)
-    pub refresh_token: Option<String>,
-    /// Optional scope restriction (refresh_token grant only)
-    pub scope: Option<String>,
+    /// Authorization code returned by the IDP callback
+    pub code: String,
+    /// Must exactly match the redirect_uri used in the authorization request
+    pub redirect_uri: String,
+    /// PKCE code verifier corresponding to the code_challenge sent at /authorize
+    pub code_verifier: String,
 }
 
-/// Optional hint about the token type
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum TokenTypeHint {
-    #[serde(rename = "access_token")]
-    AccessToken,
-    #[serde(rename = "refresh_token")]
-    RefreshToken,
-}
 /// Oauth2RevokeRequestBody
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Oauth2RevokeRequestBody {
-    /// Identity provider name. Must match a provider configured on the server.
-    /// Built-in values: okta, auth0, azure, google, github.
-    pub provider: String,
-    /// Token to revoke
-    pub token: String,
-    /// Optional hint about the token type
-    pub token_type_hint: Option<TokenTypeHint>,
+    /// The opaque session token to revoke (as returned by /auth/oauth2/token or /auth/refresh)
+    pub opaque_token: String,
 }
 
 /// LogoutRequestBody
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LogoutRequestBody {
-    /// Identity provider name. Must match a provider configured on the server.
-    /// Built-in values: okta, auth0, azure, google, github.
-    pub provider: String,
     /// Optional URI to redirect to after IDP logout completes.
     /// Forwarded to the IDP end-session endpoint as post_logout_redirect_uri.
     pub post_logout_redirect_uri: Option<String>,
@@ -1083,11 +1081,6 @@ pub struct GetWebSocketTokenRequestBody {
     pub filters: Option<Filters>,
 }
 
-/// SubmitAgentStatusRequest
-#[derive(Debug, Clone, Serialize)]
-pub struct SubmitAgentStatusRequest {
-    pub body: AgentStatus,
-}
 /// RegisterAgentSelfRequest
 #[derive(Debug, Clone, Serialize)]
 pub struct RegisterAgentSelfRequest {
@@ -1097,11 +1090,6 @@ pub struct RegisterAgentSelfRequest {
 #[derive(Debug, Clone, Serialize)]
 pub struct PostClaimAgentRequest {
     pub body: ClaimAgentRequest,
-}
-/// UpdateAgentConfigurationRequest
-#[derive(Debug, Clone, Serialize)]
-pub struct UpdateAgentConfigurationRequest {
-    pub body: AgentConfig,
 }
 /// SendAgentHeartbeatRequest
 #[derive(Debug, Clone, Serialize)]
@@ -1163,11 +1151,6 @@ pub struct PostCreateOrganizationRequest {
 pub struct GetWebSocketTokenRequest {
     pub body: GetWebSocketTokenRequestBody,
 }
-/// Report accepted for processing
-#[derive(Debug, Clone, Deserialize)]
-pub struct SubmitAgentStatusResponse202 {
-    pub body: ReportAcknowledgment,
-}
 /// Agent registration request created
 #[derive(Debug, Clone, Deserialize)]
 pub struct RegisterAgentSelfResponse201 {
@@ -1213,15 +1196,15 @@ pub struct PostClaimAgentResponse409 {
 pub struct GetAgentConfigurationResponse200 {
     pub body: AgentConfig,
 }
-/// Configuration updated successfully
-#[derive(Debug, Clone, Deserialize)]
-pub struct UpdateAgentConfigurationResponse200 {
-    pub body: AgentConfig,
-}
 /// Batch accepted for processing
 #[derive(Debug, Clone, Deserialize)]
 pub struct SubmitAgentResultsResponse202 {
     pub body: ResultsBatchAcknowledgment,
+}
+/// Agent list retrieved successfully
+#[derive(Debug, Clone, Deserialize)]
+pub struct ListAgentsResponse200 {
+    pub body: AgentListResponse,
 }
 /// Report generated successfully
 #[derive(Debug, Clone, Deserialize)]
@@ -1258,15 +1241,20 @@ pub struct GetAlertResponse200 {
 pub struct AcknowledgeAlertResponse200 {
     pub body: Alert,
 }
-/// Tokens issued successfully
+/// Session created; opaque token returned
 #[derive(Debug, Clone, Deserialize)]
 pub struct Oauth2TokenResponse200 {
     pub body: TokenResponse,
 }
-/// Token revoked (or acknowledged as no-op for providers without revocation support).
+/// Session revoked successfully.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Oauth2RevokeResponse200 {
     pub body: serde_json::Value,
+}
+/// New session token issued
+#[derive(Debug, Clone, Deserialize)]
+pub struct AuthRefreshResponse200 {
+    pub body: TokenResponse,
 }
 /// User information retrieved
 #[derive(Debug, Clone, Deserialize)]

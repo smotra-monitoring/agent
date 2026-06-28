@@ -27,11 +27,12 @@ pub mod self_upgrade;
 pub use agent_config::{ClaimConfig, Config, MonitoringConfig, ServerConfig, StorageConfig};
 pub use claim::Claim;
 pub use core::{
-    Agent, AgentHealthStatus, AgentHeartbeat, AgentStatus, CheckType, Endpoint, ErrorDetails,
-    HttpGetCheck, HttpGetCheckType, HttpGetResult, MonitoringResult, PingCheck, PingCheckType,
-    PingResult, PluginCheck, PluginCheckType, PluginResult, TcpConnectCheck, TcpConnectCheckType,
-    TcpConnectResult, TracerouteCheck, TracerouteCheckType, TracerouteHop, TracerouteResult,
-    UdpConnectCheck, UdpConnectCheckType, UdpConnectResult,
+    Agent, AgentCacheStats, AgentHealthStatus, AgentHeartbeat, AgentMetrics, AgentStatus,
+    CheckType, Endpoint, ErrorDetails, HttpGetCheck, HttpGetCheckType, HttpGetResult,
+    MonitoringResult, PingCheck, PingCheckType, PingResult, PluginCheck, PluginCheckType,
+    PluginResult, TcpConnectCheck, TcpConnectCheckType, TcpConnectResult, TracerouteCheck,
+    TracerouteCheckType, TracerouteHop, TracerouteResult, UdpConnectCheck, UdpConnectCheckType,
+    UdpConnectResult,
 };
 pub use error::{Error, Result};
 
