@@ -3,14 +3,12 @@
 use uuid::Uuid;
 
 // Re-export from generated OpenAPI types — these are the canonical wire-level types.
-pub use crate::openapi::AgentStatus;
-pub use crate::openapi::MonitoringResult;
 pub use crate::openapi::{
-    AgentHealthStatus, AgentHeartbeat, AgentMetrics, CheckType, Endpoint, ErrorDetails,
-    HttpGetCheck, HttpGetCheckType, HttpGetResult, PingCheck, PingCheckType, PingResult,
-    PluginCheck, PluginCheckType, PluginResult, TcpConnectCheck, TcpConnectCheckType,
-    TcpConnectResult, TracerouteCheck, TracerouteCheckType, TracerouteHop, TracerouteResult,
-    UdpConnectCheck, UdpConnectCheckType, UdpConnectResult,
+    AgentCacheStats, AgentHealthStatus, AgentHeartbeat, AgentMetrics, AgentStatus, CheckType,
+    Endpoint, ErrorDetails, HttpGetCheck, HttpGetCheckType, HttpGetResult, MonitoringResult,
+    PingCheck, PingCheckType, PingResult, PluginCheck, PluginCheckType, PluginResult,
+    TcpConnectCheck, TcpConnectCheckType, TcpConnectResult, TracerouteCheck, TracerouteCheckType,
+    TracerouteHop, TracerouteResult, UdpConnectCheck, UdpConnectCheckType, UdpConnectResult,
 };
 
 impl MonitoringResult {

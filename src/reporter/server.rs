@@ -117,8 +117,11 @@ async fn send_agent_report(config: &Config, agent_status: &Arc<RwLock<AgentStatu
 ///
 /// Accepts a shared `Arc<RwLock<Config>>` so that config hot-reloads are
 /// reflected in subsequent heartbeat payloads automatically.
+/// Accepts a shared `Arc<RwLock<AgentStatus>>` so each heartbeat payload
+/// includes the latest agent status snapshot.
 pub async fn run_heartbeat(
     config: Arc<RwLock<Config>>,
+    agent_status: Arc<RwLock<AgentStatus>>,
     mut agent_shutdown_rx: broadcast::Receiver<()>,
 ) -> Result<()> {
     info!("Starting heartbeat reporter");
@@ -128,7 +131,8 @@ pub async fn run_heartbeat(
         return Ok(());
     }
 
-    let heartbeat_reporter = HeartbeatReporter::new(Arc::clone(&config))?;
+    let heartbeat_reporter =
+        HeartbeatReporter::new(Arc::clone(&config), Arc::clone(&agent_status))?;
 
     // Track the current interval so we can hot-reload it when config changes.
     let mut current_interval_duration = config.read().server.heartbeat_interval();

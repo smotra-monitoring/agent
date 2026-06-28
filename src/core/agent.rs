@@ -109,9 +109,12 @@ impl Agent {
         // Start heartbeat task
         let heartbeat_handle = {
             let config = Arc::clone(&self.config);
+            let status = Arc::clone(&self.status);
             let shutdown_rx = self.subscribe_shutdown();
 
-            tokio::spawn(async move { crate::reporter::run_heartbeat(config, shutdown_rx).await })
+            tokio::spawn(async move {
+                crate::reporter::run_heartbeat(config, status, shutdown_rx).await
+            })
         };
 
         // Start updater task

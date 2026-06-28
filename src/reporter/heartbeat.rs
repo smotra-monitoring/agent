@@ -1,7 +1,7 @@
 //! Heartbeat reporting to central server
 
 use crate::agent_config::Config;
-use crate::core::{AgentHealthStatus, AgentHeartbeat, AgentMetrics};
+use crate::core::{AgentHealthStatus, AgentHeartbeat, AgentMetrics, AgentStatus};
 use crate::error::{Error, Result};
 use chrono::Utc;
 use parking_lot::RwLock;
@@ -18,6 +18,7 @@ use tracing::{debug, error, warn};
 #[derive(Debug)]
 pub struct HeartbeatReporter {
     config: Arc<RwLock<Config>>,
+    status: Arc<RwLock<AgentStatus>>,
     system: Mutex<System>,
     started_at: Instant,
 }
@@ -27,7 +28,9 @@ impl HeartbeatReporter {
     ///
     /// Accepts a shared `Arc<RwLock<Config>>` so that config hot-reloads are
     /// picked up automatically on every `send_heartbeat()` call.
-    pub fn new(config: Arc<RwLock<Config>>) -> Result<Self> {
+    /// Accepts a shared `Arc<RwLock<AgentStatus>>` so the heartbeat payload
+    /// always reflects the latest agent state.
+    pub fn new(config: Arc<RwLock<Config>>, status: Arc<RwLock<AgentStatus>>) -> Result<Self> {
         // Initialize system with minimal refresh for better performance
         let system = System::new_with_specifics(
             RefreshKind::nothing()
@@ -37,6 +40,7 @@ impl HeartbeatReporter {
 
         Ok(Self {
             config,
+            status,
             system: Mutex::new(system),
             started_at: Instant::now(),
         })
@@ -70,6 +74,7 @@ impl HeartbeatReporter {
                 memory_total_mb,
                 system_uptime_secs,
             },
+            agent_status: self.status.read().clone(),
         }
     }
 
@@ -158,6 +163,7 @@ impl HeartbeatReporter {
 mod tests {
     use super::*;
     use crate::agent_config::{MonitoringConfig, ServerConfig, StorageConfig};
+    use crate::core::AgentStatus;
     use chrono::Utc;
 
     fn create_test_config() -> Arc<RwLock<Config>> {
@@ -174,10 +180,16 @@ mod tests {
         }))
     }
 
+    fn create_test_status() -> Arc<RwLock<AgentStatus>> {
+        let config_id = uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+        Arc::new(RwLock::new(AgentStatus::new(config_id)))
+    }
+
     #[test]
     fn test_heartbeat_reporter_creation() {
         let config = create_test_config();
-        let reporter = HeartbeatReporter::new(config);
+        let status = create_test_status();
+        let reporter = HeartbeatReporter::new(config, status);
         assert!(reporter.is_ok());
     }
 
@@ -186,7 +198,8 @@ mod tests {
         let config = create_test_config();
         config.write().server.url = "".to_string(); // Clear server URL
 
-        let reporter = HeartbeatReporter::new(config);
+        let status = create_test_status();
+        let reporter = HeartbeatReporter::new(config, status);
         // Should fail if server URL is not configured
         assert!(reporter.is_ok());
     }
@@ -194,7 +207,8 @@ mod tests {
     #[tokio::test]
     async fn test_collect_metrics() {
         let config = create_test_config();
-        let reporter = HeartbeatReporter::new(config).unwrap();
+        let status = create_test_status();
+        let reporter = HeartbeatReporter::new(config, status).unwrap();
         let heartbeat = reporter.collect_metrics().await;
 
         assert!(heartbeat.timestamp.timestamp() > 0);
@@ -220,6 +234,7 @@ mod tests {
                 memory_total_mb: 8192.0,
                 system_uptime_secs: 86400,
             },
+            agent_status: AgentStatus::default(),
         };
         let json = serde_json::to_string(&heartbeat).unwrap();
 
@@ -232,6 +247,8 @@ mod tests {
         assert!(json.contains("memory_usage_mb"));
         assert!(json.contains("memory_total_mb"));
         assert!(json.contains("system_uptime_secs"));
+        assert!(json.contains("agent_status"));
+        assert!(json.contains("cache_stats"));
 
         // Verify deserialization works
         let deserialized: AgentHeartbeat = serde_json::from_str(&json).unwrap();
@@ -254,6 +271,7 @@ mod tests {
                 memory_total_mb: 0.0,
                 system_uptime_secs: 0,
             },
+            agent_status: AgentStatus::default(),
         };
         assert!(matches!(
             heartbeat.health_status,
@@ -273,6 +291,7 @@ mod tests {
                 memory_total_mb: 8192.0,
                 system_uptime_secs: 86400,
             },
+            agent_status: AgentStatus::default(),
         };
         assert!(matches!(
             heartbeat.health_status,
@@ -282,7 +301,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_system_metrics_collection() {
-        let reporter = HeartbeatReporter::new(create_test_config()).unwrap();
+        let reporter = HeartbeatReporter::new(create_test_config(), create_test_status()).unwrap();
 
         let cpu = reporter.get_cpu_usage().await;
         assert!(cpu >= 0.0, "CPU usage should be non-negative");
@@ -298,7 +317,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_metrics_in_heartbeat() {
-        let reporter = HeartbeatReporter::new(create_test_config()).unwrap();
+        let reporter = HeartbeatReporter::new(create_test_config(), create_test_status()).unwrap();
         let heartbeat = reporter.collect_metrics().await;
 
         // Verify the heartbeat was created successfully with valid status

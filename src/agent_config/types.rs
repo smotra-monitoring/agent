@@ -33,7 +33,7 @@ pub struct Config {
     pub storage: StorageConfig,
 
     /// Self-upgrade configuration (OpenAPI-generated type)
-    pub update: openapi::SelfUpdateConfig,
+    pub update: openapi::SelfUpgradeConfig,
 
     /// Endpoints to monitor
     pub endpoints: Vec<Endpoint>,
@@ -49,13 +49,13 @@ impl Default for Config {
             monitoring: MonitoringConfig::default(),
             server: ServerConfig::default(),
             storage: StorageConfig::default(),
-            update: openapi::SelfUpdateConfig::default(),
+            update: openapi::SelfUpgradeConfig::default(),
             endpoints: Vec::new(),
         }
     }
 }
 
-impl Default for openapi::SelfUpdateConfig {
+impl Default for openapi::SelfUpgradeConfig {
     fn default() -> Self {
         Self {
             enabled: false,
