@@ -38,7 +38,7 @@ impl Agent {
         let config = Config::load_and_validate_config(&config_path)?;
 
         let (shutdown_tx, _) = broadcast::channel(1);
-        let mut status = AgentStatus::new(config.agent_id);
+        let mut status = AgentStatus::new();
         status.config_version = config.version as i64;
 
         let result_cache = Arc::new(ResultCache::new(

@@ -39,7 +39,6 @@
 use super::generated::models::{AgentCacheStats, AgentStatus, Error};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 // ============================================
 // Agent Claim Endpoint Responses
@@ -74,7 +73,6 @@ pub struct HTTPResponse401 {
 impl Default for AgentStatus {
     fn default() -> Self {
         Self {
-            agent_id: Uuid::nil(),
             agent_version: env!("CARGO_PKG_VERSION").to_string(),
             config_version: 0,
             is_running: false,
@@ -95,13 +93,10 @@ impl Default for AgentStatus {
 }
 
 impl AgentStatus {
-    /// Create a new AgentStatus for a given agent, using the compiled package version
-    /// as the initial agent_version and UNIX_EPOCH as sentinel timestamps (never started/reported).
-    pub fn new(agent_id: Uuid) -> Self {
-        Self {
-            agent_id,
-            ..Default::default()
-        }
+    /// Create a new `AgentStatus` using the compiled package version
+    /// and UNIX_EPOCH as sentinel timestamps (never started/reported).
+    pub fn new() -> Self {
+        Default::default()
     }
 }
 

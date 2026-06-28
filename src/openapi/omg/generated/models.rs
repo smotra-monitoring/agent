@@ -9,7 +9,6 @@ use uuid::Uuid;
 /// AgentStatus
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentStatus {
-    pub agent_id: UUIDv7,
     /// Version of the agent
     pub agent_version: String,
     /// Version of the agent configuration

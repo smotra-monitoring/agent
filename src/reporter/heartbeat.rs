@@ -181,8 +181,7 @@ mod tests {
     }
 
     fn create_test_status() -> Arc<RwLock<AgentStatus>> {
-        let config_id = uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
-        Arc::new(RwLock::new(AgentStatus::new(config_id)))
+        Arc::new(RwLock::new(AgentStatus::new()))
     }
 
     #[test]
