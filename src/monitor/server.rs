@@ -29,7 +29,7 @@ pub async fn run_monitoring(
 ) -> Result<()> {
     info!("Starting monitoring tasks");
 
-    let (result_tx, mut result_rx) = mpsc::unbounded_channel::<MonitoringResult>();
+    let (result_tx, result_rx) = mpsc::unbounded_channel::<MonitoringResult>();
 
     // Spawn monitoring task
     let monitor_handle = {
