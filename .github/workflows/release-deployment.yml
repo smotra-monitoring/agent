@@ -13,6 +13,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Check release tag
+      run: |
+        TAG_VERSION="${{ github.ref_name }}"
+        TAG_VERSION="${TAG_VERSION#v}"
+        if [ -z "$TAG_VERSION" ]; then
+          echo "ERROR: TAG_VERSION is empty. Release tag was not resolved."
+          exit 1
+        fi
+
     - name: checkout code
       uses: actions/checkout@v7
 
@@ -122,6 +131,10 @@ jobs:
         run: |
           TAG_VERSION="${{ github.ref_name }}"
           TAG_VERSION="${TAG_VERSION#v}"
+          if [ -z "$TAG_VERSION" ]; then
+            echo "ERROR: TAG_VERSION is empty. Release tag was not resolved."
+            exit 1
+          fi
           sed -i.bak "s/^version = \".*\"/version = \"${TAG_VERSION}\"/" Cargo.toml
 
       - name: Update version in Cargo.toml to match release tag (Windows)
@@ -129,6 +142,10 @@ jobs:
         shell: pwsh
         run: |
           $TAG_VERSION = "${{ github.ref_name }}" -replace '^v', ''
+          if (-not $TAG_VERSION) {
+            Write-Error "ERROR: TAG_VERSION is empty. Release tag was not resolved."
+            exit 1
+          }
           (Get-Content Cargo.toml) -replace '^version = ".*"', "version = `"$TAG_VERSION`"" | Set-Content Cargo.toml
           
       - name: Debug info
