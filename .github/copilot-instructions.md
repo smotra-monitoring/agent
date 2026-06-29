@@ -9,6 +9,8 @@ This project is a distributed monitoring system designed to track reachability a
 - **Performance Metrics**: Collection of various performance metrics such as reachability, response time and potentially other system metrics that can be extended via plugins.
 - **Scalability**: Designed to handle a large number of agents and hosts efficiently.
 - **Extensible Architecture**: Support for plugins to extend monitoring capabilities and integrate with other systems.
+- **Config Hot-Reload**: Runtime configuration updates via file-system watch and SIGHUP signal, without restarting the agent.
+- **Self-Upgrade**: Background update checker that downloads and replaces the binary from GitHub Releases.
 - **User-Friendly Interface**: A web-based dashboard for visualizing data, configuring agents, and managing alerts.
 - **APIs for Integration**: RESTful APIs to allow integration with other systems and automation tools.
 

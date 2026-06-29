@@ -1,13 +1,35 @@
 ---
-applyTo: "src/openapi/**,api/openapi/**"
+applyTo: "src/openapi/**,api/openapi/**,api/openapi/api/spec.yaml"
 ---
 
 # OpenAPI Specification and Type Generation
+
+## ⚠️ NEVER Edit Generated Files Manually
+
+**CRITICAL**: Files inside `src/openapi/omg/generated/` are **auto-generated**. Never edit them by hand.
+If you need to change a generated type, modify `api/openapi/api/spec.yaml` and run:
+
+```bash
+just generate-omg
+```
+
+The only files you may edit manually in the `src/openapi/` tree are:
+- `src/openapi/mod.rs` — module entry point and re-exports
+- `src/openapi/omg/mod.rs` — module declarations for the omg subtree
+- `src/openapi/omg/responses.rs` — manually maintained response wrappers
 
 ## Specification Location
 
 The OpenAPI specification is the **single source of truth** for the API contract between agent and server:
 - `api/openapi/api/spec.yaml`
+
+**Workflow for any spec change:**
+1. Edit `api/openapi/api/spec.yaml`
+2. Run `just generate-omg` — this regenerates `src/openapi/omg/generated/` **and** patches the missing `use chrono::{DateTime, Utc};` import automatically
+3. Update `src/openapi/omg/responses.rs` manually if response wrappers are affected
+4. Use the regenerated types in code via `use crate::openapi;`
+
+> **Known OMG quirk**: the OMG tool omits `use chrono::{DateTime, Utc};` from `models.rs` even when it uses `DateTime<Utc>` fields. The `generate-omg` recipe in `Justfile` patches this automatically with `sed`. Never add the import by hand — always run `just generate-omg`.
 
 ## Generated Types (OMG Tool)
 

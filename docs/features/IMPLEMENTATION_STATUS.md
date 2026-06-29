@@ -80,14 +80,14 @@ Fully implemented zero-configuration onboarding:
 
 ### ✅ CLI Tools
 
-#### `agent` Binary
+#### `smotra` Binary
 - ✅ Full-featured daemon with logging
 - ✅ Signal handling (Ctrl+C)
 - ✅ Integrated claiming workflow
 - ✅ Configuration loading
 - ✅ Command-line arguments (config path, log level)
 
-#### `agent-cli` Binary
+#### `smotra-cli` Binary
 Interactive TUI with Ratatui:
 - ✅ Status dashboard with real-time updates
 - ✅ Endpoints list view with monitoring results
@@ -96,17 +96,15 @@ Interactive TUI with Ratatui:
 - ✅ Tab navigation and keyboard controls
 - ✅ Commands: `tui`, `status`, `validate-config`, `gen-config`
 
-#### `agent-updater` Binary
-- ✅ Implemented update checking mode (`--check-only`)
-- ✅ Shared updater logic with daemon task (version check, download, checksum verify)
-- ✅ Binary replacement using `self-replace`
-- ✅ OS-specific restart trigger flow
-
-#### Daemon Self-Upgrade Task
-- ✅ Tokio background update checker task
+#### Self-Upgrade System
+- ✅ Background update checker task
 - ✅ Containerized runtime detection and auto-disable
 - ✅ Config-driven update URL and polling interval
 - ✅ Graceful shutdown integration with agent lifecycle
+- ✅ Binary replacement using `self-replace`
+- ✅ OS-specific restart trigger flow
+- ✅ Version comparison logic
+- ✅ GitHub Releases API integration
 
 ## Testing
 
@@ -114,10 +112,10 @@ Interactive TUI with Ratatui:
 - ✅ Unit tests for token generation and hashing
 - ✅ Unit tests for configuration types
 - ✅ Unit tests for claim workflow
-- ✅ Integration tests for claiming workflow with mock server
-- ✅ Integration tests for heartbeat functionality
+- ✅ Integration tests for claiming workflow with mock server (`tests/claim_integration_tests.rs`)
+- ✅ API tests for claiming primitives (`tests/claim_api_test.rs`)
 - ✅ Unit tests for updater internals (version checks, checksum, extraction)
-- ✅ Integration tests for release version/checksum download flow
+- ✅ Integration tests for self-upgrade release version/checksum download flow (`tests/self_upgrade_integration_tests.rs`)
 
 ### ⏳ Needs Expansion
 - ⏳ End-to-end monitoring tests
@@ -137,7 +135,7 @@ Interactive TUI with Ratatui:
 - ✅ [SELF_UPGRADE.md](SELF_UPGRADE.md) - Self-upgrade behavior and configuration
 - ✅ OpenAPI specification (api/openapi/api/spec.yaml) with OMG type generation
 - ✅ Configuration examples (config.example.toml)
-- ✅ Example code (examples/010_plugin.rs, examples/002_heartbeat_demo.rs)
+- ✅ Example code (examples/010_plugin.rs, examples/011_plugin_registry.rs, examples/020_self_upgrade.rs)
 
 ### ⏳ Pending
 - ⏳ Plugin development guide (detailed)
@@ -151,14 +149,12 @@ Interactive TUI with Ratatui:
 2. **Implement TcpConnectChecker** - TCP connection monitoring
 3. **Implement UdpConnectChecker** - UDP connection monitoring
 4. **Implement HttpGetChecker** - HTTP endpoint monitoring
-5. **Complete cache disk persistence** - CacheManager currently has stub implementation
+5. **Complete cache disk persistence** - `src/cache/store.rs` currently has in-memory implementation
 
 ### Medium Priority
 1. **Expand test coverage** - More unit and integration tests
 2. **Dynamic plugin loading** - Load plugins from shared libraries at runtime
-3. **Agent auto-updater** - Implement update checking and installation
-4. **Configuration hot-reload** - Runtime config updates without restart
-5. **Enhanced TUI** - Add graphs and more interactive features
+3. **Enhanced TUI** - Add graphs and more interactive features
 
 ### Low Priority
 1. **Prometheus metrics endpoint** - Export metrics in Prometheus format
@@ -169,11 +165,11 @@ Interactive TUI with Ratatui:
 ## Usage Statistics
 
 - **Total Lines of Code**: ~6,000+ (excluding tests)
-- **Dependencies**: 28 (core dependencies)
-- **Binaries**: 3 (agent, agent-cli, agent-updater)
-- **Modules**: 8 (agent_config, claim, core, monitor, plugin, reporter, error, lib)
-- **Tests**: 37+ (unit and integration)
-- **Examples**: 2 (010_plugin, 002_heartbeat_demo)
+- **Dependencies**: 28+ (core dependencies)
+- **Binaries**: 2 (`smotra`, `smotra-cli`)
+- **Modules**: 10 (`agent_config`, `cache`, `claim`, `core`, `monitor`, `plugin`, `reporter`, `self_upgrade`, `openapi`, `error`)
+- **Tests**: 40+ (unit and integration)
+- **Examples**: 3 (`010_plugin`, `011_plugin_registry`, `020_self_upgrade`)
 
 ## Notes
 

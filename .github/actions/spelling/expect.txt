@@ -3,6 +3,7 @@ aws
 bincode
 Buf
 Bulma
+chrono
 CLA
 cloudfront
 codegen

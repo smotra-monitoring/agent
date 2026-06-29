@@ -29,7 +29,7 @@ pub async fn run_monitoring(
 ) -> Result<()> {
     info!("Starting monitoring tasks");
 
-    let (result_tx, mut result_rx) = mpsc::unbounded_channel::<MonitoringResult>();
+    let (result_tx, result_rx) = mpsc::unbounded_channel::<MonitoringResult>();
 
     // Spawn monitoring task
     let monitor_handle = {
@@ -48,34 +48,13 @@ pub async fn run_monitoring(
         let mut agent_shutdown_rx = agent_shutdown_rx.resubscribe();
 
         tokio::spawn(async move {
-            loop {
-                tokio::select! {
-                    Some(result) = result_rx.recv() => {
-                        // Update statistics
-                        {
-                            let mut s = agent_status.write();
-                            s.checks_performed += 1;
-                            if result.is_successful() {
-                                s.checks_successful += 1;
-                            } else {
-                                s.checks_failed += 1;
-                            }
-                        }
-                        result_cache.push(result).await;
-                        // Reflect current cache depth in agent status (after push to avoid off-by-one)
-                        let stats = result_cache.stats().await;
-                        {
-                            let mut s = agent_status.write();
-                            s.cache_stats.len = stats.len as i64;
-                            s.cache_stats.capacity = stats.capacity as i64;
-                        }
-                    }
-                    _ = agent_shutdown_rx.recv() => {
-                        info!("Monitoring coordinator shutting down");
-                        break;
-                    }
-                }
-            }
+            result_collect_loop(
+                agent_status,
+                result_cache,
+                result_rx,
+                &mut agent_shutdown_rx,
+            )
+            .await;
         })
     };
 
@@ -90,8 +69,44 @@ pub async fn run_monitoring(
     // Wait for tasks to complete
     let _ = tokio::join!(monitor_handle, result_handle);
 
-    info!("All monitoring tasks stopped");
+    info!("Monitoring and result collection tasks stopped");
     Ok(())
+}
+
+async fn result_collect_loop(
+    agent_status: Arc<parking_lot::lock_api::RwLock<parking_lot::RawRwLock, AgentStatus>>,
+    result_cache: Arc<ResultCache>,
+    mut result_rx: mpsc::UnboundedReceiver<MonitoringResult>,
+    agent_shutdown_rx: &mut broadcast::Receiver<()>,
+) {
+    loop {
+        tokio::select! {
+            Some(result) = result_rx.recv() => {
+                // Update statistics
+                {
+                    let mut s = agent_status.write();
+                    s.checks_performed += 1;
+                    if result.is_successful() {
+                        s.checks_successful += 1;
+                    } else {
+                        s.checks_failed += 1;
+                    }
+                }
+                result_cache.push(result).await;
+                // Reflect current cache depth in agent status (after push to avoid off-by-one)
+                let stats = result_cache.stats().await;
+                {
+                    let mut s = agent_status.write();
+                    s.cache_stats.len = stats.len as i64;
+                    s.cache_stats.capacity = stats.capacity as i64;
+                }
+            }
+            _ = agent_shutdown_rx.recv() => {
+                info!("Monitoring coordinator shutting down");
+                break;
+            }
+        }
+    }
 }
 
 /// Main check loop that runs periodically

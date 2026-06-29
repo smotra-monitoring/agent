@@ -18,13 +18,13 @@ applyTo: "src/**"
 - `src/bin/smotra_cli/` — CLI with TUI implementation (Ratatui).
   - `main.rs`, `cli_args.rs`, `commands.rs`, `logging.rs`
   - `tui/` — TUI implementation (mod.rs, render.rs, runner.rs, ui_loop.rs)
-- `src/bin/smotra_updater.rs` — Auto-update binary (stub).
+- `src/self_upgrade/` — Self-upgrade module (background update checker, GitHub Releases integration, binary replacement).
 
 ## Agent Capabilities
 
 - Operates in standalone mode if the server is unreachable (caches data locally, sends when connection restored).
-- Supports auto-updates via `agent-updater`.
-- Uses ICMP ping (`surge-ping`) and traceroute (`traceroute-rs`) for reachability checks; TCP/UDP via plugins.
+- Supports auto-updates via the built-in `src/self_upgrade/` module (background Tokio task, GitHub Releases, `self-replace` crate).
+- Uses ICMP ping (`surge-ping`) for reachability checks; traceroute types are defined but checker is not yet implemented; TCP/UDP/HTTP via plugins.
 - Configuration includes: list of endpoints to monitor, monitoring intervals.
 - Endpoints provided by server or configured locally. Agents may be grouped by tags and form meshes.
 - Agent library is embeddable in other Rust applications via a simple API (start/stop tasks, configure endpoints, retrieve data).

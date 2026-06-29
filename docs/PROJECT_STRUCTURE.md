@@ -21,13 +21,17 @@
 
 ### Monitoring Module (`src/monitor/`)
 - `src/monitor/mod.rs` - Module exports for monitoring
-- `src/monitor/coordinator.rs` - Monitoring coordinator and task management
+- `src/monitor/server.rs` - Monitoring task coordination and execution loop
 - `src/monitor/ping.rs` - ICMP ping implementation using surge-ping (PingChecker)
+
+### Cache Module (`src/cache/`)
+- `src/cache/mod.rs` - Module exports for cache
+- `src/cache/store.rs` - `ResultCache` — in-memory cache for offline monitoring results, with disk persistence
 
 ### Reporter Module (`src/reporter/`)
 - `src/reporter/mod.rs` - Module exports for reporting
 - `src/reporter/server.rs` - Server communication and result reporting
-- `src/reporter/cache.rs` - Cache manager for offline data storage
+- `src/reporter/results.rs` - Result batch submission to server
 - `src/reporter/heartbeat.rs` - Heartbeat reporter for lightweight agent status updates
 
 ### Plugin System (`src/plugin/`)
@@ -52,27 +56,42 @@
 - Async save operations with `save_to_file_secure()`
 
 ### Binaries (`src/bin/`)
-- `src/bin/agent.rs` - Main daemon with integrated claiming workflow
-- `src/bin/agent_updater.rs` - Auto-updater stub
+- `src/bin/smotra.rs` - Main daemon binary with integrated claiming workflow
 
-### Binary - Interactive agent TUI with Ratatui
-- `src/bin/agent_cli/main.rs` - Main entry point
-- `src/bin/agent_cli/cli_args.rs` - Command-line argument definitions
-- `src/bin/agent_cli/commands.rs` - Status, validation, and config generation handlers
-- `src/bin/agent_cli/logging.rs` - Log buffer and initialization logic
-- `src/bin/agent_cli/tui/mod.rs` - TUI initialization
-- `src/bin/agent_cli/tui/render.rs` - TUI-related functionality rendering functions
-- `src/bin/agent_cli/tui/ui_loop.rs` - TUI-related functionality event loop
-- `src/bin/agent_cli/tui/runner.rs` - TUI-related functionality initializing and starting event loop
+### Binary - Interactive agent TUI with Ratatui (`src/bin/smotra_cli/`)
+- `src/bin/smotra_cli/main.rs` - Main entry point
+- `src/bin/smotra_cli/cli_args.rs` - Command-line argument definitions
+- `src/bin/smotra_cli/commands.rs` - Status, validation, and config generation handlers
+- `src/bin/smotra_cli/logging.rs` - Log buffer and initialization logic
+- `src/bin/smotra_cli/tui/mod.rs` - TUI initialization
+- `src/bin/smotra_cli/tui/render.rs` - TUI rendering functions
+- `src/bin/smotra_cli/tui/ui_loop.rs` - TUI event loop
+- `src/bin/smotra_cli/tui/runner.rs` - TUI initialization and event loop startup
+
+### Self-Upgrade Module (`src/self_upgrade/`)
+- `src/self_upgrade/mod.rs` - Module exports and public API
+- `src/self_upgrade/checker.rs` - Version comparison and update detection
+- `src/self_upgrade/downloader.rs` - Release binary download and checksum verification
+- `src/self_upgrade/environment.rs` - Containerized runtime detection
+- `src/self_upgrade/github.rs` - GitHub Releases API integration
+- `src/self_upgrade/replacer.rs` - Binary replacement using `self-replace`
+- `src/self_upgrade/server.rs` - Background update checker task
+
+### Hot-Reload Module (`src/agent_config/hot_reload/`)
+- `src/agent_config/hot_reload/mod.rs` - Module exports and orchestrator
+- `src/agent_config/hot_reload/config_file_watcher.rs` - File-system watcher (`ConfigFileWatcher`)
+- `src/agent_config/hot_reload/server.rs` - Hot-reload server coordinating watch, SIGHUP, and reload
+- `src/agent_config/hot_reload/sighup.rs` - SIGHUP signal handler
 
 ### Examples (`examples/`)
 - `examples/010_plugin.rs` - HTTP monitoring plugin example
-- `examples/002_heartbeat_demo.rs` - Heartbeat demonstration example
-
+- `examples/011_plugin_registry.rs` - Plugin registry usage example
+- `examples/020_self_upgrade.rs` - Self-upgrade workflow example
 
 ### Tests (`tests/`)
-- `tests/heartbeat_integration_tests.rs` - Integration tests for heartbeat functionality
+- `tests/claim_api_test.rs` - Unit/API tests for claiming primitives
 - `tests/claim_integration_tests.rs` - Integration tests for claiming workflow with mock server
+- `tests/self_upgrade_integration_tests.rs` - Integration tests for self-upgrade (version check, download)
 
 ### OpenAPI Module (`src/openapi/`)
 - `src/openapi/mod.rs` - Module entry point, re-exports types from omg
@@ -127,7 +146,7 @@
 - Periodic reporting to central server
 - HTTP client with X-API-KEY header authentication (reqwest with rustls-tls)
 - Connection status tracking
-- Cache manager stub (disk persistence to be implemented)
+- Cache manager with disk persistence for offline data storage
 - Heartbeat reporting with system metrics (CPU, memory, uptime) using sysinfo crate
 - Agent health status monitoring (Healthy, Degraded, Critical, Unknown)
 
@@ -150,15 +169,20 @@
 - Example HTTP plugin implementation
 
 ### CLI Tools
-- `agent`: Full-featured daemon with logging and signal handling
-- `agent-cli`: Interactive TUI with:
+- `smotra`: Full-featured daemon with logging, signal handling, and integrated claiming workflow
+- `smotra-cli`: Interactive TUI with:
   - Status dashboard with real-time updates
   - Endpoints list view with monitoring results
   - Configuration viewer
   - Logs view with buffered output
   - Tab navigation and keyboard controls (Arrow keys, h/l, s to start, q/Esc to quit)
   - Commands: `tui`, `status`, `validate-config`, `gen-config`
-- `agent-updater`: Placeholder for auto-update functionality
+
+### Self-Upgrade
+- Background Tokio task checks GitHub Releases for newer versions
+- Containerized environment detection disables auto-upgrade automatically
+- Config-driven update URL and polling interval
+- Binary replacement using `self-replace` crate with OS-specific restart flow
 
 ## Architecture Highlights
 
@@ -187,50 +211,47 @@
 ### High Priority
 1. **Traceroute**: Implement TracerouteChecker (types already defined)
 2. **TCP/UDP/HTTP Checks**: Implement TcpConnectChecker, UdpConnectChecker, HttpGetChecker (types already defined)
-3. **Cache Implementation**: Complete local caching to disk (stub currently in place)
-4. **Result Processing**: Connect monitoring results to reporter
-5. **OpenAPI Specification**: Create complete API specification in api/openapi/
+3. **Cache disk persistence**: Complete on-disk persistence in `src/cache/store.rs`
+4. **Config server polling**: Implement server-side config polling with version tracking
 
 ### Medium Priority
 1. **Enhanced Testing**: Expand unit and integration test coverage
 2. **Plugin Loading**: Dynamic plugin loading from shared libraries
-3. **Auto-updates**: Implement update checking and installation
-4. **Log Viewer**: Add real-time log viewing in TUI
+3. **Advanced TUI**: Add graphs and more interactive features
+4. **Retry in server reporting**: Implement retry logic in `reporter/server.rs`
 
 ### Low Priority
 1. **Metrics**: Add Prometheus metrics endpoint
 2. **Health Check**: HTTP endpoint for health status
-3. **Configuration Hot-reload**: Support runtime config updates
-4. **Advanced TUI**: Add graphs and more interactive features
-5. **Retry in server reporting** Implement retry logic in reporter/server.rs
-6. **Track number of failed sends to server** Add tracking to server status struct
+3. **Track failed sends**: Add tracking to server status struct
 
 ## Usage Examples
 
 ### Generate Configuration
 ```bash
-./agent --gen-config
+./smotra --gen-config
 # or
-./agent-cli gen-config -o config.toml
+./smotra-cli gen-config -o config.toml
 ```
 
 ### Run Agent
 ```bash
-./agent -c config.toml
-./agent -c config.toml --log-level debug
+./smotra -c config.toml
+./smotra -c config.toml --log-level debug
 ```
 
 ### Run Interactive CLI
 ```bash
-./agent-cli -c config.toml tui
-./agent-cli -c config.toml status
-./agent-cli -c config.toml validate-config
+./smotra-cli -c config.toml tui
+./smotra-cli -c config.toml status
+./smotra-cli -c config.toml validate-config
 ```
 
 ### Run Plugin Examples
 ```bash
 cargo run --example 010_plugin
-cargo run --example 002_heartbeat_demo
+cargo run --example 011_plugin_registry
+cargo run --example 020_self_upgrade
 ```
 
 ## Building
@@ -240,13 +261,13 @@ cargo build --release
 ```
 
 Binaries will be in `target/release/`:
-- `agent`
-- `agent-cli`
-- `agent-updater`
+- `smotra`
+- `smotra-cli`
 
 Example plugins in `examples/`:
 - `010_plugin` - HTTP monitoring plugin example
-- `002_heartbeat_demo` - Heartbeat system demonstration
+- `011_plugin_registry` - Plugin registry usage example
+- `020_self_upgrade` - Self-upgrade workflow example
 
 ## Notes
 
