@@ -56,10 +56,8 @@ cargo build --release
 
 The agent consists of:
 
-- **`smotra_agent`** - Core monitoring library
-- **`agent`** - Main daemon process
-- **`agent-cli`** - Interactive TUI for monitoring and configuration
-- **`smotra-updater`** - Auto-update tool and daemon self-upgrade helper
+- **`smotra`** - Core monitoring library and main daemon process
+- **`smotra-cli`** - Interactive TUI for monitoring and configuration
 
 ## 🔧 Basic Configuration
 
@@ -163,7 +161,7 @@ cargo build
 cargo test
 
 # Run with debug logging
-RUST_LOG=debug cargo run --bin agent -- -c config.toml
+RUST_LOG=debug cargo run --bin smotra -- -c config.toml
 ```
 
 ## 📦 API Specification

@@ -18,7 +18,7 @@ applyTo: "src/**"
 - `src/bin/smotra_cli/` — CLI with TUI implementation (Ratatui).
   - `main.rs`, `cli_args.rs`, `commands.rs`, `logging.rs`
   - `tui/` — TUI implementation (mod.rs, render.rs, runner.rs, ui_loop.rs)
-- `src/bin/smotra_updater.rs` — Auto-update binary (stub).
+- `src/self_upgrade/` — Self-upgrade module (background update checker, GitHub Releases integration, binary replacement).
 
 ## Agent Capabilities
 
