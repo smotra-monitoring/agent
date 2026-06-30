@@ -21,6 +21,7 @@ mod error;
 mod monitor;
 mod plugin;
 mod reporter;
+mod results;
 
 pub mod self_upgrade;
 
