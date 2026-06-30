@@ -102,7 +102,7 @@ impl Agent {
             let shutdown_rx = self.subscribe_shutdown();
 
             tokio::spawn(async move {
-                crate::reporter::run_result_reporter(config, cache, status, shutdown_rx).await
+                crate::results::run_result_reporter(config, cache, status, shutdown_rx).await
             })
         };
 
