@@ -1,10 +1,11 @@
 //!
-//! Generated from an OAS specification by openapi-model-generator(v0.5.1)
+//! Generated from an OAS specification by openapi-model-generator(v0.6.2)
 //!
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use validator::Validate;
 
 /// AgentStatus
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -25,8 +26,8 @@ pub struct AgentStatus {
     pub checks_successful: i64,
     /// Number of failed checks
     pub checks_failed: i64,
-    /// Timestamp of the last report received from the agent (RFC3339)
-    pub last_report_at: DateTime<Utc>,
+    /// Timestamp of the last report sent by the agent (RFC3339)
+    pub reported_at: DateTime<Utc>,
     /// Number of consecutive failed report attempts
     pub failed_report_count: i64,
     /// Whether the agent is currently connected to the server
@@ -62,69 +63,84 @@ pub struct AgentConfig {
 }
 
 /// MonitoringConfig
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct MonitoringConfig {
     /// Interval between checks in seconds
+    #[validate(range(min = 1))]
     pub interval_secs: i64,
     /// Timeout for each check in seconds
+    #[validate(range(min = 1))]
     pub timeout_secs: i64,
     /// Number of pings to send per check
+    #[validate(range(min = 1, max = 100))]
     pub ping_count: i64,
     /// Maximum number of concurrent checks
+    #[validate(range(min = 1))]
     pub max_concurrent: i64,
     /// Enable traceroute on failed pings
     pub traceroute_on_failure: bool,
     /// Maximum TTL for traceroute
+    #[validate(range(min = 1, max = 255))]
     pub traceroute_max_hops: i64,
 }
 
 /// ServerConfig
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct ServerConfig {
     /// Server URL
+    #[validate(url)]
     pub url: Option<String>,
     /// API key for authentication
     pub api_key: Option<String>,
     /// Report interval in seconds
+    #[validate(range(min = 1))]
     pub report_interval_secs: i64,
     /// Heartbeat interval in seconds
+    #[validate(range(min = 1))]
     pub heartbeat_interval_secs: i64,
     /// Enable TLS verification
     pub verify_tls: bool,
     /// Connection timeout in seconds
+    #[validate(range(min = 1))]
     pub timeout_secs: i64,
     /// Retry attempts on failure
+    #[validate(range(min = 0))]
     pub retry_attempts: i64,
 }
 
 /// StorageConfig
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct StorageConfig {
     /// Directory for storing cached data
     pub cache_dir: String,
     /// Maximum number of results to cache
+    #[validate(range(min = 0))]
     pub max_cached_results: i64,
     /// Maximum age of cached results in seconds (e.g., 86400 = 24 hours)
+    #[validate(range(min = 0))]
     pub max_cache_age_secs: i64,
 }
 
 /// SelfUpgradeConfig
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct SelfUpgradeConfig {
     /// Enables self-upgrade checks when true
     pub enabled: bool,
     /// GitHub repository URL for checking latest releases (must be a public repo)
+    #[validate(url)]
     pub github_repo_url: String,
     /// Periodic self-upgrade check interval in seconds
+    #[validate(range(min = 60))]
     pub check_interval_secs: i64,
 }
 
 /// An endpoint to monitor (IP address, hostname, or URL)
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Endpoint {
     pub id: UUIDv7,
     /// IP address, hostname, or URL
     pub address: String,
+    #[validate(range(min = 1, max = 65535))]
     pub port: Option<i64>,
     pub enabled: bool,
     /// Tags associated with the target
@@ -334,23 +350,28 @@ pub struct AgentHeartbeat {
 }
 
 /// AgentMetrics
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct AgentMetrics {
     /// How long the agent process has been running in seconds; useful for detecting crashes and restarts
+    #[validate(range(min = 0))]
     pub agent_uptime_secs: i64,
     /// CPU utilization percentage (0.0–100.0)
+    #[validate(range(min = 0.0, max = 100.0))]
     pub cpu_usage_percent: f64,
     /// Resident memory currently in use (MB)
+    #[validate(range(min = 0.0))]
     pub memory_usage_mb: f64,
     /// Total physical memory available (MB)
+    #[validate(range(min = 0.0))]
     pub memory_total_mb: f64,
     /// System uptime in seconds
+    #[validate(range(min = 0))]
     pub system_uptime_secs: i64,
 }
 
 /// Type of check performed
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Type {
+pub enum MetricType {
     #[serde(rename = "icmp_ping")]
     IcmpPing,
     #[serde(rename = "tcp_check")]
@@ -366,17 +387,18 @@ pub enum Type {
 pub type Metadata = std::collections::HashMap<String, serde_json::Value>;
 
 /// Metric
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Metric {
     /// Type of check performed
     #[serde(rename = "type")]
-    pub r#type: Type,
+    pub r#type: MetricType,
     /// Target host, IP, or URL
     pub target: String,
     pub status: MetricStatus,
     /// Response time in milliseconds
     pub response_time_ms: Option<f64>,
     /// Packet loss percentage for ping checks
+    #[validate(range(min = 0.0, max = 100.0))]
     pub packet_loss_percent: Option<f64>,
     /// HTTP status code for HTTP checks
     pub status_code: Option<i64>,
@@ -456,11 +478,12 @@ pub struct AgentListResponse {
 }
 
 /// AgentSelfRegistration
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct AgentSelfRegistration {
     #[serde(rename = "agentId")]
     pub agent_id: UUIDv7,
     /// SHA-256 hash of the claim token (plain token shown in agent logs for user)
+    #[validate(length(min = 64, max = 64))]
     #[serde(rename = "claimTokenHash")]
     pub claim_token_hash: String,
     /// System hostname of the machine running the agent
@@ -474,18 +497,20 @@ pub struct AgentSelfRegistration {
     /// select the preferred one during the claim process. The entry with
     /// recommended=true reflects the OS-selected source IP for connections toward
     /// the server (determined via routing table, no traffic sent).
+    #[validate(length(min = 1))]
     #[serde(rename = "ipAddresses")]
     pub ip_addresses: Vec<AgentNetworkInterface>,
 }
 
 /// AgentRegistrationResponse
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct AgentRegistrationResponse {
     pub status: RegistrationStatus,
     /// URL for agent to poll for claim status
     #[serde(rename = "pollUrl")]
     pub poll_url: String,
     /// URL for user to claim the agent (web UI)
+    #[validate(url)]
     #[serde(rename = "claimUrl")]
     pub claim_url: String,
     /// When the claim token expires (RFC3339)
@@ -494,13 +519,14 @@ pub struct AgentRegistrationResponse {
 }
 
 /// ClaimStatusPending
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct ClaimStatusPending {
     pub status: ClaimStatusPendingEnum,
     /// When the claim token expires (RFC3339)
     #[serde(rename = "expiresAt")]
     pub expires_at: DateTime<Utc>,
     /// Seconds until next poll (server-controlled backoff)
+    #[validate(range(min = 1))]
     #[serde(rename = "pollIn")]
     pub poll_in: i64,
 }
@@ -563,10 +589,13 @@ pub struct Thresholds {
 }
 
 /// RetryPolicy
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct RetryPolicy {
+    #[validate(range(min = 0))]
     pub max_retries: Option<i64>,
+    #[validate(range(min = 1))]
     pub retry_delay_seconds: Option<i64>,
+    #[validate(range(min = 1.0))]
     pub backoff_multiplier: Option<f64>,
 }
 
@@ -644,9 +673,9 @@ pub struct SummaryStatistics {
     pub by_agent: Option<Vec<serde_json::Value>>,
 }
 
-/// Severity
+/// AlertSeverity
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Severity {
+pub enum AlertSeverity {
     #[serde(rename = "critical")]
     Critical,
     #[serde(rename = "warning")]
@@ -662,7 +691,7 @@ pub struct Alert {
     pub title: Option<String>,
     pub description: Option<String>,
     pub status: AlertStatus,
-    pub severity: Severity,
+    pub severity: AlertSeverity,
     pub agent_id: Option<String>,
     pub target: Option<String>,
     pub metric_type: Option<String>,
@@ -674,23 +703,46 @@ pub struct Alert {
     pub resolved_at: Option<DateTime<Utc>>,
 }
 
-/// AlertRule
+/// AlertRuleSeverity
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AlertRuleSeverity {
+    #[serde(rename = "critical")]
+    Critical,
+    #[serde(rename = "warning")]
+    Warning,
+    #[serde(rename = "info")]
+    Info,
+}
+/// AlertRule
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct AlertRule {
     pub id: Option<Uuid>,
     pub name: String,
     pub description: Option<String>,
     pub enabled: Option<bool>,
     pub condition: AlertCondition,
-    pub severity: Severity,
+    pub severity: AlertRuleSeverity,
     pub notifications: Vec<NotificationChannel>,
     /// Minimum time between repeat notifications
+    #[validate(range(min = 0))]
     pub cooldown_seconds: Option<i64>,
 }
 
-/// Operator
+/// AlertConditionMetric
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Operator {
+pub enum AlertConditionMetric {
+    #[serde(rename = "response_time_ms")]
+    ResponseTimeMs,
+    #[serde(rename = "packet_loss_percent")]
+    PacketLossPercent,
+    #[serde(rename = "status")]
+    Status,
+    #[serde(rename = "uptime_percent")]
+    UptimePercent,
+}
+/// AlertConditionOperator
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AlertConditionOperator {
     #[serde(rename = "greater_than")]
     GreaterThan,
     #[serde(rename = "less_than")]
@@ -700,9 +752,9 @@ pub enum Operator {
     #[serde(rename = "not_equals")]
     NotEquals,
 }
-/// Aggregation
+/// AlertConditionAggregation
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Aggregation {
+pub enum AlertConditionAggregation {
     #[serde(rename = "avg")]
     Avg,
     #[serde(rename = "min")]
@@ -723,22 +775,39 @@ pub struct Filters {
 }
 
 /// AlertCondition
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct AlertCondition {
-    pub metric: Metric,
-    pub operator: Operator,
+    pub metric: AlertConditionMetric,
+    pub operator: AlertConditionOperator,
     pub threshold: f64,
     /// Condition must be true for this duration before alerting
+    #[validate(range(min = 0))]
     pub duration_seconds: Option<i64>,
-    pub aggregation: Option<Aggregation>,
+    pub aggregation: Option<AlertConditionAggregation>,
     pub filters: Option<Filters>,
 }
 
+/// NotificationChannelType
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum NotificationChannelType {
+    #[serde(rename = "discord")]
+    Discord,
+    #[serde(rename = "email")]
+    Email,
+    #[serde(rename = "webhook")]
+    Webhook,
+    #[serde(rename = "slack")]
+    Slack,
+    #[serde(rename = "pagerduty")]
+    Pagerduty,
+    #[serde(rename = "teams")]
+    Teams,
+}
 /// NotificationChannel
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NotificationChannel {
     #[serde(rename = "type")]
-    pub r#type: Type,
+    pub r#type: NotificationChannelType,
     /// Channel-specific configuration
     pub configuration: Option<std::collections::HashMap<String, serde_json::Value>>,
 }
@@ -757,15 +826,17 @@ pub struct TokenResponse {
 }
 
 /// UserInfo
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct UserInfo {
     /// Subject identifier (user ID)
     pub sub: String,
+    #[validate(email)]
     pub email: Option<String>,
     pub email_verified: Option<bool>,
     pub name: Option<String>,
     pub given_name: Option<String>,
     pub family_name: Option<String>,
+    #[validate(url)]
     pub picture: Option<String>,
     pub organization_id: Option<Uuid>,
     pub roles: Option<Vec<String>>,
@@ -773,9 +844,10 @@ pub struct UserInfo {
 }
 
 /// User
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct User {
     pub id: Uuid,
+    #[validate(email)]
     pub email: String,
     pub name: Option<String>,
     pub roles: Option<Vec<String>>,
@@ -791,10 +863,12 @@ pub struct User {
 }
 
 /// CreateUserRequest
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct CreateUserRequest {
+    #[validate(email)]
     pub email: String,
     pub name: Option<String>,
+    #[validate(length(min = 1))]
     pub roles: Vec<String>,
     /// Required for super admins creating users in other orgs
     pub organization_id: Option<Uuid>,
@@ -808,9 +882,9 @@ pub struct UpdateUserRequest {
     pub roles: Option<Vec<String>>,
 }
 
-/// Plan
+/// OrganizationPlan
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum Plan {
+pub enum OrganizationPlan {
     #[serde(rename = "free")]
     Free,
     #[serde(rename = "professional")]
@@ -827,24 +901,34 @@ pub struct Settings {
 }
 
 /// Organization
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Organization {
     pub id: Uuid,
     pub name: String,
     pub slug: Option<String>,
     pub status: Option<OrganizationStatus>,
-    pub plan: Option<Plan>,
+    pub plan: Option<OrganizationPlan>,
     pub settings: Option<Settings>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-/// CreateOrganizationRequest
+/// CreateOrganizationRequestPlan
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CreateOrganizationRequestPlan {
+    #[serde(rename = "free")]
+    Free,
+    #[serde(rename = "professional")]
+    Professional,
+    #[serde(rename = "enterprise")]
+    Enterprise,
+}
+/// CreateOrganizationRequest
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct CreateOrganizationRequest {
     pub name: String,
     pub slug: Option<String>,
-    pub plan: Option<Plan>,
+    pub plan: Option<CreateOrganizationRequestPlan>,
 }
 
 /// SystemStatus
@@ -1004,9 +1088,11 @@ pub enum ComponentHealthStatus {
 pub type UUIDv7 = Uuid;
 
 /// Pagination
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Pagination {
+    #[validate(range(min = 1))]
     pub page: i64,
+    #[validate(range(min = 1))]
     pub page_size: i64,
     pub total_items: i64,
     pub total_pages: i64,
@@ -1015,13 +1101,14 @@ pub struct Pagination {
 }
 
 /// Error
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Error {
     pub error: String,
     pub message: String,
     pub details: Option<Vec<serde_json::Value>>,
     pub request_id: Option<Uuid>,
     /// Link to relevant documentation
+    #[validate(url)]
     pub documentation_url: Option<String>,
 }
 
@@ -1034,18 +1121,19 @@ pub struct AcknowledgeAlertRequestBody {
 
 /// OAuth2 grant type (only authorization_code is supported here)
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum GrantType {
+pub enum Oauth2TokenRequestBodyGrantType {
     #[serde(rename = "authorization_code")]
     AuthorizationCode,
 }
 /// Oauth2TokenRequestBody
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct Oauth2TokenRequestBody {
     /// OAuth2 grant type (only authorization_code is supported here)
-    pub grant_type: GrantType,
+    pub grant_type: Oauth2TokenRequestBodyGrantType,
     /// Authorization code returned by the IDP callback
     pub code: String,
     /// Must exactly match the redirect_uri used in the authorization request
+    #[validate(url)]
     pub redirect_uri: String,
     /// PKCE code verifier corresponding to the code_challenge sent at /authorize
     pub code_verifier: String,
@@ -1059,16 +1147,18 @@ pub struct Oauth2RevokeRequestBody {
 }
 
 /// LogoutRequestBody
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct LogoutRequestBody {
     /// Optional URI to redirect to after IDP logout completes.
     /// Forwarded to the IDP end-session endpoint as post_logout_redirect_uri.
+    #[validate(url)]
     pub post_logout_redirect_uri: Option<String>,
 }
 
 /// UpdateUserRolesRequestBody
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct UpdateUserRolesRequestBody {
+    #[validate(length(min = 1))]
     pub roles: Vec<String>,
 }
 
