@@ -55,7 +55,7 @@ pub async fn run_reporter(
                             Ok(_) => {
                                 let mut s = agent_status.write();
                                 s.server_connected = true;
-                                s.last_report_at = Utc::now();
+                                s.reported_at = Utc::now();
                                 debug!("Report sent successfully");
                             }
                             Err(e) => {
