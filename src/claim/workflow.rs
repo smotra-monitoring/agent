@@ -123,7 +123,7 @@ impl<'a> Claim<'a> {
         // Poll for claim status
         let api_key = poll_claim_status(
             &client,
-            format!("{}{}", server_url, &registration_response.poll_url).as_str(),
+            format!("{}{}", server_url, registration_response.poll_url).as_str(),
         )
         .await?;
 
