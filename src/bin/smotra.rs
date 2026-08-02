@@ -78,11 +78,11 @@ async fn generate_config(path: &Path) -> Result<()> {
 
 /// Loads the configuration from `path`.
 /// Exits the process with an error message if the file does not exist.
-fn load_config(path: &Path) -> Result<Config> {
+async fn load_config(path: &Path) -> Result<Config> {
     if !path.exists() {
-        error!("Configuration file not found: {}", path.display());
-        error!("Run with --gen-config to generate a default configuration");
-        std::process::exit(1);
+        info!("Configuration file not found at: {}", path.display());
+        info!("Generating default configuration ...");
+        generate_config(path).await?;
     }
 
     info!("Loading configuration from: {}", path.display());
@@ -149,7 +149,7 @@ async fn main() -> Result<()> {
     // Scoping is only to make sure that config is dropped before we start the agent,
     // since Agent::new() will re-open the config file for reading and writing
     {
-        let mut config = load_config(&cli.config)?;
+        let mut config = load_config(&cli.config).await?;
         if config.server.is_claim_required() {
             ensure_claimed(&mut config, &cli.config).await?;
         }
@@ -225,7 +225,7 @@ mod tests {
             let path = dir.path().join("config.toml");
             generate_config(&path).await.unwrap();
 
-            let result = load_config(&path);
+            let result = load_config(&path).await;
 
             assert!(
                 result.is_ok(),
@@ -233,13 +233,13 @@ mod tests {
             );
         }
 
-        #[test]
-        fn returns_error_for_malformed_toml() {
+        #[tokio::test]
+        async fn returns_error_for_malformed_toml() {
             let dir = tempdir().unwrap();
             let path = dir.path().join("bad.toml");
             std::fs::write(&path, b"not valid toml ][[[").unwrap();
 
-            let result = load_config(&path);
+            let result = load_config(&path).await;
 
             assert!(
                 result.is_err(),
