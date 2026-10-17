@@ -1,5 +1,5 @@
 ---
-applyTo: "src/openapi/**,api/openapi/**,api/openapi/api/spec.yaml"
+applyTo: "src/openapi/**,api/openapi/**,api/openapi/api/spec.yaml,**/generated/**"
 ---
 
 # OpenAPI Specification and Type Generation
