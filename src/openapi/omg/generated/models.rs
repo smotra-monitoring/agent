@@ -1,11 +1,16 @@
 //!
-//! Generated from an OAS specification by openapi-model-generator(v0.6.2)
+//! Generated from an OAS specification by openapi-model-generator(v0.6.3)
 //!
 
 use chrono::{DateTime, Utc};
+use regex::Regex;
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 use uuid::Uuid;
 use validator::Validate;
+
+static RE_1: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-f0-9]{64}$").unwrap());
+static RE_2: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z0-9-]+$").unwrap());
 
 /// AgentStatus
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -92,9 +97,6 @@ pub struct ServerConfig {
     pub url: Option<String>,
     /// API key for authentication
     pub api_key: Option<String>,
-    /// Report interval in seconds
-    #[validate(range(min = 1))]
-    pub report_interval_secs: i64,
     /// Heartbeat interval in seconds
     #[validate(range(min = 1))]
     pub heartbeat_interval_secs: i64,
@@ -442,9 +444,9 @@ pub struct AgentNetworkInterface {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Agent {
     pub id: UUIDv7,
-    /// Section (organizational unit) this agent belongs to
-    #[serde(rename = "sectionId")]
-    pub section_id: String,
+    /// Workspace this agent belongs to
+    #[serde(rename = "workspaceId")]
+    pub workspace_id: String,
     /// Human-readable agent name
     pub name: String,
     /// Current configuration version
@@ -484,6 +486,7 @@ pub struct AgentSelfRegistration {
     pub agent_id: UUIDv7,
     /// SHA-256 hash of the claim token (plain token shown in agent logs for user)
     #[validate(length(min = 64, max = 64))]
+    #[validate(regex(path = RE_1))]
     #[serde(rename = "claimTokenHash")]
     pub claim_token_hash: String,
     /// System hostname of the machine running the agent
@@ -551,8 +554,8 @@ pub struct ClaimAgentRequest {
     /// Claim token from agent logs
     #[serde(rename = "claimToken")]
     pub claim_token: String,
-    #[serde(rename = "sectionId")]
-    pub section_id: UUIDv7,
+    #[serde(rename = "workspaceId")]
+    pub workspace_id: UUIDv7,
     /// Human-readable name for the agent (defaults to hostname if not provided)
     pub name: Option<String>,
 }
@@ -905,6 +908,7 @@ pub struct Settings {
 pub struct Organization {
     pub id: Uuid,
     pub name: String,
+    #[validate(regex(path = RE_2))]
     pub slug: Option<String>,
     pub status: Option<OrganizationStatus>,
     pub plan: Option<OrganizationPlan>,
@@ -927,6 +931,7 @@ pub enum CreateOrganizationRequestPlan {
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct CreateOrganizationRequest {
     pub name: String,
+    #[validate(regex(path = RE_2))]
     pub slug: Option<String>,
     pub plan: Option<CreateOrganizationRequestPlan>,
 }

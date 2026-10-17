@@ -83,17 +83,6 @@ impl Agent {
             })
         };
 
-        // Start reporter task
-        let reporter_handle = {
-            let config = Arc::clone(&self.config);
-            let status = Arc::clone(&self.status);
-            let mut shutdown_rx = self.subscribe_shutdown();
-
-            tokio::spawn(async move {
-                crate::reporter::run_reporter(config, status, &mut shutdown_rx).await
-            })
-        };
-
         // Start result-cache reporter task
         let result_reporter_handle = {
             let config = Arc::clone(&self.config);
@@ -174,7 +163,6 @@ impl Agent {
         // Wait for tasks to complete
         tokio::time::timeout(std::time::Duration::from_secs(2), async {
             let _ = monitor_handle.await;
-            let _ = reporter_handle.await;
             let _ = result_reporter_handle.await;
             let _ = heartbeat_handle.await;
             let _ = updater_handle.await;

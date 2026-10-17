@@ -12,9 +12,6 @@ pub struct ServerConfig {
     /// API key for authentication
     pub api_key: Option<String>,
 
-    /// Report interval in seconds
-    pub report_interval_secs: u64,
-
     /// Heartbeat interval in seconds
     pub heartbeat_interval_secs: u64,
 
@@ -36,7 +33,6 @@ impl Default for ServerConfig {
         Self {
             url: "https://api.smotra.net/v1".to_string(),
             api_key: None,
-            report_interval_secs: 300,
             heartbeat_interval_secs: 300,
             verify_tls: true,
             timeout_secs: 5,
@@ -47,10 +43,6 @@ impl Default for ServerConfig {
 }
 
 impl ServerConfig {
-    pub fn report_interval(&self) -> Duration {
-        Duration::from_secs(self.report_interval_secs)
-    }
-
     pub fn heartbeat_interval(&self) -> Duration {
         Duration::from_secs(self.heartbeat_interval_secs)
     }

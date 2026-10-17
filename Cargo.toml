@@ -50,6 +50,7 @@ if-addrs = "0"
 notify = "8"
 notify-debouncer-full = "0"
 validator = { version = "0.21.0", features = ["derive"] }
+regex = "1.13.1"
 
 [dev-dependencies]
 tempfile = "3"
