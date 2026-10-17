@@ -92,9 +92,6 @@ pub struct ServerConfig {
     pub url: Option<String>,
     /// API key for authentication
     pub api_key: Option<String>,
-    /// Report interval in seconds
-    #[validate(range(min = 1))]
-    pub report_interval_secs: i64,
     /// Heartbeat interval in seconds
     #[validate(range(min = 1))]
     pub heartbeat_interval_secs: i64,
