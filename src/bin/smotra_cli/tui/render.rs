@@ -8,7 +8,7 @@ use ratatui::{
     widgets::{Block, Borders, Gauge, List, ListItem, Paragraph},
     Frame,
 };
-use smotra::Config;
+use smotra::AgentConfig;
 use tracing::Level;
 
 pub fn render_header(f: &mut Frame, area: Rect, tabs: &[&str], selected: usize) {
@@ -40,7 +40,12 @@ pub fn render_header(f: &mut Frame, area: Rect, tabs: &[&str], selected: usize) 
     f.render_widget(header, area);
 }
 
-pub fn render_status(f: &mut Frame, area: Rect, status: &smotra::AgentStatus, config: &Config) {
+pub fn render_status(
+    f: &mut Frame,
+    area: Rect,
+    status: &smotra::AgentStatus,
+    config: &AgentConfig,
+) {
     use ratatui::layout::{Constraint, Direction, Layout};
 
     let chunks = Layout::default()
@@ -128,7 +133,7 @@ pub fn render_status(f: &mut Frame, area: Rect, status: &smotra::AgentStatus, co
     f.render_widget(gauge, chunks[4]);
 }
 
-pub fn render_endpoints(f: &mut Frame, area: Rect, config: &Config) {
+pub fn render_endpoints(f: &mut Frame, area: Rect, config: &AgentConfig) {
     let items: Vec<ListItem> = config
         .endpoints
         .iter()
@@ -154,7 +159,7 @@ pub fn render_endpoints(f: &mut Frame, area: Rect, config: &Config) {
     f.render_widget(list, area);
 }
 
-pub fn render_config(f: &mut Frame, area: Rect, config: &Config, scroll_offset: usize) {
+pub fn render_config(f: &mut Frame, area: Rect, config: &AgentConfig, scroll_offset: usize) {
     // Serialize the full config structure to TOML format
     let config_str = match toml::to_string_pretty(config) {
         Ok(s) => s,

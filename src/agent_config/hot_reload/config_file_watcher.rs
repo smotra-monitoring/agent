@@ -103,16 +103,16 @@ impl ConfigFileWatcher {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::Config;
+    use crate::openapi::AgentConfig;
     use tempfile::NamedTempFile;
 
     #[tokio::test]
     async fn test_config_file_watcher_creation() {
         let temp_file = NamedTempFile::new().unwrap();
 
-        let config = Config {
+        let config = AgentConfig {
             agent_id: uuid::Uuid::now_v7(),
-            ..Config::default()
+            ..AgentConfig::default()
         };
         config.save_to_file_secure(temp_file.path()).await.unwrap();
 
@@ -126,9 +126,9 @@ mod tests {
     async fn test_start_watching() {
         let temp_file = NamedTempFile::new().unwrap();
 
-        let config = Config {
+        let config = AgentConfig {
             agent_id: uuid::Uuid::now_v7(),
-            ..Config::default()
+            ..AgentConfig::default()
         };
         config.save_to_file_secure(temp_file.path()).await.unwrap();
 
@@ -146,11 +146,11 @@ mod tests {
     async fn test_watching_event() {
         let temp_file = NamedTempFile::new().unwrap();
 
-        let config = Config {
+        let config = AgentConfig {
             version: 1,
             agent_id: uuid::Uuid::now_v7(),
             agent_name: "Test Agent".to_string(),
-            ..Config::default()
+            ..AgentConfig::default()
         };
         config.save_to_file_secure(temp_file.path()).await.unwrap();
 
@@ -163,11 +163,11 @@ mod tests {
         let result = watcher.start_watching();
         assert!(result.is_ok());
 
-        let config_new = Config {
+        let config_new = AgentConfig {
             version: 2,
             agent_id: uuid::Uuid::now_v7(),
             agent_name: "Test Agent 2".to_string(),
-            ..Config::default()
+            ..AgentConfig::default()
         };
         config_new
             .save_to_file_secure(temp_file.path())

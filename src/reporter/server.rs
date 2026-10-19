@@ -1,8 +1,8 @@
 //! Server reporting functionality
 
-use crate::agent_config::Config;
 use crate::core::AgentStatus;
 use crate::error::{Error, Result};
+use crate::openapi::AgentConfig;
 use crate::reporter::HeartbeatReporter;
 use chrono::Utc;
 use parking_lot::RwLock;
@@ -18,7 +18,7 @@ use tracing::{debug, error, info, warn};
 /// Accepts a shared `Arc<RwLock<AgentStatus>>` so each heartbeat payload
 /// includes the latest agent status snapshot.
 pub async fn run_heartbeat(
-    config: Arc<RwLock<Config>>,
+    config: Arc<RwLock<AgentConfig>>,
     agent_status: Arc<RwLock<AgentStatus>>,
     mut agent_shutdown_rx: broadcast::Receiver<()>,
 ) -> Result<()> {

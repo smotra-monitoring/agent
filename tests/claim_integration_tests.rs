@@ -1,12 +1,12 @@
 //! Integration tests for agent claiming workflow public API
 
-use smotra::{Claim, Config};
+use smotra::{AgentConfig, Claim};
 use tempfile::NamedTempFile;
 
 #[test]
 fn test_claim_api_is_accessible() {
     // Verify we can create a Claim using the public API
-    let config = Config::default();
+    let config = AgentConfig::default();
 
     let _claim = Claim::new(&config);
 
@@ -23,7 +23,7 @@ async fn test_claim_workflow_with_mock_server() {
     // Create a config pointing to our mock server
     let temp_file = NamedTempFile::new().unwrap();
 
-    let mut config = Config::default();
+    let mut config = AgentConfig::default();
     config.server.url = server.url();
     config.server.verify_tls = false;
     config.server.claiming.max_registration_retries = 1;

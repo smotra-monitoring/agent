@@ -10,13 +10,13 @@ use tokio::sync::{broadcast, mpsc};
 use tracing::{error, info, warn};
 
 use super::AgentStatus;
-use crate::agent_config::Config;
 use crate::cache::ResultCache;
 use crate::error::Result;
+use crate::openapi::AgentConfig;
 
 /// Main agent instance that coordinates all monitoring tasks
 pub struct Agent {
-    config: Arc<RwLock<Config>>,
+    config: Arc<RwLock<AgentConfig>>,
     config_path: PathBuf,
     status: Arc<RwLock<AgentStatus>>,
     result_cache: Arc<ResultCache>,
@@ -35,15 +35,15 @@ impl Agent {
     /// Returns the agent instance or an error if config loading/validation fails
     pub fn new(config_path: PathBuf) -> Result<Self> {
         // Load and validate configuration from file
-        let config = Config::load_and_validate_config(&config_path)?;
+        let config = AgentConfig::load_and_validate_config(&config_path)?;
 
         let (shutdown_tx, _) = broadcast::channel(1);
         let mut status = AgentStatus::new();
-        status.config_version = config.version as i64;
+        status.config_version = config.version;
 
         let result_cache = Arc::new(ResultCache::new(
-            config.storage.max_cached_results,
-            std::time::Duration::from_secs(config.storage.max_cache_age_secs),
+            config.storage.max_cached_results as usize,
+            config.storage.max_cache_age(),
         ));
 
         Ok(Self {
@@ -223,7 +223,7 @@ impl Agent {
     /// This method does not restart monitoring tasks. They will pick up
     /// the new configuration on their next iteration. For changes that require
     /// immediate effect (like API keys or server URLs), consider restarting the agent.
-    pub fn reload_config(&self, new_config: Config) -> Result<()> {
+    pub fn reload_config(&self, new_config: AgentConfig) -> Result<()> {
         info!(
             "Attempting to reload configuration (version: {})",
             new_config.version
@@ -238,7 +238,7 @@ impl Agent {
 
         // Apply the new configuration atomically
         *self.config.write() = new_config.clone();
-        self.status.write().config_version = new_config.version as i64;
+        self.status.write().config_version = new_config.version;
 
         info!(
             "Configuration reloaded successfully (version: {})",
@@ -248,7 +248,7 @@ impl Agent {
         Ok(())
     }
 
-    fn warn_if_critical_changes(&self, old_config: &Config, new_config: &Config) {
+    fn warn_if_critical_changes(&self, old_config: &AgentConfig, new_config: &AgentConfig) {
         // Check if agent_id changed (this would be problematic)
         if new_config.agent_id != old_config.agent_id {
             warn!(
@@ -286,7 +286,7 @@ impl Agent {
     }
 
     /// Get a clone of the current agent configuration.
-    pub fn config_clone(&self) -> Config {
+    pub fn config_clone(&self) -> AgentConfig {
         self.config.read().clone()
     }
 }
@@ -324,10 +324,10 @@ mod tests {
 
     #[tokio::test]
     async fn test_reload_config_success() {
-        let config = Config {
+        let config = AgentConfig {
             agent_id: Uuid::now_v7(),
             agent_name: "Test Agent".to_string(),
-            ..Config::default()
+            ..AgentConfig::default()
         };
 
         let temp_file = NamedTempFile::new().unwrap();
@@ -354,16 +354,16 @@ mod tests {
         assert_eq!(current_config.agent_name, new_config.agent_name);
         assert_eq!(
             agent.status().config_version,
-            new_config.version as i64,
+            new_config.version,
             "config_version in status should be updated after reload"
         );
     }
 
     #[tokio::test]
     async fn test_reload_config_validation_failure() {
-        let original_config = Config {
+        let original_config = AgentConfig {
             agent_id: Uuid::now_v7(),
-            ..Config::default()
+            ..AgentConfig::default()
         };
 
         let temp_file = NamedTempFile::new().unwrap();
@@ -391,9 +391,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_reload_config_nil_agent_id() {
-        let original_config = Config {
+        let original_config = AgentConfig {
             agent_id: Uuid::now_v7(),
-            ..Config::default()
+            ..AgentConfig::default()
         };
 
         let temp_file = NamedTempFile::new().unwrap();
@@ -418,9 +418,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_config() {
-        let original_config = Config {
+        let original_config = AgentConfig {
             agent_id: Uuid::now_v7(),
-            ..Config::default()
+            ..AgentConfig::default()
         };
 
         let temp_file = NamedTempFile::new().unwrap();

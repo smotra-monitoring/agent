@@ -3,15 +3,15 @@
 use tracing::info;
 use uuid::Uuid;
 
-use super::Config;
 use crate::claim::AgentCredentials;
 use crate::error::{Error, Result};
+use crate::openapi::AgentConfig;
 use std::fs;
 use std::path::Path;
 use tokio::fs as async_fs;
 use tokio::io::AsyncWriteExt;
 
-impl Config {
+impl AgentConfig {
     /// Load configuration from a TOML file
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         let content = fs::read_to_string(path.as_ref())
@@ -115,15 +115,15 @@ impl Config {
             ));
         }
 
-        if self.update.github_repo_url.is_empty() {
+        if self.self_upgrade.github_repo_url.is_empty() {
             return Err(Error::Config(
-                "update check_url cannot be empty".to_string(),
+                "self_upgrade.github_repo_url cannot be empty".to_string(),
             ));
         }
 
-        if self.update.check_interval_secs <= 0 {
+        if self.self_upgrade.check_interval_secs <= 0 {
             return Err(Error::Config(
-                "update check_interval_secs must be greater than 0".to_string(),
+                "self_upgrade.check_interval_secs must be greater than 0".to_string(),
             ));
         }
 
@@ -157,11 +157,12 @@ impl Config {
 mod tests {
     use super::*;
     use crate::claim::AgentCredentials;
+    use crate::openapi::{AgentConfig, ServerConfig};
     use tempfile::NamedTempFile;
 
     #[test]
     fn test_apply_claim_result() {
-        let mut config = Config::default();
+        let mut config = AgentConfig::default();
         assert_eq!(config.agent_id, Uuid::nil());
         assert_eq!(config.server.api_key, None);
 
@@ -180,9 +181,9 @@ mod tests {
     #[test]
     fn test_apply_claim_result_overwrites_existing() {
         let old_agent_id = Uuid::now_v7();
-        let mut config = Config {
+        let mut config = AgentConfig {
             agent_id: old_agent_id,
-            server: crate::ServerConfig {
+            server: ServerConfig {
                 api_key: Some("old_key".to_string()),
                 ..Default::default()
             },
@@ -203,13 +204,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_save_to_file_secure() {
-        use crate::agent_config::server_config::ServerConfig;
-
         let temp_file = NamedTempFile::new().unwrap();
         let path = temp_file.path();
 
         let agent_id = Uuid::now_v7();
-        let config = Config {
+        let config = AgentConfig {
             agent_id,
             agent_name: "Test Agent".to_string(),
             server: ServerConfig {
@@ -248,7 +247,7 @@ mod tests {
         let path = temp_file.path();
 
         // Start with default config
-        let mut config = Config {
+        let mut config = AgentConfig {
             agent_name: "Integration Test Agent".to_string(),
             ..Default::default()
         };
@@ -265,7 +264,7 @@ mod tests {
         config.save_to_file_secure(path).await.unwrap();
 
         // Reload and verify
-        let loaded_config = Config::from_file(path).unwrap();
+        let loaded_config = AgentConfig::from_file(path).unwrap();
         assert_eq!(loaded_config.agent_id, agent_id);
         assert_eq!(
             loaded_config.server.api_key,
@@ -275,32 +274,32 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_fails_when_update_url_is_empty() {
-        let mut config = Config {
+    fn test_validate_fails_when_self_upgrade_url_is_empty() {
+        let mut config = AgentConfig {
             agent_id: Uuid::now_v7(),
             ..Default::default()
         };
-        config.update.github_repo_url = String::new();
+        config.self_upgrade.github_repo_url = String::new();
 
         let result = config.validate();
         assert!(
             result.is_err(),
-            "empty update.check_url should fail validation"
+            "empty self_upgrade.github_repo_url should fail validation"
         );
     }
 
     #[test]
-    fn test_validate_fails_when_update_interval_is_zero() {
-        let mut config = Config {
+    fn test_validate_fails_when_self_upgrade_interval_is_zero() {
+        let mut config = AgentConfig {
             agent_id: Uuid::now_v7(),
             ..Default::default()
         };
-        config.update.check_interval_secs = 0;
+        config.self_upgrade.check_interval_secs = 0;
 
         let result = config.validate();
         assert!(
             result.is_err(),
-            "zero update.check_interval_secs should fail validation"
+            "zero self_upgrade.check_interval_secs should fail validation"
         );
     }
 }

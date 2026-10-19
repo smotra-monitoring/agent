@@ -1,8 +1,8 @@
 //! Heartbeat reporting to central server
 
-use crate::agent_config::Config;
 use crate::core::{AgentHealthStatus, AgentHeartbeat, AgentMetrics, AgentStatus};
 use crate::error::{Error, Result};
+use crate::openapi::AgentConfig;
 use chrono::Utc;
 use parking_lot::RwLock;
 use std::sync::Arc;
@@ -17,7 +17,7 @@ use tracing::{debug, error, warn};
 /// `Agent::reload_config()` is immediately reflected in subsequent heartbeats.
 #[derive(Debug)]
 pub struct HeartbeatReporter {
-    config: Arc<RwLock<Config>>,
+    config: Arc<RwLock<AgentConfig>>,
     status: Arc<RwLock<AgentStatus>>,
     system: Mutex<System>,
     started_at: Instant,
@@ -30,7 +30,7 @@ impl HeartbeatReporter {
     /// picked up automatically on every `send_heartbeat()` call.
     /// Accepts a shared `Arc<RwLock<AgentStatus>>` so the heartbeat payload
     /// always reflects the latest agent state.
-    pub fn new(config: Arc<RwLock<Config>>, status: Arc<RwLock<AgentStatus>>) -> Result<Self> {
+    pub fn new(config: Arc<RwLock<AgentConfig>>, status: Arc<RwLock<AgentStatus>>) -> Result<Self> {
         // Initialize system with minimal refresh for better performance
         let system = System::new_with_specifics(
             RefreshKind::nothing()
@@ -162,12 +162,12 @@ impl HeartbeatReporter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent_config::{MonitoringConfig, ServerConfig, StorageConfig};
     use crate::core::AgentStatus;
+    use crate::openapi::{AgentConfig, MonitoringConfig, ServerConfig, StorageConfig};
     use chrono::Utc;
 
-    fn create_test_config() -> Arc<RwLock<Config>> {
-        Arc::new(RwLock::new(Config {
+    fn create_test_config() -> Arc<RwLock<AgentConfig>> {
+        Arc::new(RwLock::new(AgentConfig {
             version: 1,
             agent_id: uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
             agent_name: "Test Agent".to_string(),
@@ -175,7 +175,7 @@ mod tests {
             monitoring: MonitoringConfig::default(),
             server: ServerConfig::default(),
             storage: StorageConfig::default(),
-            update: Default::default(),
+            self_upgrade: Default::default(),
             endpoints: vec![],
         }))
     }

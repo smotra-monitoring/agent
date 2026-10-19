@@ -16,9 +16,9 @@ fn test_claim_public_api() {
 
 #[test]
 fn test_claim_workflow_via_public_api() {
-    use smotra::{Claim, Config};
+    use smotra::{AgentConfig, Claim};
 
-    let config = Config::default();
+    let config = AgentConfig::default();
 
     // This is the only public way to use the claiming workflow
     let _claim = Claim::new(&config);

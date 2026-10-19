@@ -1,10 +1,10 @@
 //! Monitoring task coordination and execution
 
-use crate::agent_config::Config;
 use crate::cache::ResultCache;
 use crate::core::AgentStatus;
 use crate::error::Result;
 use crate::monitor::PingChecker;
+use crate::openapi::AgentConfig;
 use parking_lot::RwLock;
 use std::sync::Arc;
 use tokio::sync::broadcast;
@@ -22,7 +22,7 @@ type ResultSender = mpsc::UnboundedSender<MonitoringResult>;
 /// Accepts a shared `Arc<RwLock<Config>>` so that config hot-reloads applied by
 /// `Agent::reload_config()` are picked up on every monitoring tick.
 pub async fn run_monitoring(
-    agent_config: Arc<RwLock<Config>>,
+    agent_config: Arc<RwLock<AgentConfig>>,
     agent_status: Arc<RwLock<AgentStatus>>,
     result_cache: Arc<ResultCache>,
     agent_shutdown_rx: &mut broadcast::Receiver<()>,
@@ -114,7 +114,7 @@ async fn result_collect_loop(
 /// Reads a fresh config snapshot on every tick so that hot-reloaded values
 /// (endpoints, intervals, ping parameters) take effect without a restart.
 async fn run_check_loop(
-    agent_config: Arc<RwLock<Config>>,
+    agent_config: Arc<RwLock<AgentConfig>>,
     result_tx: ResultSender,
     agent_shutdown_rx: &mut broadcast::Receiver<()>,
 ) {
@@ -145,7 +145,7 @@ async fn run_check_loop(
                 // timeout and ping_count changes take effect immediately.
                 let ping_checker = match PingChecker::new(
                     config.monitoring.timeout(),
-                    config.monitoring.ping_count,
+                    config.monitoring.ping_count as u32,
                 ) {
                     Ok(checker) => Arc::new(checker),
                     Err(e) => {
@@ -167,7 +167,7 @@ async fn run_check_loop(
                 debug!("Running checks for {} enabled endpoints", enabled_endpoints.len());
 
                 // Run checks concurrently with limit
-                let semaphore = Arc::new(tokio::sync::Semaphore::new(config.monitoring.max_concurrent));
+                let semaphore = Arc::new(tokio::sync::Semaphore::new(config.monitoring.max_concurrent as usize));
                 let mut tasks = Vec::new();
 
                 for endpoint in enabled_endpoints {

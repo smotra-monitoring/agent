@@ -11,7 +11,7 @@ use tracing::{error, info, warn};
 
 use super::config_file_watcher::ConfigFileWatcher;
 use super::sighup::handle_sighup;
-use crate::agent_config::Config;
+use crate::agent_config::AgentConfig;
 use crate::error::Result;
 
 /// Events that trigger config reload
@@ -55,7 +55,7 @@ pub enum ReloadTrigger {
 ///    and sends validated configs to Agent through the provided channel
 pub async fn run_hot_reload(
     config_path: PathBuf,
-    config_tx: mpsc::Sender<Config>,
+    config_tx: mpsc::Sender<AgentConfig>,
     shutdown_rx: broadcast::Receiver<()>,
 ) -> Result<()> {
     info!("Starting config hot-reload orchestration");
@@ -98,7 +98,7 @@ pub async fn run_hot_reload(
                     ReloadTrigger::FileChange() | ReloadTrigger::Signal
                      => {
 
-                        match Config::load_and_validate_config(&config_path) {
+                        match AgentConfig::load_and_validate_config(&config_path) {
                             Ok(new_config) => {
                                 info!(
                                     "Config loaded and validated successfully (version: {})",
@@ -171,7 +171,7 @@ mod test_helpers {
     /// This allows tests to manually send reload triggers
     pub async fn run_hot_reload_with_trigger_channel(
         config_path: PathBuf,
-        config_tx: mpsc::Sender<Config>,
+        config_tx: mpsc::Sender<AgentConfig>,
         mut trigger_rx: mpsc::UnboundedReceiver<ReloadTrigger>,
         shutdown_rx: broadcast::Receiver<()>,
     ) -> Result<()> {
@@ -183,7 +183,7 @@ mod test_helpers {
                 Some(trigger) = trigger_rx.recv() => {
                     info!("Config reload triggered: {:?}", trigger);
 
-                    match Config::load_and_validate_config(&config_path) {
+                    match AgentConfig::load_and_validate_config(&config_path) {
                         Ok(new_config) => {
                             info!(
                                 "Config loaded and validated successfully (version: {})",
@@ -217,18 +217,22 @@ mod test_helpers {
 mod tests {
     use super::*;
     use crate::core::Agent;
-    use crate::{Endpoint, MonitoringConfig};
+    use crate::{AgentConfig, Endpoint, MonitoringConfig};
     use std::fs;
     use tempfile::NamedTempFile;
     use tokio::time::{sleep, Duration};
 
     /// Helper to create a valid config file content
-    fn config_with_endpoints(version: u32, interval_secs: u64, endpoints_count: usize) -> Config {
+    fn config_with_endpoints(
+        version: i64,
+        interval_secs: i64,
+        endpoints_count: usize,
+    ) -> AgentConfig {
         let endpoints: Vec<Endpoint> = (1..=endpoints_count)
             .map(|i| Endpoint::new(format!("192.168.1.{}", i)))
             .collect();
 
-        Config {
+        AgentConfig {
             version,
             agent_id: uuid::Uuid::now_v7(),
             monitoring: MonitoringConfig {
@@ -236,7 +240,7 @@ mod tests {
                 ..MonitoringConfig::default()
             },
             endpoints,
-            ..Config::default()
+            ..AgentConfig::default()
         }
     }
 
@@ -244,9 +248,9 @@ mod tests {
     async fn test_run_hot_reload_shutdown() {
         // Create a temporary config file
         let temp_file = NamedTempFile::new().unwrap();
-        let config = Config {
+        let config = AgentConfig {
             agent_id: uuid::Uuid::now_v7(),
-            ..Config::default()
+            ..AgentConfig::default()
         };
         config.save_to_file_secure(temp_file.path()).await.unwrap();
 
@@ -487,7 +491,7 @@ mod tests {
 
         // Perform multiple reloads
         for i in 2..=5 {
-            let updated_config = config_with_endpoints(i, 60 + (i as u64 * 10), i as usize);
+            let updated_config = config_with_endpoints(i, 60 + (i * 10), i as usize);
             updated_config
                 .save_to_file_secure(&config_path)
                 .await
@@ -501,10 +505,7 @@ mod tests {
 
             let current_config = agent_arc.config_clone();
             assert_eq!(current_config.version, i);
-            assert_eq!(
-                current_config.monitoring.interval_secs,
-                60 + (i as u64 * 10)
-            );
+            assert_eq!(current_config.monitoring.interval_secs, 60 + (i * 10));
         }
 
         // Shutdown
