@@ -1,7 +1,7 @@
 //! Main agent daemon binary
 
 use clap::Parser;
-use smotra::{Agent, Claim, Config, Endpoint, Result};
+use smotra::{Agent, AgentConfig, Claim, Endpoint, Result};
 use std::io::IsTerminal;
 use std::path::{Path, PathBuf};
 use tracing::{error, info};
@@ -67,7 +67,7 @@ fn init_tracing(log_level: &str, log_file: Option<&Path>) {
 
 /// Generates a default configuration file at `path` with a sample endpoint and exits.
 async fn generate_config(path: &Path) -> Result<()> {
-    let mut config = Config::default();
+    let mut config = AgentConfig::default();
     config
         .endpoints
         .push(Endpoint::new("8.8.8.8").with_tags(vec!["DNS".to_string(), "google".to_string()]));
@@ -78,7 +78,7 @@ async fn generate_config(path: &Path) -> Result<()> {
 
 /// Loads the configuration from `path`.
 /// Exits the process with an error message if the file does not exist.
-async fn load_config(path: &Path) -> Result<Config> {
+async fn load_config(path: &Path) -> Result<AgentConfig> {
     if !path.exists() {
         info!("Configuration file not found at: {}", path.display());
         info!("Generating default configuration ...");
@@ -86,7 +86,7 @@ async fn load_config(path: &Path) -> Result<Config> {
     }
 
     info!("Loading configuration from: {}", path.display());
-    Config::from_file(path).map_err(|e| {
+    AgentConfig::from_file(path).map_err(|e| {
         error!("Failed to load configuration: {}", e);
         e
     })
@@ -97,7 +97,7 @@ async fn load_config(path: &Path) -> Result<Config> {
 /// If the server API key is already present in `config`, this is a no-op.
 /// Otherwise, it runs the interactive claiming workflow, applies the result
 /// to `config`, and persists the updated config to `config_path`.
-async fn ensure_claimed(config: &mut Config, config_path: &Path) -> Result<()> {
+async fn ensure_claimed(config: &mut AgentConfig, config_path: &Path) -> Result<()> {
     if config.server.url.is_empty() {
         error!("Server URL not configured. Please set 'server.url' in the configuration file.");
         std::process::exit(1);
@@ -122,7 +122,7 @@ async fn ensure_claimed(config: &mut Config, config_path: &Path) -> Result<()> {
 }
 
 /// Validates config, logs a summary, then creates and runs the agent.
-fn print_info(config: &Config) -> Result<()> {
+fn print_info(config: &AgentConfig) -> Result<()> {
     config.validate().map_err(|e| {
         error!("Configuration validation failed: {}", e);
         e
@@ -194,7 +194,7 @@ mod tests {
 
             generate_config(&path).await.unwrap();
 
-            let config = Config::from_file(&path);
+            let config = AgentConfig::from_file(&path);
             assert!(
                 config.is_ok(),
                 "generated file should parse as valid Config"
@@ -208,7 +208,7 @@ mod tests {
 
             generate_config(&path).await.unwrap();
 
-            let config = Config::from_file(&path).unwrap();
+            let config = AgentConfig::from_file(&path).unwrap();
             assert!(
                 !config.endpoints.is_empty(),
                 "generated config should contain at least one sample endpoint"

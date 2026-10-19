@@ -1,8 +1,8 @@
 use super::environment::is_containerized;
 use super::replacer;
 use super::{download_release_binary, fetch_latest_version, is_newer_than_current};
-use crate::agent_config::Config;
 use crate::error::{Error, Result};
+use crate::openapi::AgentConfig;
 use octocrab::Octocrab;
 use parking_lot::RwLock;
 use std::sync::Arc;
@@ -11,7 +11,7 @@ use tokio::time::interval;
 use tracing::{error, info, warn};
 
 pub async fn run_update_checker(
-    config: Arc<RwLock<Config>>,
+    config: Arc<RwLock<AgentConfig>>,
     mut shutdown_rx: broadcast::Receiver<()>,
 ) -> Result<()> {
     if is_containerized() {
@@ -23,7 +23,8 @@ pub async fn run_update_checker(
         .build()
         .map_err(|e| Error::GithubApi(format!("Failed to initialize GitHub client: {}", e)))?;
 
-    let mut current_interval_secs = normalize_interval(config.read().update.check_interval_secs);
+    let mut current_interval_secs =
+        normalize_interval(config.read().self_upgrade.check_interval_secs);
     let mut iv = interval(std::time::Duration::from_secs(current_interval_secs));
     iv.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
@@ -32,7 +33,7 @@ pub async fn run_update_checker(
             _ = iv.tick() => {
                 let cfg = config.read().clone();
 
-                let next_interval_secs = normalize_interval(cfg.update.check_interval_secs);
+                let next_interval_secs = normalize_interval(cfg.self_upgrade.check_interval_secs);
                 if next_interval_secs != current_interval_secs {
                     current_interval_secs = next_interval_secs;
                     iv = interval(std::time::Duration::from_secs(current_interval_secs));
@@ -40,16 +41,16 @@ pub async fn run_update_checker(
                     info!("Update check interval changed to {} seconds", current_interval_secs);
                 }
 
-                if !cfg.update.enabled {
+                if !cfg.self_upgrade.enabled {
                     continue;
                 }
 
-                match fetch_latest_version(&octocrab, &cfg.update.github_repo_url).await {
+                match fetch_latest_version(&octocrab, &cfg.self_upgrade.github_repo_url).await {
                     Ok(latest_version) => {
                         match is_newer_than_current(&latest_version) {
                             Ok(true) => {
                                 info!("New version {} detected. Starting upgrade", latest_version);
-                                match download_release_binary(&octocrab, &cfg.update.github_repo_url, &latest_version).await {
+                                match download_release_binary(&octocrab, &cfg.self_upgrade.github_repo_url, &latest_version).await {
                                     Ok(new_binary) => {
                                         if let Err(e) = replacer::replace_binary_and_restart(&new_binary) {
                                             error!("Failed to replace/restart after update: {}", e);

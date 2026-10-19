@@ -25,7 +25,9 @@ mod results;
 
 pub mod self_upgrade;
 
-pub use agent_config::{ClaimConfig, Config, MonitoringConfig, ServerConfig, StorageConfig};
+pub use agent_config::{
+    AgentConfig, ClaimConfig, MonitoringConfig, SelfUpgradeConfig, ServerConfig, StorageConfig,
+};
 pub use claim::Claim;
 pub use core::{
     Agent, AgentCacheStats, AgentHealthStatus, AgentHeartbeat, AgentMetrics, AgentStatus,

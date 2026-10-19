@@ -1,6 +1,6 @@
 //! Command handlers for CLI operations
 
-use smotra::{Agent, Config, Result};
+use smotra::{Agent, AgentConfig, Result};
 use std::path::PathBuf;
 
 /// Show current status
@@ -24,7 +24,7 @@ pub async fn show_status(config_path: PathBuf) -> Result<()> {
 
 /// Validate configuration
 pub async fn validate_config(config_path: PathBuf) -> Result<()> {
-    match Config::from_file(&config_path) {
+    match AgentConfig::from_file(&config_path) {
         Ok(config) => match config.validate() {
             Ok(_) => println!("✓ Configuration is valid"),
             Err(e) => {
@@ -43,7 +43,7 @@ pub async fn validate_config(config_path: PathBuf) -> Result<()> {
 
 /// Generate default configuration
 pub async fn generate_config(output: PathBuf) -> Result<()> {
-    let config = Config::default();
+    let config = AgentConfig::default();
     config.save_to_file_secure(&output).await?;
     println!("Generated default configuration at: {}", output.display());
     Ok(())

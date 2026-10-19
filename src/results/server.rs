@@ -15,11 +15,10 @@
 //! 3. `drain_front(n)` on success only — guarantees at-least-once delivery.
 //!    On failure the same items will be retried on the next tick.
 
-use crate::agent_config::Config;
 use crate::cache::ResultCache;
 use crate::core::{AgentStatus, MonitoringResult};
 use crate::error::{Error, Result};
-use crate::openapi;
+use crate::openapi::{self, AgentConfig};
 use parking_lot::RwLock;
 use std::sync::Arc;
 use tokio::sync::broadcast;
@@ -40,7 +39,7 @@ use tracing::{debug, error, info};
 /// The loop respects hot-reloaded configuration (server URL, API key, intervals,
 /// cache settings) by reading a fresh config snapshot on every tick.
 pub async fn run_result_reporter(
-    config: Arc<RwLock<Config>>,
+    config: Arc<RwLock<AgentConfig>>,
     result_cache: Arc<ResultCache>,
     agent_status: Arc<RwLock<AgentStatus>>,
     mut agent_shutdown_rx: broadcast::Receiver<()>,
@@ -52,8 +51,7 @@ pub async fn run_result_reporter(
         return Ok(());
     }
 
-    let mut current_interval_duration =
-        std::time::Duration::from_secs(config.read().storage.cache_report_interval_secs);
+    let mut current_interval_duration = config.read().storage.cache_report_interval();
     let mut iv = interval(current_interval_duration);
     iv.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
@@ -69,9 +67,7 @@ pub async fn run_result_reporter(
                 }
 
                 // Hot-reload interval changes.
-                let new_interval = std::time::Duration::from_secs(
-                    config_snapshot.storage.cache_report_interval_secs,
-                );
+                let new_interval = config_snapshot.storage.cache_report_interval();
                 if new_interval != current_interval_duration {
                     info!(
                         "Result report interval changed from {:?} to {:?}, recreating timer",
@@ -87,7 +83,7 @@ pub async fn run_result_reporter(
                     continue;
                 }
 
-                let batch_size = config_snapshot.storage.cache_batch_size;
+                let batch_size = config_snapshot.storage.cache_batch_size as usize;
                 let batch = result_cache.peek_batch(batch_size).await;
 
                 if batch.is_empty() {
@@ -129,7 +125,7 @@ pub async fn run_result_reporter(
 }
 
 /// POST `POST /agent/{agentId}/results` with a batch payload.
-async fn send_result_batch(config: &Config, batch: &[MonitoringResult]) -> Result<()> {
+async fn send_result_batch(config: &AgentConfig, batch: &[MonitoringResult]) -> Result<()> {
     let agent_id = config.agent_id;
     let server_url = &config.server.url;
 
@@ -308,11 +304,11 @@ mod tests {
 #[cfg(test)]
 mod reporter_loop_tests {
     use super::run_result_reporter;
-    use crate::agent_config::{Config, MonitoringConfig, ServerConfig, StorageConfig};
     use crate::cache::ResultCache;
     use crate::core::{
         AgentStatus, CheckType, MonitoringResult, PingCheck, PingCheckType, PingResult,
     };
+    use crate::openapi::{AgentConfig, MonitoringConfig, ServerConfig, StorageConfig};
     use parking_lot::RwLock;
     use std::sync::Arc;
     use std::time::Duration;
@@ -344,7 +340,7 @@ mod reporter_loop_tests {
         ))
     }
 
-    fn make_config(server_url: &str) -> Arc<RwLock<Config>> {
+    fn make_config(server_url: &str) -> Arc<RwLock<AgentConfig>> {
         let storage = StorageConfig {
             cache_enabled: true,
             cache_batch_size: 10,
@@ -356,7 +352,7 @@ mod reporter_loop_tests {
             api_key: Some("test-api-key".to_string()),
             ..ServerConfig::default()
         };
-        Arc::new(RwLock::new(Config {
+        Arc::new(RwLock::new(AgentConfig {
             version: 1,
             agent_id: Uuid::now_v7(),
             agent_name: "Test Agent".to_string(),
@@ -364,7 +360,7 @@ mod reporter_loop_tests {
             monitoring: MonitoringConfig::default(),
             server,
             storage,
-            update: Default::default(),
+            self_upgrade: Default::default(),
             endpoints: vec![],
         }))
     }
@@ -513,7 +509,7 @@ mod reporter_loop_tests {
     #[tokio::test]
     async fn reporter_exits_immediately_when_cache_disabled() {
         let cache = make_cache(100, 3600);
-        let config = Arc::new(RwLock::new(Config {
+        let config = Arc::new(RwLock::new(AgentConfig {
             version: 1,
             agent_id: Uuid::now_v7(),
             agent_name: "Test".to_string(),
@@ -527,7 +523,7 @@ mod reporter_loop_tests {
                 cache_enabled: false,
                 ..StorageConfig::default()
             },
-            update: Default::default(),
+            self_upgrade: Default::default(),
             endpoints: vec![],
         }));
 

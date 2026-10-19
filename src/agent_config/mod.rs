@@ -3,9 +3,9 @@
 
 mod hot_reload;
 mod loader;
-mod server_config;
-mod types;
+mod openapi_ext;
 
+pub use crate::openapi::{
+    AgentConfig, ClaimConfig, MonitoringConfig, SelfUpgradeConfig, ServerConfig, StorageConfig,
+};
 pub use hot_reload::run_hot_reload;
-pub use server_config::{ClaimConfig, ServerConfig};
-pub use types::*;

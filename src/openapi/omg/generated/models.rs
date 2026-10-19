@@ -58,7 +58,7 @@ pub struct AgentConfig {
     /// Human-readable agent name
     pub agent_name: String,
     /// Tags for this agent (used for mesh organization)
-    pub tags: Option<Vec<String>>,
+    pub tags: Vec<String>,
     pub monitoring: MonitoringConfig,
     pub server: ServerConfig,
     pub storage: StorageConfig,
@@ -89,12 +89,20 @@ pub struct MonitoringConfig {
     pub traceroute_max_hops: i64,
 }
 
+/// ClaimConfig
+#[derive(Debug, Clone, Serialize, Deserialize, Validate)]
+pub struct ClaimConfig {
+    /// Maximum registration retry attempts
+    #[validate(range(min = 0))]
+    pub max_registration_retries: i64,
+}
+
 /// ServerConfig
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct ServerConfig {
     /// Server URL
     #[validate(url)]
-    pub url: Option<String>,
+    pub url: String,
     /// API key for authentication
     pub api_key: Option<String>,
     /// Heartbeat interval in seconds
@@ -108,6 +116,7 @@ pub struct ServerConfig {
     /// Retry attempts on failure
     #[validate(range(min = 0))]
     pub retry_attempts: i64,
+    pub claiming: ClaimConfig,
 }
 
 /// StorageConfig
@@ -121,6 +130,14 @@ pub struct StorageConfig {
     /// Maximum age of cached results in seconds (e.g., 86400 = 24 hours)
     #[validate(range(min = 0))]
     pub max_cache_age_secs: i64,
+    /// Enable in-memory result caching and batch reporting
+    pub cache_enabled: bool,
+    /// Number of results sent to the server in a single POST request
+    #[validate(range(min = 1))]
+    pub cache_batch_size: i64,
+    /// How often (in seconds) the result reporter drains and sends a batch
+    #[validate(range(min = 1))]
+    pub cache_report_interval_secs: i64,
 }
 
 /// SelfUpgradeConfig

@@ -7,7 +7,7 @@ use crate::claim::{
     types::AgentCredentials,
 };
 use crate::openapi::AgentSelfRegistration;
-use crate::{Config, Error, Result};
+use crate::{AgentConfig, Error, Result};
 use tracing::{error, info};
 use uuid::Uuid;
 
@@ -20,7 +20,7 @@ use uuid::Uuid;
 /// 4. Poll for claim status
 /// 5. Save API key when claimed
 pub struct Claim<'a> {
-    config: &'a Config,
+    config: &'a AgentConfig,
 }
 
 impl<'a> Claim<'a> {
@@ -30,7 +30,7 @@ impl<'a> Claim<'a> {
     ///
     /// * `config` - Current agent configuration
     /// * `config_path` - Path to the configuration file
-    pub fn new(config: &'a Config) -> Self {
+    pub fn new(config: &'a AgentConfig) -> Self {
         Self { config }
     }
 
@@ -109,7 +109,7 @@ impl<'a> Claim<'a> {
             &client,
             server_url,
             registration,
-            self.config.server.claiming.max_registration_retries,
+            self.config.server.claiming.max_registration_retries as u32,
         )
         .await?;
 
@@ -148,7 +148,7 @@ mod tests {
     #[test]
     fn test_claim_creation() {
         let test_agent_id = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
-        let config = Config {
+        let config = AgentConfig {
             agent_id: test_agent_id,
             agent_name: "Test Agent".to_string(),
             ..Default::default()
@@ -162,7 +162,7 @@ mod tests {
 
     #[test]
     fn test_claim_generates_agent_id_when_nil() {
-        let config = Config {
+        let config = AgentConfig {
             agent_id: Uuid::nil(),
             agent_name: "Test Agent".to_string(),
             ..Default::default()
