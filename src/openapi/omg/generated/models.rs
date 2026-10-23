@@ -843,6 +843,37 @@ pub struct TokenResponse {
     pub expires_at: DateTime<Utc>,
 }
 
+/// Session
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Session {
+    pub id: UUIDv7,
+    pub created_at: DateTime<Utc>,
+    pub last_used_at: DateTime<Utc>,
+    /// Hard expiry of the session
+    pub expires_at: DateTime<Utc>,
+    /// Client IP recorded when the session was created
+    pub ip_address: Option<String>,
+    /// Client User-Agent recorded when the session was created
+    pub user_agent: Option<String>,
+    /// Identity provider used to sign in
+    pub provider: String,
+    /// True for the session that made this request
+    pub is_current: bool,
+}
+
+/// SessionListResponse
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionListResponse {
+    pub sessions: Vec<Session>,
+}
+
+/// PurgeSessionsResponse
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PurgeSessionsResponse {
+    /// Number of sessions revoked
+    pub revoked_count: i64,
+}
+
 /// UserInfo
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct UserInfo {
@@ -1375,6 +1406,16 @@ pub struct GetUserInfoResponse200 {
 #[derive(Debug, Clone, Deserialize)]
 pub struct LogoutResponse200 {
     pub body: serde_json::Value,
+}
+/// Active sessions retrieved
+#[derive(Debug, Clone, Deserialize)]
+pub struct ListSessionsResponse200 {
+    pub body: SessionListResponse,
+}
+/// Sessions purged
+#[derive(Debug, Clone, Deserialize)]
+pub struct PurgeSessionsResponse200 {
+    pub body: PurgeSessionsResponse,
 }
 /// Users retrieved successfully
 #[derive(Debug, Clone, Deserialize)]
