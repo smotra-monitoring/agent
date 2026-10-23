@@ -571,8 +571,6 @@ pub struct ClaimAgentRequest {
     /// Claim token from agent logs
     #[serde(rename = "claimToken")]
     pub claim_token: String,
-    #[serde(rename = "workspaceId")]
-    pub workspace_id: UUIDv7,
     /// Human-readable name for the agent (defaults to hostname if not provided)
     pub name: Option<String>,
 }
