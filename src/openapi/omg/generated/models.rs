@@ -2,12 +2,12 @@
 //! Generated from an OAS specification by openapi-model-generator(v0.6.3)
 //!
 
-use chrono::{DateTime, Utc};
-use regex::Regex;
-use serde::{Deserialize, Serialize};
-use std::sync::LazyLock;
+use serde::{Serialize, Deserialize};
 use uuid::Uuid;
 use validator::Validate;
+use regex::Regex;
+use std::sync::LazyLock;
+use chrono::{DateTime, Utc};
 
 static RE_1: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-f0-9]{64}$").unwrap());
 static RE_2: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z0-9-]+$").unwrap());
@@ -200,37 +200,37 @@ pub enum CheckType {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PingCheckType {
     #[serde(rename = "ping")]
-    Ping,
+    Ping
 }
 /// TracerouteCheckType
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TracerouteCheckType {
     #[serde(rename = "traceroute")]
-    Traceroute,
+    Traceroute
 }
 /// TcpConnectCheckType
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum TcpConnectCheckType {
     #[serde(rename = "tcpconnect")]
-    Tcpconnect,
+    Tcpconnect
 }
 /// UdpConnectCheckType
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum UdpConnectCheckType {
     #[serde(rename = "udpconnect")]
-    Udpconnect,
+    Udpconnect
 }
 /// HttpGetCheckType
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum HttpGetCheckType {
     #[serde(rename = "httpget")]
-    Httpget,
+    Httpget
 }
 /// PluginCheckType
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PluginCheckType {
     #[serde(rename = "plugin")]
-    Plugin,
+    Plugin
 }
 /// PingCheck
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -400,7 +400,7 @@ pub enum MetricType {
     #[serde(rename = "traceroute")]
     Traceroute,
     #[serde(rename = "custom")]
-    Custom,
+    Custom
 }
 /// Additional metric-specific data
 pub type Metadata = std::collections::HashMap<String, serde_json::Value>;
@@ -571,8 +571,6 @@ pub struct ClaimAgentRequest {
     /// Claim token from agent logs
     #[serde(rename = "claimToken")]
     pub claim_token: String,
-    #[serde(rename = "workspaceId")]
-    pub workspace_id: UUIDv7,
     /// Human-readable name for the agent (defaults to hostname if not provided)
     pub name: Option<String>,
 }
@@ -701,7 +699,7 @@ pub enum AlertSeverity {
     #[serde(rename = "warning")]
     Warning,
     #[serde(rename = "info")]
-    Info,
+    Info
 }
 /// Alert
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -731,7 +729,7 @@ pub enum AlertRuleSeverity {
     #[serde(rename = "warning")]
     Warning,
     #[serde(rename = "info")]
-    Info,
+    Info
 }
 /// AlertRule
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
@@ -758,7 +756,7 @@ pub enum AlertConditionMetric {
     #[serde(rename = "status")]
     Status,
     #[serde(rename = "uptime_percent")]
-    UptimePercent,
+    UptimePercent
 }
 /// AlertConditionOperator
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -770,7 +768,7 @@ pub enum AlertConditionOperator {
     #[serde(rename = "equals")]
     Equals,
     #[serde(rename = "not_equals")]
-    NotEquals,
+    NotEquals
 }
 /// AlertConditionAggregation
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -784,7 +782,7 @@ pub enum AlertConditionAggregation {
     #[serde(rename = "sum")]
     Sum,
     #[serde(rename = "count")]
-    Count,
+    Count
 }
 /// Filters
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -821,7 +819,7 @@ pub enum NotificationChannelType {
     #[serde(rename = "pagerduty")]
     Pagerduty,
     #[serde(rename = "teams")]
-    Teams,
+    Teams
 }
 /// NotificationChannel
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -910,7 +908,7 @@ pub enum OrganizationPlan {
     #[serde(rename = "professional")]
     Professional,
     #[serde(rename = "enterprise")]
-    Enterprise,
+    Enterprise
 }
 /// Settings
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -942,7 +940,7 @@ pub enum CreateOrganizationRequestPlan {
     #[serde(rename = "professional")]
     Professional,
     #[serde(rename = "enterprise")]
-    Enterprise,
+    Enterprise
 }
 /// CreateOrganizationRequest
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
@@ -980,7 +978,7 @@ pub enum AgentHealthStatus {
     #[serde(rename = "healthy")]
     Healthy,
     #[serde(rename = "degraded")]
-    Degraded,
+    Degraded
 }
 /// Status of a monitoring check
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -992,13 +990,13 @@ pub enum MetricStatus {
     #[serde(rename = "degraded")]
     Degraded,
     #[serde(rename = "unknown")]
-    Unknown,
+    Unknown
 }
 /// Status of agent registration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RegistrationStatus {
     #[serde(rename = "pending_claim")]
-    PendingClaim,
+    PendingClaim
 }
 /// IP address family (IPv4 or IPv6)
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1006,25 +1004,25 @@ pub enum IpAddressFamily {
     #[serde(rename = "ipv4")]
     Ipv4,
     #[serde(rename = "ipv6")]
-    Ipv6,
+    Ipv6
 }
 /// Pending claim status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClaimStatusPendingEnum {
     #[serde(rename = "pending_claim")]
-    PendingClaim,
+    PendingClaim
 }
 /// Claimed status
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClaimStatusClaimedEnum {
     #[serde(rename = "claimed")]
-    Claimed,
+    Claimed
 }
 /// Status in claim response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ClaimResponseStatus {
     #[serde(rename = "claimed")]
-    Claimed,
+    Claimed
 }
 /// Report acknowledgment status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1032,7 +1030,7 @@ pub enum ReportAckStatus {
     #[serde(rename = "accepted")]
     Accepted,
     #[serde(rename = "queued")]
-    Queued,
+    Queued
 }
 /// Metric status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1044,7 +1042,7 @@ pub enum AggregatedMetricStatus {
     #[serde(rename = "degraded")]
     Degraded,
     #[serde(rename = "unknown")]
-    Unknown,
+    Unknown
 }
 /// Alert status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1054,7 +1052,7 @@ pub enum AlertStatus {
     #[serde(rename = "acknowledged")]
     Acknowledged,
     #[serde(rename = "resolved")]
-    Resolved,
+    Resolved
 }
 /// User account status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1064,7 +1062,7 @@ pub enum UserStatus {
     #[serde(rename = "inactive")]
     Inactive,
     #[serde(rename = "suspended")]
-    Suspended,
+    Suspended
 }
 /// Updated user status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1074,7 +1072,7 @@ pub enum UpdateUserStatus {
     #[serde(rename = "inactive")]
     Inactive,
     #[serde(rename = "suspended")]
-    Suspended,
+    Suspended
 }
 /// Organization status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1084,7 +1082,7 @@ pub enum OrganizationStatus {
     #[serde(rename = "suspended")]
     Suspended,
     #[serde(rename = "trial")]
-    Trial,
+    Trial
 }
 /// System health status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1094,7 +1092,7 @@ pub enum SystemHealthStatus {
     #[serde(rename = "degraded")]
     Degraded,
     #[serde(rename = "unhealthy")]
-    Unhealthy,
+    Unhealthy
 }
 /// Component health status
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1104,7 +1102,7 @@ pub enum ComponentHealthStatus {
     #[serde(rename = "degraded")]
     Degraded,
     #[serde(rename = "unhealthy")]
-    Unhealthy,
+    Unhealthy
 }
 /// UUID version 7 as per RFC 4122
 pub type UUIDv7 = Uuid;
@@ -1145,7 +1143,7 @@ pub struct AcknowledgeAlertRequestBody {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Oauth2TokenRequestBodyGrantType {
     #[serde(rename = "authorization_code")]
-    AuthorizationCode,
+    AuthorizationCode
 }
 /// Oauth2TokenRequestBody
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
