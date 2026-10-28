@@ -7,31 +7,43 @@ on:
 permissions:
   contents: read
 
+# Passed via env (not inline expressions) to avoid script injection from tag names.
+env:
+  RELEASE_TAG: ${{ github.ref_name }}
+  REPO_NAME: ${{ github.event.repository.name }}
+
 jobs:
+  prepare:
+    name: Resolve release version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Print debug info
+        run: |
+          echo "RELEASE_TAG: ${RELEASE_TAG}"
+          echo "GITHUB_REF: ${GITHUB_REF}"
+          echo "GITHUB_EVENT_NAME: ${GITHUB_EVENT_NAME}"
+          echo "GITHUB_EVENT_PATH: ${GITHUB_EVENT_PATH}"
+          echo "GITHUB_REPOSITORY: ${GITHUB_REPOSITORY}"
+          echo "GITHUB_SHA: ${GITHUB_SHA}"
+          echo "GITHUB_ACTOR: ${GITHUB_ACTOR}"
+
+      - name: Resolve version from release tag
+        id: version
+        run: |
+          if ! [[ "$RELEASE_TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+([-+][0-9A-Za-z.+-]+)?$ ]]; then
+            echo "ERROR: release tag '${RELEASE_TAG}' is not a valid version (expected [v]MAJOR.MINOR.PATCH[-suffix])."
+            exit 1
+          fi
+          echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
+
   release-pre-checks:
     name:  Test, lint and attempt to build
+    needs: prepare
     runs-on: ubuntu-latest
 
     steps:
-    - name: Print debug info
-      run: |
-        echo "GITHUB_REF_NAME: ${{ github.ref_name }}"
-        echo "GITHUB_REF: ${{ github.ref }}"
-        echo "GITHUB_EVENT_NAME: ${{ github.event_name }}"
-        echo "GITHUB_EVENT_PATH: ${{ github.event_path }}"
-        echo "GITHUB_REPOSITORY: ${{ github.repository }}"
-        echo "GITHUB_SHA: ${{ github.sha }}"
-        echo "GITHUB_ACTOR: ${{ github.actor }}"
-        
-    - name: Check release tag
-      run: |
-        TAG_VERSION="${{ github.ref_name }}"
-        TAG_VERSION="${TAG_VERSION#v}"
-        if [ -z "$TAG_VERSION" ]; then
-          echo "ERROR: TAG_VERSION is empty. Release tag was not resolved."
-          exit 1
-        fi
-
     - name: checkout code
       uses: actions/checkout@v7
 
@@ -55,35 +67,24 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      
-      - name: Get the release version from the tag
-        id: version
-        run: echo "VERSION=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-        
-      - name: Show the version
-        run: |
-          echo "version is: ${{ github.ref_name }}"
-          
-      - name: Publish existing draft release or create if not exists
+
+      - name: Create release if it does not exist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Check if a draft release already exists
-          if gh release view ${{ github.ref_name }} &>/dev/null; then
-            echo "Draft release exists, no need to create"
+          if gh release view "$RELEASE_TAG" &>/dev/null; then
+            echo "Release exists, no need to create"
           else
             echo "No release found, creating one"
-            gh release create ${{ github.ref_name }} --draft --verify-tag --title ${{ github.ref_name }}
+            gh release create "$RELEASE_TAG" --draft --verify-tag --title "$RELEASE_TAG"
           fi
-
-    outputs:
-      version: ${{ steps.version.outputs.VERSION }}
-
 
   build:
     name: Build ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
-    needs: create-release
+    needs: [prepare, create-release]
+    env:
+      VERSION: ${{ needs.prepare.outputs.version }}
     permissions:
       contents: read
     strategy:
@@ -136,28 +137,13 @@ jobs:
           echo '[target.aarch64-unknown-linux-gnu]' >> .cargo/config.toml
           echo 'linker = "aarch64-linux-gnu-gcc"' >> .cargo/config.toml
           
-      - name: Update version in Cargo.toml to match release tag (Unix)
-        if: matrix.os != 'windows-latest'
+      - name: Update version in Cargo.toml to match release tag
+        shell: bash
         run: |
-          TAG_VERSION="${{ github.ref_name }}"
-          TAG_VERSION="${TAG_VERSION#v}"
-          if [ -z "$TAG_VERSION" ]; then
-            echo "ERROR: TAG_VERSION is empty. Release tag was not resolved."
-            exit 1
-          fi
-          sed -i.bak "s/^version = \".*\"/version = \"${TAG_VERSION}\"/" Cargo.toml
+          # Only touch the [package] section; VERSION is validated in the prepare job.
+          sed -i.bak '/^\[package\]/,/^\[/ s/^version = ".*"/version = "'"$VERSION"'"/' Cargo.toml
+          grep -qx "version = \"$VERSION\"" Cargo.toml || { echo "ERROR: failed to set version in Cargo.toml"; exit 1; }
 
-      - name: Update version in Cargo.toml to match release tag (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          $TAG_VERSION = "${{ github.ref_name }}" -replace '^v', ''
-          if (-not $TAG_VERSION) {
-            Write-Error "ERROR: TAG_VERSION is empty. Release tag was not resolved."
-            exit 1
-          }
-          (Get-Content Cargo.toml) -replace '^version = ".*"', "version = `"$TAG_VERSION`"" | Set-Content Cargo.toml
-          
       - name: Debug info
         run: |
           cat Cargo.toml
@@ -175,21 +161,18 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
-            smotra smotra-cli
-          sha256sum ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
-            > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz.sha256
+          ARCHIVE="${REPO_NAME}-${RELEASE_TAG}-${{ matrix.target }}.tar.gz"
+          tar czf "$ARCHIVE" smotra smotra-cli
+          sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
 
       - name: Package (Windows)
         shell: bash
         if: matrix.os == 'windows-latest'
         run: |
           cd target/${{ matrix.target }}/release
-          7z a ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip \
-            smotra.exe smotra-cli.exe
-          certutil -hashfile "${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip" SHA256 > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip.sha256
-          sha256sum ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip \
-            > ${{ github.event.repository.name }}-${{ github.ref_name }}-${{ matrix.target }}.zip.sha256
+          ARCHIVE="${REPO_NAME}-${RELEASE_TAG}-${{ matrix.target }}.zip"
+          7z a "$ARCHIVE" smotra.exe smotra-cli.exe
+          sha256sum "$ARCHIVE" > "$ARCHIVE.sha256"
 
       - name: Upload artifacts (Unix)
         uses: actions/upload-artifact@v7
@@ -197,8 +180,8 @@ jobs:
         with:
           name: release-${{ matrix.target }}
           path: |
-            target/${{ matrix.target }}/release/${{ github.event.repository.name }}-*.tar.gz
-            target/${{ matrix.target }}/release/${{ github.event.repository.name }}-*.tar.gz.sha256
+            target/${{ matrix.target }}/release/${{ env.REPO_NAME }}-*.tar.gz
+            target/${{ matrix.target }}/release/${{ env.REPO_NAME }}-*.tar.gz.sha256
 
       - name: Upload artifacts (Windows)
         uses: actions/upload-artifact@v7
@@ -206,8 +189,8 @@ jobs:
         with:
           name: release-${{ matrix.target }}
           path: |
-            target/${{ matrix.target }}/release/${{ github.event.repository.name }}-*.zip
-            target/${{ matrix.target }}/release/${{ github.event.repository.name }}-*.zip.sha256
+            target/${{ matrix.target }}/release/${{ env.REPO_NAME }}-*.zip
+            target/${{ matrix.target }}/release/${{ env.REPO_NAME }}-*.zip.sha256
 
   deploy-release:
     needs: build
@@ -217,7 +200,7 @@ jobs:
       deployments: write
     environment:
       name: release
-      url: https://github.com/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+      url: https://github.com/${{ github.repository }}/releases/tag/${{ env.RELEASE_TAG }}
     steps:
       - uses: actions/checkout@v7
 
@@ -233,12 +216,10 @@ jobs:
           tree -a -L 2 . 
           ls -la artifacts
 
-      - name: Upload release assets (without sha256 files)
+      - name: Upload release assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_TAG: ${{ github.ref_name }}
         run: |
-          # Use a standard shell glob array or separate arguments
           for file in artifacts/*.tar.gz artifacts/*.zip artifacts/*.sha256; do
             # Ensure the file actually exists before trying to upload
             [ -e "$file" ] || continue
@@ -263,7 +244,6 @@ jobs:
         
       - name: Organize release files
         run: |
-          VERSION="${{ github.ref_name }}"
           mkdir html
           cd html
                     
@@ -286,13 +266,13 @@ jobs:
           </head>
           <body>
               <h1>Smotra Agent Installation</h1>
-              <p>Latest Version: <strong>${VERSION}</strong></p>
+              <p>Latest Version: <strong>${RELEASE_TAG}</strong></p>
               
               <h2>Quick Install</h2>
               <pre><code>curl -fsSL https://install.smotra.net/smotra.sh | sh</code></pre>
               
               <h2>Documentation</h2>
-              <p>Visit <a href="https://github.com/${{ github.event.repository.owner.login }}/${{ github.event.repository.name }}">GitHub Repository</a> for full documentation.</p>
+              <p>Visit <a href="https://github.com/${{ github.repository }}">GitHub Repository</a> for full documentation.</p>
           </body>
           </html>
           EOF
