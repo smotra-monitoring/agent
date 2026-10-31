@@ -466,9 +466,14 @@ pub struct Agent {
     pub workspace_id: String,
     /// Human-readable agent name
     pub name: String,
-    /// Current configuration version
-    #[serde(rename = "configVersion")]
-    pub config_version: i64,
+    /// Configuration version the server wants the agent to run
+    #[serde(rename = "configVersionDesired")]
+    pub config_version_desired: i64,
+    /// Configuration version last reported by the agent in a heartbeat, null if the agent
+    /// has not sent one yet. Lower than configVersionDesired means the agent has not
+    /// applied the latest configuration.
+    #[serde(rename = "configVersionCurrent")]
+    pub config_version_current: Option<i64>,
     /// Version of the agent software, null if not yet reported
     #[serde(rename = "agentVersion")]
     pub agent_version: Option<String>,
