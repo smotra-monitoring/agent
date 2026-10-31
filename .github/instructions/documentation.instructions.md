@@ -4,7 +4,7 @@ applyTo: "docs/**,examples/**,**/*.md"
 
 # Documentation Requirements
 
-**IMPORTANT**: All project documentation MUST live in the `docs/` folder. Do not create documentation files in the project root or other directories unless specifically required (e.g., `docs/README.md` serves as the main README; `CONTRIBUTING.md` lives in the project root for GitHub visibility).
+**IMPORTANT**: All project documentation MUST live in the `docs/` folder. Do not create documentation files in the project root or other directories unless specifically required (e.g., `docs/README.md` serves as the main README).
 
 ## Location Rules
 - **Primary location**: `docs/`
@@ -21,7 +21,7 @@ applyTo: "docs/**,examples/**,**/*.md"
 - Plugin development guide
 - API documentation for the library
 - OpenAPI specification for server API
-- Contribution guidelines (`CONTRIBUTING.md` in the project root)
+- Contribution guidelines (`docs/CONTRIBUTING.md`)
 - Testing guidelines and requirements
 - Troubleshooting and FAQ
 

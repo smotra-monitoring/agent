@@ -4,7 +4,7 @@ or replace this text with the content of the matching template.
 PRs that do not follow CONTRIBUTING.md are closed without review.
 -->
 
-Please read [CONTRIBUTING.md](../CONTRIBUTING.md). Every PR must use one of these templates:
+Please read [CONTRIBUTING.md](../docs/CONTRIBUTING.md). Every PR must use one of these templates:
 
 - Feature: [feature.md](https://github.com/smotra-monitoring/agent/compare?template=feature.md) (requires a `SKILL.md`)
 - Security: [security.md](https://github.com/smotra-monitoring/agent/compare?template=security.md) (requires explanation, reproduction steps, unit test, proposed fix)

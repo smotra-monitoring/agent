@@ -195,7 +195,7 @@ If you’ve found a bug or have a great idea:
 
 See the [User Guide](GUIDE.md) for testing requirements and code standards.
 
-See the [Contributing Guide](../CONTRIBUTING.md) for the development workflow, testing, and documentation requirements.
+See the [Contributing Guide](CONTRIBUTING.md) for the development workflow, testing, and documentation requirements.
 
 ---
 

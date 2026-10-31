@@ -1,6 +1,6 @@
 ## Feature PR
 
-Feature PRs are accepted only via a `SKILL.md` file. See [CONTRIBUTING.md](../../CONTRIBUTING.md#feature-prs).
+Feature PRs are accepted only via a `SKILL.md` file. See [CONTRIBUTING.md](../../docs/CONTRIBUTING.md#feature-prs).
 
 ### Skill reference (required)
 

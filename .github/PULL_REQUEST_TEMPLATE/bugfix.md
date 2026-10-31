@@ -1,6 +1,6 @@
 ## Bug fix PR
 
-Bugs must be reported as GitHub issues first. See [CONTRIBUTING.md](../../CONTRIBUTING.md#bug-fixes).
+Bugs must be reported as GitHub issues first. See [CONTRIBUTING.md](../../docs/CONTRIBUTING.md#bug-fixes).
 
 ### Linked issue (required)
 
