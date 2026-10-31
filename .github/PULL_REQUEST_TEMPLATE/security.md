@@ -1,6 +1,6 @@
 ## Security PR
 
-All four sections below are mandatory. Incomplete security PRs are closed. See [CONTRIBUTING.md](../../CONTRIBUTING.md#security-prs).
+All four sections below are mandatory. Incomplete security PRs are closed. See [CONTRIBUTING.md](../../docs/CONTRIBUTING.md#security-prs).
 
 ### 1. Vulnerability explanation (required)
 

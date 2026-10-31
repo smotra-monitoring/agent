@@ -6,13 +6,13 @@ Thank you for contributing! This document outlines the development workflow and 
 
 ## Contribution Policy
 
-We receive a high volume of automated, machine-generated pull requests. To keep contributions genuine and reviewable, every PR must fall into exactly one of the categories below and use the matching [pull request template](.github/PULL_REQUEST_TEMPLATE/). PRs that do not follow these rules are closed without review.
+We receive a high volume of automated, machine-generated pull requests. To keep contributions genuine and reviewable, every PR must fall into exactly one of the categories below and use the matching [pull request template](../.github/PULL_REQUEST_TEMPLATE/). PRs that do not follow these rules are closed without review.
 
 | Category | Accepted only when | PR template |
 |---|---|---|
-| Feature | Submitted via a `SKILL.md` file (see [Feature PRs](#feature-prs)) | [feature.md](.github/PULL_REQUEST_TEMPLATE/feature.md) |
-| Security | Includes explanation, reproduction steps, unit test and proposed fix (see [Security PRs](#security-prs)) | [security.md](.github/PULL_REQUEST_TEMPLATE/security.md) |
-| Bug fix | Linked to a GitHub issue (see [Bug Fixes](#bug-fixes)) | [bugfix.md](.github/PULL_REQUEST_TEMPLATE/bugfix.md) |
+| Feature | Submitted via a `SKILL.md` file (see [Feature PRs](#feature-prs)) | [feature.md](../.github/PULL_REQUEST_TEMPLATE/feature.md) |
+| Security | Includes explanation, reproduction steps, unit test and proposed fix (see [Security PRs](#security-prs)) | [security.md](../.github/PULL_REQUEST_TEMPLATE/security.md) |
+| Bug fix | Linked to a GitHub issue (see [Bug Fixes](#bug-fixes)) | [bugfix.md](../.github/PULL_REQUEST_TEMPLATE/bugfix.md) |
 
 Additional rules:
 
@@ -31,7 +31,7 @@ Feature PRs are accepted **only via a `SKILL.md` file**. Features are not accept
 
 1. Open an issue proposing the feature and wait for maintainer approval.
 2. Describe the feature as a skill in `.github/skills/<feature-name>/SKILL.md` (see existing skills in `.github/skills/`). The skill must define the feature's purpose, when it applies, inputs/outputs, constraints, and acceptance criteria.
-3. Submit a PR using the [feature template](.github/PULL_REQUEST_TEMPLATE/feature.md) that references the `SKILL.md` file.
+3. Submit a PR using the [feature template](../.github/PULL_REQUEST_TEMPLATE/feature.md) that references the `SKILL.md` file.
 4. After the skill is approved, the implementation must follow it, including:
    - **Unit tests** in the same file as the code (inside `#[cfg(test)]` module).
    - **Integration tests** in the `tests/` directory covering end-to-end workflows.
@@ -47,11 +47,11 @@ Security PRs must contain **all** of the following. Incomplete security PRs are 
 3. **Unit test that reproduces the vulnerability**: a test that fails before the fix and passes after it.
 4. **Proposed fix or mitigation**: the code change, or a documented mitigation if a full fix is not possible.
 
-Submit using the [security template](.github/PULL_REQUEST_TEMPLATE/security.md).
+Submit using the [security template](../.github/PULL_REQUEST_TEMPLATE/security.md).
 
 ### Bug Fixes
 
-Bugs must be **submitted as GitHub issues** first, using the [bug report template](.github/ISSUE_TEMPLATE/bug_report.md). A bug-fix PR is only considered when it links to a confirmed issue (for example `Fixes #123`).
+Bugs must be **submitted as GitHub issues** first, using the [bug report template](../.github/ISSUE_TEMPLATE/bug_report.md). A bug-fix PR is only considered when it links to a confirmed issue (for example `Fixes #123`).
 
 When fixing a bug:
 
@@ -60,7 +60,7 @@ When fixing a bug:
 3. **Fix the bug** so the regression test passes.
 4. **Ensure all existing tests still pass**: `cargo test`
 5. **Document the root cause** in the test's doc comment.
-6. Submit using the [bug fix template](.github/PULL_REQUEST_TEMPLATE/bugfix.md), linking the issue.
+6. Submit using the [bug fix template](../.github/PULL_REQUEST_TEMPLATE/bugfix.md), linking the issue.
 
 ### Refactors
 
@@ -164,7 +164,7 @@ Runnable examples go in the `examples/` directory using the naming convention `X
 
 ### Documentation Location Rules
 
-- All docs live in `docs/` — the only root-level documentation file is this `CONTRIBUTING.md`.
+- All docs live in `docs/` — including this `CONTRIBUTING.md`.
 - Feature-specific docs belong in `docs/features/`.
 - OpenAPI specs belong in `api/openapi/api/spec.yaml`.
 - Cross-reference docs using relative paths from `docs/`.
