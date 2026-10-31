@@ -53,7 +53,7 @@ mod tests {
         #[test]
         /// Verifies that older versions are not treated as upgrade candidates.
         fn rejects_older_version() {
-            let latest = Version::parse("0.0.1").unwrap();
+            let latest = Version::parse("0.0.0").unwrap();
             let newer = is_newer_than_current(&latest).unwrap();
             assert!(
                 !newer,
