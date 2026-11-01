@@ -30,7 +30,7 @@ These generated types are available through `use crate::openapi;` and should be 
   - `AgentRegistration`: Request payload with agent ID and token hash
   - `RegistrationResponse`: Server response with poll URL and expiration
   - `ClaimStatus`: Enum for pending/claimed states
-  - Proper serde serialization with camelCase field mapping
+  - Proper serde serialization with snake_case field names (matches the OpenAPI spec)
 
 - **registration.rs**: Agent self-registration with retry logic
   - HTTP POST to `/api/v1/agent/register`
@@ -126,7 +126,7 @@ These generated types are available through `use crate::openapi;` and should be 
 
 - **Serialization** (src/claim/registration.rs):
   - AgentRegistration JSON serialization
-  - Field name mapping (camelCase)
+  - Field names (snake_case)
   - RegistrationResponse deserialization
 
 - **Claim status parsing** (src/claim/polling.rs):
@@ -240,13 +240,13 @@ X-API-KEY: <api-key-received-during-claiming>
 ### Endpoints
 
 1. **POST /api/v1/agent/register** (No authentication required)
-   - Request: `{ agentId, claimTokenHash, hostname, agentVersion, ipAddresses }`
-   - `ipAddresses`: array of `{ ip, iface, family, recommended }` — all non-loopback, non-link-local interfaces; `recommended=true` marks the OS-selected source IP toward the server (UDP socket routing-table probe, no traffic sent)
-   - Response: `{ status, pollUrl, claimUrl, expiresAt }`
+   - Request: `{ agent_id, claim_token_hash, hostname, agent_version, ip_addresses }`
+   - `ip_addresses`: array of `{ ip, iface, family, recommended }` — all non-loopback, non-link-local interfaces; `recommended=true` marks the OS-selected source IP toward the server (UDP socket routing-table probe, no traffic sent)
+   - Response: `{ status, poll_url, claim_url, expires_at }`
 
 2. **GET /api/v1/agent/{agentId}/claim-status** (No authentication required during claiming)
-   - Pending: `{ status: "pending_claim", expiresAt }`
-   - Claimed: `{ status: "claimed", apiKey, configUrl }`
+   - Pending: `{ status: "pending_claim", expires_at, poll_in }`
+   - Claimed: `{ status: "claimed", api_key, config_url }`
 
 3. **POST /api/v1/monitoring/results** (Requires X-API-KEY header)
    - Used to submit monitoring results after claiming
