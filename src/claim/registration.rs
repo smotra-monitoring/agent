@@ -120,20 +120,20 @@ mod tests {
 
         let json = serde_json::to_value(&registration).unwrap();
 
-        assert_eq!(json["agentId"], agent_id.to_string());
-        assert_eq!(json["claimTokenHash"], "abc123");
+        assert_eq!(json["agent_id"], agent_id.to_string());
+        assert_eq!(json["claim_token_hash"], "abc123");
         assert_eq!(json["hostname"], "test-host");
-        assert!(json["agentVersion"].is_string());
-        assert_eq!(json["ipAddresses"], serde_json::json!([]));
+        assert!(json["agent_version"].is_string());
+        assert_eq!(json["ip_addresses"], serde_json::json!([]));
     }
 
     #[test]
     fn test_registration_response_deserialization() {
         let json = r#"{
             "status": "pending_claim",
-            "pollUrl": "/agent/123/claim-status",
-            "claimUrl": "https://example.com/claim",
-            "expiresAt": "2026-02-01T12:00:00Z"
+            "poll_url": "/agent/123/claim-status",
+            "claim_url": "https://example.com/claim",
+            "expires_at": "2026-02-01T12:00:00Z"
         }"#;
 
         let response: AgentRegistrationResponse = serde_json::from_str(json).unwrap();
@@ -169,9 +169,9 @@ mod tests {
             .with_body(format!(
                 r#"{{
                     "status": "pending_claim",
-                    "pollUrl": "/agent/{}/claim-status",
-                    "claimUrl": "https://example.com/claim",
-                    "expiresAt": "2026-02-01T12:00:00Z"
+                    "poll_url": "/agent/{}/claim-status",
+                    "claim_url": "https://example.com/claim",
+                    "expires_at": "2026-02-01T12:00:00Z"
                 }}"#,
                 agent_id
             ))
@@ -206,9 +206,9 @@ mod tests {
             .with_body(format!(
                 r#"{{
                     "status": "pending_claim",
-                    "pollUrl": "/agent/{}/claim-status",
-                    "claimUrl": "https://example.com/claim",
-                    "expiresAt": "2026-02-01T12:00:00Z"
+                    "poll_url": "/agent/{}/claim-status",
+                    "claim_url": "https://example.com/claim",
+                    "expires_at": "2026-02-01T12:00:00Z"
                 }}"#,
                 agent_id
             ))
