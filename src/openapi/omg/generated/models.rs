@@ -461,8 +461,7 @@ pub struct AgentNetworkInterface {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Agent {
     pub id: UUIDv7,
-    /// Workspace this agent belongs to
-    pub workspace_id: String,
+    pub workspace_id: UUIDv7,
     /// Human-readable agent name
     pub name: String,
     /// Configuration version the server wants the agent to run
