@@ -19,9 +19,9 @@
 //! Response types follow the pattern: `{OperationId}Response{StatusCode}`
 //!
 //! Example:
-//! - Operation: `claimAgent` (operationId in OpenAPI spec)
-//! - Status: `400`
-//! - Type name: `ClaimAgentResponse400`
+//! - Operation: `postClaimAgent` (operationId in OpenAPI spec)
+//! - Status: `401`
+//! - Type name: `PostClaimAgentResponse401`
 //!
 //! ## Template
 //!
@@ -47,7 +47,7 @@ use serde::{Deserialize, Serialize};
 /// Bad request - Invalid parameters
 ///
 /// Corresponds to: `$ref: '#/components/responses/BadRequest'`
-/// Used by: claimAgent POST /agent/claim
+/// Used by: registerAgentSelf POST /agent/register
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HTTPResponse400 {
     pub body: Error,
@@ -56,7 +56,7 @@ pub struct HTTPResponse400 {
 /// Unauthorized - Invalid or missing authentication
 ///
 /// Corresponds to: `$ref: '#/components/responses/Unauthorized'`
-/// Used by: claimAgent POST /agent/claim
+/// Used by: postClaimAgent POST /agent/claim
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HTTPResponse401 {
     pub body: Error,
