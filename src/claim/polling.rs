@@ -152,8 +152,8 @@ mod tests {
     fn test_claim_status_pending_deserialization() {
         let json = r#"{
             "status": "pending_claim",
-            "expiresAt": "2026-02-01T12:00:00Z",
-            "pollIn": 30
+            "expires_at": "2026-02-01T12:00:00Z",
+            "poll_in": 30
         }"#;
 
         let pending: openapi::ClaimStatusPending = serde_json::from_str(json).unwrap();
@@ -180,8 +180,8 @@ mod tests {
     fn test_claim_status_claimed_deserialization() {
         let json = r#"{
             "status": "claimed",
-            "apiKey": "sk_live_abc123",
-            "configUrl": "/agent/123/configuration"
+            "api_key": "sk_live_abc123",
+            "config_url": "/agent/123/configuration"
         }"#;
 
         let claimed: openapi::ClaimStatusClaimed = serde_json::from_str(json).unwrap();

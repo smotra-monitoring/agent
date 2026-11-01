@@ -462,35 +462,26 @@ pub struct AgentNetworkInterface {
 pub struct Agent {
     pub id: UUIDv7,
     /// Workspace this agent belongs to
-    #[serde(rename = "workspaceId")]
     pub workspace_id: String,
     /// Human-readable agent name
     pub name: String,
     /// Configuration version the server wants the agent to run
-    #[serde(rename = "configVersionDesired")]
     pub config_version_desired: i64,
     /// Configuration version last reported by the agent in a heartbeat, null if the agent
-    /// has not sent one yet. Lower than configVersionDesired means the agent has not
+    /// has not sent one yet. Lower than config_version_desired means the agent has not
     /// applied the latest configuration.
-    #[serde(rename = "configVersionCurrent")]
     pub config_version_current: Option<i64>,
     /// Version of the agent software, null if not yet reported
-    #[serde(rename = "agentVersion")]
     pub agent_version: Option<String>,
     /// Network interfaces reported by the agent
-    #[serde(rename = "ipAddresses")]
     pub ip_addresses: Option<Vec<AgentNetworkInterface>>,
     /// Timestamp of the last heartbeat received from the agent
-    #[serde(rename = "lastSeenAt")]
     pub last_seen_at: Option<DateTime<Utc>>,
     /// Timestamp of the last monitoring result submission
-    #[serde(rename = "lastResultSubmittedAt")]
     pub last_result_submitted_at: Option<DateTime<Utc>>,
     /// Timestamp when the agent was registered
-    #[serde(rename = "createdAt")]
     pub created_at: DateTime<Utc>,
     /// Timestamp when the agent record was last updated
-    #[serde(rename = "updatedAt")]
     pub updated_at: DateTime<Utc>,
 }
 
@@ -504,17 +495,14 @@ pub struct AgentListResponse {
 /// AgentSelfRegistration
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
 pub struct AgentSelfRegistration {
-    #[serde(rename = "agentId")]
     pub agent_id: UUIDv7,
     /// SHA-256 hash of the claim token (plain token shown in agent logs for user)
     #[validate(length(min = 64, max = 64))]
     #[validate(regex(path = RE_1))]
-    #[serde(rename = "claimTokenHash")]
     pub claim_token_hash: String,
     /// System hostname of the machine running the agent
     pub hostname: String,
     /// Version of the agent software
-    #[serde(rename = "agentVersion")]
     pub agent_version: String,
     /// List of all non-loopback, non-link-local network interfaces on the agent host.
     /// Loopback (127.x.x.x / ::1) and link-local (169.254.x.x / fe80::/10) addresses
@@ -523,7 +511,6 @@ pub struct AgentSelfRegistration {
     /// recommended=true reflects the OS-selected source IP for connections toward
     /// the server (determined via routing table, no traffic sent).
     #[validate(length(min = 1))]
-    #[serde(rename = "ipAddresses")]
     pub ip_addresses: Vec<AgentNetworkInterface>,
 }
 
@@ -532,14 +519,11 @@ pub struct AgentSelfRegistration {
 pub struct AgentRegistrationResponse {
     pub status: RegistrationStatus,
     /// URL for agent to poll for claim status
-    #[serde(rename = "pollUrl")]
     pub poll_url: String,
     /// URL for user to claim the agent (web UI)
     #[validate(url)]
-    #[serde(rename = "claimUrl")]
     pub claim_url: String,
     /// When the claim token expires (RFC3339)
-    #[serde(rename = "expiresAt")]
     pub expires_at: DateTime<Utc>,
 }
 
@@ -548,11 +532,9 @@ pub struct AgentRegistrationResponse {
 pub struct ClaimStatusPending {
     pub status: ClaimStatusPendingEnum,
     /// When the claim token expires (RFC3339)
-    #[serde(rename = "expiresAt")]
     pub expires_at: DateTime<Utc>,
     /// Seconds until next poll (server-controlled backoff)
     #[validate(range(min = 1))]
-    #[serde(rename = "pollIn")]
     pub poll_in: i64,
 }
 
@@ -561,20 +543,16 @@ pub struct ClaimStatusPending {
 pub struct ClaimStatusClaimed {
     pub status: ClaimStatusClaimedEnum,
     /// API key for authenticated requests (one-time delivery)
-    #[serde(rename = "apiKey")]
     pub api_key: String,
     /// URL to fetch agent configuration
-    #[serde(rename = "configUrl")]
     pub config_url: String,
 }
 
 /// ClaimAgentRequest
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClaimAgentRequest {
-    #[serde(rename = "agentId")]
     pub agent_id: UUIDv7,
     /// Claim token from agent logs
-    #[serde(rename = "claimToken")]
     pub claim_token: String,
     /// Human-readable name for the agent (defaults to hostname if not provided)
     pub name: Option<String>,
@@ -583,7 +561,6 @@ pub struct ClaimAgentRequest {
 /// ClaimAgentResponse
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClaimAgentResponse {
-    #[serde(rename = "agentId")]
     pub agent_id: UUIDv7,
     pub status: ClaimResponseStatus,
     /// Human-readable message
