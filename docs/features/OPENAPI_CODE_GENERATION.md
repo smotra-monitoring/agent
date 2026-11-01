@@ -149,11 +149,11 @@ Response wrapper types follow the pattern:
 ```
 
 Where:
-- `OperationId`: The `operationId` from the OpenAPI spec (e.g., `claimAgent` → `ClaimAgent`)
+- `OperationId`: The `operationId` from the OpenAPI spec (e.g., `postClaimAgent` → `PostClaimAgent`)
 - `StatusCode`: The HTTP status code (e.g., `400`, `401`)
 
 Examples:
-- `ClaimAgentResponse400` for 400 response of `claimAgent` operation
+- `PostClaimAgentResponse401` for 401 response of `postClaimAgent` operation
 - `GetAgentStatusResponse401` for 401 response of `getAgentStatus` operation
 
 ## Alternative Approaches Considered
