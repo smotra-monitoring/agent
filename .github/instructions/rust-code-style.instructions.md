@@ -95,3 +95,7 @@ Acquire resources in constructors, release in `Drop` implementations. Use guard 
 # Logging / Tracing
 
 Use the `tracing` crate for all logging. Support different log levels and structured output formats. Do not use `println!` or `eprintln!` for observability.
+
+# HTTP Clients
+
+All outgoing HTTP/HTTPS requests must send the agent `User-Agent`. Use `http_client::build_client(...)` / `http_client::user_agent()` instead of `reqwest::Client::new()` or ad-hoc builders. See `agent-domain.instructions.md` ("HTTP Client & User-Agent").

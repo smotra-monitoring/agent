@@ -6,6 +6,7 @@ use crate::claim::{
     token::{generate_claim_token, hash_claim_token},
     types::AgentCredentials,
 };
+use crate::http_client::build_client;
 use crate::openapi::AgentSelfRegistration;
 use crate::{AgentConfig, Error, Result};
 use tracing::{error, info};
@@ -97,10 +98,7 @@ impl<'a> Claim<'a> {
             AgentSelfRegistration::new(agent_id, claim_token_hash, hostname, ip_addresses);
 
         // Create HTTP client
-        let client = reqwest::Client::builder()
-            .timeout(self.config.server.timeout())
-            .danger_accept_invalid_certs(!self.config.server.verify_tls)
-            .build()
+        let client = build_client(self.config.server.timeout(), self.config.server.verify_tls)
             .map_err(|e| Error::Network(format!("Failed to create HTTP client: {}", e)))?;
 
         // Register with server (with retries)

@@ -83,6 +83,7 @@ async fn test_complete_workflow() {
 - **rstest** — parameterized tests
 - **assert_matches** — pattern matching assertions
 - **tempfile** — temporary file/directory creation
+- **mockito** — HTTP mock server; assert the `user-agent` header via `match_header("user-agent", ...)` on any mock for agent-originated requests
 
 ## Workflow: When Generating Code
 1. Write the implementation code.

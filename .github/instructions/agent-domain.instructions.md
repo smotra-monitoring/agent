@@ -52,6 +52,17 @@ Lightweight heartbeat for reporting agent health to the server (separate from fu
 - `AgentHealthStatus` — enum: `Healthy`, `Degraded`, `Critical`, `Unknown`
 - `HeartbeatReporter` — sends periodic health updates using `sysinfo` crate metrics
 
+## HTTP Client & User-Agent
+
+**CRITICAL**: Every outgoing HTTP/HTTPS request MUST carry the agent `User-Agent` header.
+
+- Format: `smotra-agent/<CARGO_PKG_VERSION> (+https://github.com/smotra-monitoring/agent; <os>; <arch>)`, produced by `http_client::user_agent()` in `src/http_client/`.
+- Build every `reqwest::Client` with `http_client::build_client(timeout, verify_tls)`. Never use `reqwest::Client::new()` or a bare `reqwest::Client::builder()` in `src/`.
+- Exception: `octocrab` (self-upgrade) always sends `user-agent: octocrab`, and `add_header` would append a second `User-Agent` line, so do not use it. Leave the default until octocrab is replaced by a `build_client`-based GitHub client.
+- Never put secrets, API keys, agent IDs or hostnames in the User-Agent.
+- `examples/` and plugins cannot reach the private module; they must set their own `smotra-agent/<version> (<name>/<version>)` style UA.
+- Tests that mock HTTP endpoints with `mockito` should `match_header("user-agent", ...)`.
+
 ## Configuration Versioning and Server Polling
 
 The `Config` struct has a `version: u32` field (starts at 1) for synchronization with the server.

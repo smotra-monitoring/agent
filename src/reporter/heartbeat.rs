@@ -2,6 +2,7 @@
 
 use crate::core::{AgentHealthStatus, AgentHeartbeat, AgentMetrics, AgentStatus};
 use crate::error::{Error, Result};
+use crate::http_client::build_client;
 use crate::openapi::AgentConfig;
 use chrono::Utc;
 use parking_lot::RwLock;
@@ -83,10 +84,7 @@ impl HeartbeatReporter {
         // Snapshot the live config so all fields within this call are consistent.
         let config = self.config.read().clone();
 
-        let client = reqwest::Client::builder()
-            .timeout(config.server.timeout())
-            .danger_accept_invalid_certs(!config.server.verify_tls)
-            .build()?;
+        let client = build_client(config.server.timeout(), config.server.verify_tls)?;
 
         let heartbeat = self.collect_metrics().await;
         let heartbeat_url = format!("{}/agent/{}/heartbeat", config.server.url, config.agent_id);
