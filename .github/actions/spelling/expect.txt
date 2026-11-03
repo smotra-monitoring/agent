@@ -20,6 +20,7 @@ failover
 google
 Grafana
 greenlit
+hostnames
 HOTRELOAD
 httpget
 iface
@@ -29,11 +30,13 @@ libc
 lifecycle
 mcp
 mockall
+mockito
 modelcontextprotocol
 MQTT
 Newtype
 nocapture
 OAuth
+octocrab
 omg
 openapi
 pid
