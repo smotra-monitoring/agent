@@ -14,6 +14,9 @@ This project is a distributed monitoring system designed to track reachability a
 - **User-Friendly Interface**: A web-based dashboard for visualizing data, configuring agents, and managing alerts.
 - **APIs for Integration**: RESTful APIs to allow integration with other systems and automation tools.
 
+# Cross-Cutting Rules
+- **User-Agent**: every outgoing HTTP/HTTPS request must send `smotra-agent/<version> (+https://github.com/smotra-monitoring/agent; <os>; <arch>)`. Use `http_client::build_client` / `user_agent()`; never `reqwest::Client::new()`. See `agent-domain.instructions.md`.
+
 # Technologies Used
 - Agent Development is in Rust for performance and safety.
 - Server-side components are developed in Go.

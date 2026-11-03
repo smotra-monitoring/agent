@@ -22,7 +22,15 @@ struct HttpPlugin {
 impl HttpPlugin {
     fn new() -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .user_agent(format!(
+                    "smotra-agent/{} ({}/{})",
+                    env!("CARGO_PKG_VERSION"),
+                    PLUGIN_NAME,
+                    PLUGIN_VERSION
+                ))
+                .build()
+                .expect("build HTTP client"),
         }
     }
 }

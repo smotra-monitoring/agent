@@ -28,6 +28,11 @@
 - `src/cache/mod.rs` - Module exports for cache
 - `src/cache/store.rs` - `ResultCache` — in-memory cache for offline monitoring results, with disk persistence
 
+### HTTP Client Module (`src/http_client/`)
+- `src/http_client/mod.rs` - Crate-private re-exports
+- `src/http_client/client.rs` - `build_client()` — shared `reqwest::Client` factory (timeout, TLS verification, User-Agent)
+- `src/http_client/user_agent.rs` - `user_agent()` — `smotra-agent/<version> (+<url>; <os>; <arch>)`
+
 ### Reporter Module (`src/reporter/`)
 - `src/reporter/mod.rs` - Module exports for reporting
 - `src/reporter/server.rs` - Server communication and result reporting

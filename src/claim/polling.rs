@@ -147,6 +147,7 @@ async fn check_claim_status(client: &Client, url: &str) -> Result<ClaimStatus> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::http_client::{build_client, user_agent};
 
     #[test]
     fn test_claim_status_pending_deserialization() {
@@ -201,14 +202,15 @@ mod tests {
         let mut server = Server::new_async().await;
         let agent_id = Uuid::now_v7();
 
-        // Mock returns 404 (expired)
-        let _mock_expired = server
+        // Mock returns 404 (expired); only matches when the UA header is present
+        let mock_expired = server
             .mock("GET", format!("/agent/{}/claim-status", agent_id).as_str())
+            .match_header("user-agent", user_agent())
             .with_status(404)
             .create_async()
             .await;
 
-        let client = reqwest::Client::new();
+        let client = build_client(std::time::Duration::from_secs(5), true).unwrap();
 
         let result = poll_claim_status(
             &client,
@@ -217,5 +219,6 @@ mod tests {
         .await;
 
         assert!(result.is_err());
+        mock_expired.assert_async().await;
     }
 }

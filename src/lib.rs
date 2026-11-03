@@ -17,6 +17,7 @@ mod cache;
 mod claim;
 mod core;
 mod error;
+mod http_client;
 
 mod monitor;
 mod plugin;

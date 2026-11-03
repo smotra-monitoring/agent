@@ -18,6 +18,7 @@
 use crate::cache::ResultCache;
 use crate::core::{AgentStatus, MonitoringResult};
 use crate::error::{Error, Result};
+use crate::http_client::build_client;
 use crate::openapi::{self, AgentConfig};
 use parking_lot::RwLock;
 use std::sync::Arc;
@@ -129,10 +130,7 @@ async fn send_result_batch(config: &AgentConfig, batch: &[MonitoringResult]) -> 
     let agent_id = config.agent_id;
     let server_url = &config.server.url;
 
-    let client = reqwest::Client::builder()
-        .timeout(config.server.timeout())
-        .danger_accept_invalid_certs(!config.server.verify_tls)
-        .build()?;
+    let client = build_client(config.server.timeout(), config.server.verify_tls)?;
 
     let url = format!("{}/agent/{}/results", server_url, agent_id);
     let payload = openapi::BatchMonitoringResults {

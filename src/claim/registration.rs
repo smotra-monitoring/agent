@@ -106,6 +106,7 @@ async fn register_agent(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::http_client::{build_client, user_agent};
     use uuid::Uuid;
 
     #[test]
@@ -164,6 +165,7 @@ mod tests {
         // Third attempt succeeds
         let _mock_success = server
             .mock("POST", "/agent/register")
+            .match_header("user-agent", user_agent())
             .with_status(201)
             .with_header("content-type", "application/json")
             .with_body(format!(
@@ -178,7 +180,7 @@ mod tests {
             .create_async()
             .await;
 
-        let client = reqwest::Client::new();
+        let client = build_client(Duration::from_secs(5), true).unwrap();
         let registration = AgentSelfRegistration::new(
             agent_id,
             "test_hash".to_string(),
@@ -201,6 +203,7 @@ mod tests {
         // Both requests should succeed
         let _mock_register = server
             .mock("POST", "/agent/register")
+            .match_header("user-agent", user_agent())
             .with_status(200) // 200 for idempotent update
             .with_header("content-type", "application/json")
             .with_body(format!(
@@ -216,7 +219,7 @@ mod tests {
             .create_async()
             .await;
 
-        let client = reqwest::Client::new();
+        let client = build_client(Duration::from_secs(5), true).unwrap();
         let registration = AgentSelfRegistration::new(
             agent_id,
             "test_hash".to_string(),
