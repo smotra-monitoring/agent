@@ -25,6 +25,7 @@ HOTRELOAD
 httpget
 iface
 IMO
+jsonl
 justfile
 libc
 lifecycle
@@ -48,6 +49,7 @@ RAII
 Ratatui
 Refactors
 reqwest
+Retryable
 Rhai
 roadmap
 rstest
