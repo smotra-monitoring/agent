@@ -213,6 +213,7 @@ pub async fn run_result_reporter(
                             sent, remaining
                         );
                     }
+                    // Permanent rejection, save the batch for later inspection
                     SendOutcome::Rejected { status, body } => {
                         let ids: Vec<String> = batch.iter().map(|r| r.id.to_string()).collect();
                         let check_types: BTreeSet<&str> =
@@ -242,6 +243,7 @@ pub async fn run_result_reporter(
                         drain_and_refresh_stats(&result_cache, &agent_status, batch.len()).await;
                         agent_status.write().dropped_result_count += batch.len() as i64;
                     }
+                    // Temporary failure, will retry later
                     SendOutcome::Retryable(e) => {
                         agent_status.write().failed_report_count += 1;
                         error!("Failed to send result batch: {}", e);
