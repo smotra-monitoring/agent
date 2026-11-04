@@ -96,7 +96,7 @@ impl Default for StorageConfig {
             max_cache_age_secs: 86400,
             cache_enabled: true,
             cache_batch_size: 100,
-            cache_report_interval_secs: 60,
+            cache_report_interval_secs: 15 * 60,
         }
     }
 }
