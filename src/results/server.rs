@@ -14,17 +14,125 @@
 //! 2. POST the batch.
 //! 3. `drain_front(n)` on success only — guarantees at-least-once delivery.
 //!    On failure the same items will be retried on the next tick.
+//!
+//! # Rejected batches
+//!
+//! HTTP 400/422 means the server will never accept the payload, so retrying
+//! would block the queue forever. Such a batch is dropped without retry, counted
+//! in `dropped_result_count` and appended to `{cache_dir}/rejected_results.jsonl`
+//! (rotated to `.1` at 5 MiB). Every other failure (network, 401/403/404, 5xx, ...)
+//! keeps the batch for retry.
 
 use crate::cache::ResultCache;
-use crate::core::{AgentStatus, MonitoringResult};
+use crate::core::{AgentStatus, CheckType, MonitoringResult};
 use crate::error::{Error, Result};
 use crate::http_client::build_client;
 use crate::openapi::{self, AgentConfig};
 use parking_lot::RwLock;
+use reqwest::StatusCode;
+use std::collections::BTreeSet;
+use std::path::Path;
 use std::sync::Arc;
+use tokio::io::AsyncWriteExt;
 use tokio::sync::broadcast;
 use tokio::time::interval;
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
+
+const REJECTED_FILE_NAME: &str = "rejected_results.jsonl";
+const REJECTED_FILE_MAX_BYTES: u64 = 5 * 1024 * 1024;
+const MAX_LOGGED_BODY_CHARS: usize = 1024;
+
+/// Result of a single batch POST attempt.
+enum SendOutcome {
+    Accepted,
+    /// Transient or environmental failure; the batch must be kept.
+    Retryable(Error),
+    /// The server permanently refused the payload; the batch must be dropped.
+    Rejected {
+        status: StatusCode,
+        body: String,
+    },
+}
+
+/// Only 400 and 422 are permanent; 404 stays retryable because an operator can restore the agent.
+fn is_rejection(status: StatusCode) -> bool {
+    matches!(
+        status,
+        StatusCode::BAD_REQUEST | StatusCode::UNPROCESSABLE_ENTITY
+    )
+}
+
+fn check_type_name(check_type: &CheckType) -> &'static str {
+    match check_type {
+        CheckType::PingCheck(_) => "ping",
+        CheckType::TracerouteCheck(_) => "traceroute",
+        CheckType::TcpConnectCheck(_) => "tcpconnect",
+        CheckType::UdpConnectCheck(_) => "udpconnect",
+        CheckType::HttpGetCheck(_) => "httpget",
+        CheckType::PluginCheck(_) => "plugin",
+    }
+}
+
+fn truncate_body(body: &str) -> String {
+    match body.char_indices().nth(MAX_LOGGED_BODY_CHARS) {
+        Some((idx, _)) => format!("{}...[truncated]", &body[..idx]),
+        None => body.to_string(),
+    }
+}
+
+/// Append rejected results to `{dir}/rejected_results.jsonl`, rotating to `.1` once `max_bytes` is reached.
+async fn save_rejected_batch(
+    dir: &Path,
+    max_bytes: u64,
+    status: StatusCode,
+    body: &str,
+    batch: &[MonitoringResult],
+) -> std::io::Result<()> {
+    tokio::fs::create_dir_all(dir).await?;
+    let path = dir.join(REJECTED_FILE_NAME);
+
+    if let Ok(meta) = tokio::fs::metadata(&path).await {
+        if meta.len() >= max_bytes {
+            tokio::fs::rename(&path, dir.join(format!("{REJECTED_FILE_NAME}.1"))).await?;
+        }
+    }
+
+    let rejected_at = chrono::Utc::now();
+    let body = truncate_body(body);
+    let mut lines = String::new();
+    for result in batch {
+        let record = serde_json::json!({
+            "rejected_at": rejected_at,
+            "status": status.as_u16(),
+            "server_response": body,
+            "result": result,
+        });
+        lines.push_str(&record.to_string());
+        lines.push('\n');
+    }
+
+    let mut file = tokio::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .await?;
+    file.write_all(lines.as_bytes()).await?;
+    file.flush().await
+}
+
+/// Remove the first `count` items from the cache and refresh the cache stats in the agent status.
+async fn drain_and_refresh_stats(
+    result_cache: &ResultCache,
+    agent_status: &RwLock<AgentStatus>,
+    count: usize,
+) -> usize {
+    result_cache.drain_front(count).await;
+    let stats = result_cache.stats().await;
+    let mut s = agent_status.write();
+    s.cache_stats.len = stats.len as i64;
+    s.cache_stats.capacity = stats.capacity as i64;
+    stats.len
+}
 
 // ============================================================
 // Reporter loop
@@ -35,7 +143,8 @@ use tracing::{debug, error, info};
 /// Periodically drains a batch from `result_cache` and posts it to the server.
 /// Items are only removed from the cache after the server acknowledges the POST
 /// (peek-then-drain semantics). If the POST fails, the same items are retried
-/// on the next tick.
+/// on the next tick, except for batches the server rejects with 400/422, which
+/// are dropped (see the module docs).
 ///
 /// The loop respects hot-reloaded configuration (server URL, API key, intervals,
 /// cache settings) by reading a fresh config snapshot on every tick.
@@ -95,21 +204,47 @@ pub async fn run_result_reporter(
                 debug!("Sending batch of {} results to server", batch.len());
 
                 match send_result_batch(&config_snapshot, &batch).await {
-                    Ok(()) => {
+                    SendOutcome::Accepted => {
                         let sent = batch.len();
-                        result_cache.drain_front(sent).await;
-                        let stats = result_cache.stats().await;
-                        {
-                            let mut s = agent_status.write();
-                            s.cache_stats.len = stats.len as i64;
-                            s.cache_stats.capacity = stats.capacity as i64;
-                        }
+                        let remaining =
+                            drain_and_refresh_stats(&result_cache, &agent_status, sent).await;
                         debug!(
                             "Sent {} results, {} remaining in cache",
-                            sent, stats.len
+                            sent, remaining
                         );
                     }
-                    Err(e) => {
+                    // Permanent rejection, save the batch for later inspection
+                    SendOutcome::Rejected { status, body } => {
+                        let ids: Vec<String> = batch.iter().map(|r| r.id.to_string()).collect();
+                        let check_types: BTreeSet<&str> =
+                            batch.iter().map(|r| check_type_name(&r.check_type)).collect();
+                        warn!(
+                            "Server rejected result batch with {}, dropping {} results: ids=[{}] check_types={:?} body={}",
+                            status,
+                            batch.len(),
+                            ids.join(","),
+                            check_types,
+                            truncate_body(&body),
+                        );
+
+                        let dir = Path::new(&config_snapshot.storage.cache_dir);
+                        if let Err(e) = save_rejected_batch(
+                            dir,
+                            REJECTED_FILE_MAX_BYTES,
+                            status,
+                            &body,
+                            &batch,
+                        )
+                        .await
+                        {
+                            warn!("Could not save rejected results in {}: {}", dir.display(), e);
+                        }
+
+                        drain_and_refresh_stats(&result_cache, &agent_status, batch.len()).await;
+                        agent_status.write().dropped_result_count += batch.len() as i64;
+                    }
+                    // Temporary failure, will retry later
+                    SendOutcome::Retryable(e) => {
                         agent_status.write().failed_report_count += 1;
                         error!("Failed to send result batch: {}", e);
                     }
@@ -126,11 +261,14 @@ pub async fn run_result_reporter(
 }
 
 /// POST `POST /agent/{agentId}/results` with a batch payload.
-async fn send_result_batch(config: &AgentConfig, batch: &[MonitoringResult]) -> Result<()> {
+async fn send_result_batch(config: &AgentConfig, batch: &[MonitoringResult]) -> SendOutcome {
     let agent_id = config.agent_id;
     let server_url = &config.server.url;
 
-    let client = build_client(config.server.timeout(), config.server.verify_tls)?;
+    let client = match build_client(config.server.timeout(), config.server.verify_tls) {
+        Ok(client) => client,
+        Err(e) => return SendOutcome::Retryable(e.into()),
+    };
 
     let url = format!("{}/agent/{}/results", server_url, agent_id);
     let payload = openapi::BatchMonitoringResults {
@@ -143,12 +281,20 @@ async fn send_result_batch(config: &AgentConfig, batch: &[MonitoringResult]) -> 
         request = request.header("X-Agent-API-Key", api_key);
     }
 
-    let response = request.send().await?;
+    let response = match request.send().await {
+        Ok(response) => response,
+        Err(e) => return SendOutcome::Retryable(e.into()),
+    };
 
-    if !response.status().is_success() {
-        return Err(Error::Network(format!(
+    let status = response.status();
+    if is_rejection(status) {
+        let body = response.text().await.unwrap_or_default();
+        return SendOutcome::Rejected { status, body };
+    }
+    if !status.is_success() {
+        return SendOutcome::Retryable(Error::Network(format!(
             "Server returned {} for result batch POST",
-            response.status()
+            status
         )));
     }
 
@@ -168,7 +314,7 @@ async fn send_result_batch(config: &AgentConfig, batch: &[MonitoringResult]) -> 
         }
     }
 
-    Ok(())
+    SendOutcome::Accepted
 }
 
 // ============================================================
@@ -291,6 +437,139 @@ mod tests {
                 json["results"][1]["check_type"]["type"].as_str(),
                 Some("ping")
             );
+        }
+    }
+
+    mod is_rejection_tests {
+        use super::*;
+
+        /// Only 400/422 are permanent; everything else must keep the batch.
+        #[test]
+        fn only_400_and_422_are_rejections() {
+            for code in [400u16, 422] {
+                assert!(is_rejection(StatusCode::from_u16(code).unwrap()), "{code}");
+            }
+            for code in [200u16, 202, 401, 403, 404, 408, 413, 429, 500, 502, 503] {
+                assert!(!is_rejection(StatusCode::from_u16(code).unwrap()), "{code}");
+            }
+        }
+    }
+
+    mod truncate_body_tests {
+        use super::*;
+
+        #[test]
+        fn short_body_is_unchanged() {
+            assert_eq!(truncate_body("bad request"), "bad request");
+        }
+
+        #[test]
+        fn empty_body_is_unchanged() {
+            assert_eq!(truncate_body(""), "");
+        }
+
+        /// Multi-byte characters must not be split mid-codepoint.
+        #[test]
+        fn long_multibyte_body_is_truncated_on_char_boundary() {
+            let body = "é".repeat(MAX_LOGGED_BODY_CHARS + 10);
+            let out = truncate_body(&body);
+            assert!(out.ends_with("...[truncated]"));
+            assert_eq!(
+                out.chars().count(),
+                MAX_LOGGED_BODY_CHARS + "...[truncated]".chars().count()
+            );
+        }
+    }
+
+    mod save_rejected_batch_tests {
+        use super::*;
+
+        #[tokio::test]
+        async fn writes_one_json_line_per_result() {
+            let dir = tempfile::tempdir().unwrap();
+            let batch = vec![make_result(), make_result()];
+
+            save_rejected_batch(
+                dir.path(),
+                REJECTED_FILE_MAX_BYTES,
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "unknown check type",
+                &batch,
+            )
+            .await
+            .unwrap();
+
+            let content = std::fs::read_to_string(dir.path().join(REJECTED_FILE_NAME)).unwrap();
+            let lines: Vec<&str> = content.lines().collect();
+            assert_eq!(lines.len(), 2);
+            let first: serde_json::Value = serde_json::from_str(lines[0]).unwrap();
+            assert_eq!(first["status"], 422);
+            assert_eq!(first["server_response"], "unknown check type");
+            assert_eq!(first["result"]["id"], batch[0].id.to_string());
+        }
+
+        #[tokio::test]
+        async fn creates_missing_directory() {
+            let dir = tempfile::tempdir().unwrap();
+            let nested = dir.path().join("a").join("b");
+
+            save_rejected_batch(
+                &nested,
+                REJECTED_FILE_MAX_BYTES,
+                StatusCode::BAD_REQUEST,
+                "",
+                &[make_result()],
+            )
+            .await
+            .unwrap();
+
+            assert!(nested.join(REJECTED_FILE_NAME).exists());
+        }
+
+        #[tokio::test]
+        async fn rotates_when_size_cap_reached_and_keeps_single_backup() {
+            let dir = tempfile::tempdir().unwrap();
+            let save = |batch: Vec<MonitoringResult>| {
+                let path = dir.path().to_path_buf();
+                async move {
+                    save_rejected_batch(&path, 1, StatusCode::BAD_REQUEST, "x", &batch)
+                        .await
+                        .unwrap();
+                }
+            };
+
+            save(vec![make_result()]).await;
+            save(vec![make_result()]).await;
+            save(vec![make_result(), make_result()]).await;
+
+            let current = std::fs::read_to_string(dir.path().join(REJECTED_FILE_NAME)).unwrap();
+            let backup =
+                std::fs::read_to_string(dir.path().join(format!("{REJECTED_FILE_NAME}.1")))
+                    .unwrap();
+            assert_eq!(
+                current.lines().count(),
+                2,
+                "newest batch only in current file"
+            );
+            assert_eq!(backup.lines().count(), 1, "previous backup is overwritten");
+        }
+
+        #[tokio::test]
+        async fn fails_when_directory_is_a_file() {
+            let dir = tempfile::tempdir().unwrap();
+            let not_a_dir = dir.path().join("file");
+            std::fs::write(&not_a_dir, b"").unwrap();
+
+            let result = save_rejected_batch(
+                &not_a_dir,
+                REJECTED_FILE_MAX_BYTES,
+                StatusCode::BAD_REQUEST,
+                "",
+                &[make_result()],
+            )
+            .await;
+
+            assert!(result.is_err());
         }
     }
 }
@@ -418,6 +697,172 @@ mod reporter_loop_tests {
         });
 
         addr
+    }
+
+    /// Spawn a mock server that always answers with the given status line and body.
+    async fn spawn_mock_server_status(
+        status_line: &'static str,
+        body: &'static str,
+    ) -> std::net::SocketAddr {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use tokio::net::TcpListener;
+
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let response = format!(
+            "HTTP/1.1 {}\r\nContent-Length: {}\r\nContent-Type: text/plain\r\n\r\n{}",
+            status_line,
+            body.len(),
+            body
+        );
+
+        tokio::spawn(async move {
+            loop {
+                if let Ok((mut stream, _)) = listener.accept().await {
+                    let mut buf = vec![0u8; 16384];
+                    let _ = stream.read(&mut buf).await;
+                    let _ = stream.write_all(response.as_bytes()).await;
+                }
+            }
+        });
+
+        addr
+    }
+
+    /// Run the reporter against `status_line` for ~1.5s with a 3-result cache.
+    async fn run_with_status(
+        status_line: &'static str,
+        body: &'static str,
+        cache_dir: &std::path::Path,
+    ) -> (Arc<ResultCache>, Arc<RwLock<AgentStatus>>) {
+        let addr = spawn_mock_server_status(status_line, body).await;
+        let cache = make_cache(100, 3600);
+        let config = make_config(&format!("http://{}", addr));
+        config.write().storage.cache_dir = cache_dir.to_string_lossy().into_owned();
+
+        for i in 0..3 {
+            cache.push(make_ping_result(&format!("10.0.0.{}", i))).await;
+        }
+
+        let agent_status = Arc::new(RwLock::new(AgentStatus::default()));
+        let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);
+        let reporter_task = tokio::spawn({
+            let cache = Arc::clone(&cache);
+            let status = Arc::clone(&agent_status);
+            async move { run_result_reporter(config, cache, status, shutdown_rx).await }
+        });
+
+        tokio::time::sleep(Duration::from_millis(1500)).await;
+        let _ = shutdown_tx.send(());
+        let _ = tokio::time::timeout(Duration::from_secs(2), reporter_task).await;
+        (cache, agent_status)
+    }
+
+    /// Regression: a permanently rejected batch used to stay at the head of the queue forever.
+    #[tokio::test]
+    async fn reporter_drops_and_records_batch_rejected_with_422() {
+        let dir = tempfile::tempdir().unwrap();
+        let (cache, status) =
+            run_with_status("422 Unprocessable Entity", "unknown check type", dir.path()).await;
+
+        assert_eq!(cache.len().await, 0, "rejected batch must be drained");
+        assert_eq!(status.read().dropped_result_count, 3);
+        assert_eq!(
+            status.read().failed_report_count,
+            0,
+            "a rejection is not retried, so it is not a failed report"
+        );
+        assert_eq!(status.read().cache_stats.len, 0);
+
+        let content = std::fs::read_to_string(dir.path().join("rejected_results.jsonl")).unwrap();
+        assert_eq!(content.lines().count(), 3);
+        assert!(content.contains("unknown check type"));
+    }
+
+    #[tokio::test]
+    async fn reporter_drops_batch_rejected_with_400() {
+        let dir = tempfile::tempdir().unwrap();
+        let (cache, status) = run_with_status("400 Bad Request", "bad json", dir.path()).await;
+
+        assert_eq!(cache.len().await, 0);
+        assert_eq!(status.read().dropped_result_count, 3);
+    }
+
+    /// A rejected batch must still be dropped when the rejected file cannot be written.
+    #[tokio::test]
+    async fn reporter_drops_rejected_batch_even_if_file_cannot_be_written() {
+        let dir = tempfile::tempdir().unwrap();
+        let not_a_dir = dir.path().join("file");
+        std::fs::write(&not_a_dir, b"").unwrap();
+
+        let (cache, status) = run_with_status("422 Unprocessable Entity", "x", &not_a_dir).await;
+
+        assert_eq!(cache.len().await, 0);
+        assert_eq!(status.read().dropped_result_count, 3);
+    }
+
+    /// 401/403/404/429/5xx are not data problems; the batch must be kept and nothing recorded.
+    async fn assert_batch_kept(status_line: &'static str) {
+        let dir = tempfile::tempdir().unwrap();
+        let (cache, status) = run_with_status(status_line, "nope", dir.path()).await;
+
+        assert_eq!(cache.len().await, 3, "{status_line}: batch must be kept");
+        assert_eq!(status.read().dropped_result_count, 0, "{status_line}");
+        assert!(status.read().failed_report_count > 0, "{status_line}");
+        assert!(
+            !dir.path().join("rejected_results.jsonl").exists(),
+            "{status_line}: nothing must be written to the rejected file"
+        );
+    }
+
+    #[tokio::test]
+    async fn reporter_keeps_batch_on_401() {
+        assert_batch_kept("401 Unauthorized").await;
+    }
+
+    #[tokio::test]
+    async fn reporter_keeps_batch_on_403() {
+        assert_batch_kept("403 Forbidden").await;
+    }
+
+    #[tokio::test]
+    async fn reporter_keeps_batch_on_404() {
+        assert_batch_kept("404 Not Found").await;
+    }
+
+    #[tokio::test]
+    async fn reporter_keeps_batch_on_429() {
+        assert_batch_kept("429 Too Many Requests").await;
+    }
+
+    #[tokio::test]
+    async fn reporter_keeps_batch_on_500() {
+        assert_batch_kept("500 Internal Server Error").await;
+    }
+
+    #[tokio::test]
+    async fn reporter_keeps_batch_on_network_error() {
+        // Nothing listens on port 1, so the connection is refused.
+        let dir = tempfile::tempdir().unwrap();
+        let cache = make_cache(100, 3600);
+        let config = make_config("http://127.0.0.1:1");
+        config.write().storage.cache_dir = dir.path().to_string_lossy().into_owned();
+        cache.push(make_ping_result("10.0.0.1")).await;
+
+        let agent_status = Arc::new(RwLock::new(AgentStatus::default()));
+        let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);
+        let task = tokio::spawn({
+            let cache = Arc::clone(&cache);
+            let status = Arc::clone(&agent_status);
+            async move { run_result_reporter(config, cache, status, shutdown_rx).await }
+        });
+        tokio::time::sleep(Duration::from_millis(1200)).await;
+        let _ = shutdown_tx.send(());
+        let _ = tokio::time::timeout(Duration::from_secs(2), task).await;
+
+        assert_eq!(cache.len().await, 1);
+        assert_eq!(agent_status.read().dropped_result_count, 0);
+        assert!(agent_status.read().failed_report_count > 0);
     }
 
     #[tokio::test]

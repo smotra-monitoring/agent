@@ -105,6 +105,20 @@ The server **must deduplicate** by `result.id` — since the reporter uses peek-
 
 The endpoint is defined in [`api/openapi/api/spec.yaml`](../../api/openapi/api/spec.yaml) as `POST /agent/{agentId}/results` with operationId `submitAgentResults`.
 
+### Response handling
+
+| Response | Action |
+|----------|--------|
+| `2xx` | Batch drained from the cache |
+| `400`, `422` (rejected) | Batch **dropped without retry**, counted in `AgentStatus.dropped_result_count`, logged with `warn!` (result IDs, check types, server body) and appended to the rejected file |
+| Network error, timeout, `401`, `403`, `404`, `408`, `429`, `5xx` | Batch kept and retried on the next tick; `failed_report_count` incremented |
+
+A batch the server will never accept would otherwise sit at the head of the queue forever and block all newer results. Retryable statuses never drop data: the payload is valid and discarding it would lose monitoring history.
+
+### Rejected results file
+
+Rejected results are appended to `{storage.cache_dir}/rejected_results.jsonl`, one JSON object per result: `rejected_at`, `status`, `server_response` (truncated to 1024 chars) and the full `result`. When the file reaches 5 MiB it is renamed to `rejected_results.jsonl.1` (replacing any previous backup), so disk use is bounded at roughly 10 MiB. If the file cannot be written, a warning is logged and the batch is still dropped.
+
 ### CheckType wire format
 
 The `check_type` field uses an adjacently-tagged envelope `{"type": "<variant>", "result": {...}}` to match the OpenAPI spec's `CheckType` oneOf discriminator:
@@ -162,7 +176,7 @@ Set `cache_enabled = false` in `[storage]` to turn off in-memory caching entirel
 
 ## Disk persistence (future work)
 
-The `cache_dir` config field is reserved but not yet used. A future enhancement will serialize the `VecDeque` to disk (using `serde + bincode`) and reload it on startup, enabling recovery of buffered results after an agent restart. Track progress in [ROADMAP.md](../ROADMAP.md).
+The `cache_dir` config field is reserved for result persistence and is not yet used for it (it currently only holds `rejected_results.jsonl`). A future enhancement will serialize the `VecDeque` to disk (using `serde + bincode`) and reload it on startup, enabling recovery of buffered results after an agent restart. Track progress in [ROADMAP.md](../ROADMAP.md).
 
 ## Common pitfalls
 
@@ -170,5 +184,6 @@ The `cache_dir` config field is reserved but not yet used. A future enhancement 
 |---------|-------------|-----|
 | Cache grows without bound | `max_cache_age_secs` is very large AND `cache_enabled = true` but server unreachable | Lower `max_cached_results` or fix server connectivity |
 | Old results never sent | `cache_report_interval_secs` is very large | Reduce the interval |
-| High failed_report_count | Server returning non-2xx | Check server logs; reporter retries automatically |
+| High failed_report_count | Server unreachable or returning 401/403/404/429/5xx | Check server logs; reporter retries automatically |
+| `dropped_result_count` increasing | Server rejects batches with 400/422 (schema mismatch, unknown check type) | Inspect `rejected_results.jsonl` in `cache_dir`; check agent/server version compatibility |
 | Results lost on restart | Only in-memory; no disk persistence | Implement disk persistence (future work) |

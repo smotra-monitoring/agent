@@ -35,6 +35,8 @@ pub struct AgentStatus {
     pub reported_at: DateTime<Utc>,
     /// Number of consecutive failed report attempts
     pub failed_report_count: i64,
+    /// Number of results discarded because the server permanently rejected them (HTTP 400/422)
+    pub dropped_result_count: i64,
     /// Whether the agent is currently connected to the server
     pub server_connected: bool,
     pub cache_stats: AgentCacheStats,

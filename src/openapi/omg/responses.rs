@@ -83,6 +83,7 @@ impl Default for AgentStatus {
             checks_failed: 0,
             reported_at: DateTime::<Utc>::UNIX_EPOCH,
             failed_report_count: 0,
+            dropped_result_count: 0,
             server_connected: false,
             cache_stats: AgentCacheStats {
                 len: 0,
