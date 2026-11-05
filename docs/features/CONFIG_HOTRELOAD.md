@@ -7,7 +7,7 @@ This document describes the configuration hot-reload functionality in the Smotra
 The agent supports automatic configuration reloading in response to:
 1. **File system changes** - When the config file is modified
 2. **SIGHUP signal** - On Unix systems, sending SIGHUP triggers a reload (not available on Windows)
-3. **Server version changes** - Future implementation for server-initiated updates
+3. **Server config version changes** - The heartbeat reports the server's desired config version; the agent saves the new config to the file and the file watcher applies it (see [Server-Initiated Config Updates](#server-initiated-config-updates))
 
 ## Architecture
 
@@ -26,7 +26,6 @@ An enum representing the source of a reload request:
 pub enum ReloadTrigger {
     FileChange(PathBuf),        // Config file was modified
     Signal,                     // SIGHUP received (Unix only)
-    ServerVersionChange(u32),   // Server reported new version (future)
 }
 ```
 
@@ -279,24 +278,26 @@ The reload manager participates in graceful shutdown:
 - Stops watching files when shutdown is signaled
 - Completes in-flight reload operations before exiting
 
+## Server-Initiated Config Updates
+
+The server drives config changes through the heartbeat; no separate polling timer exists.
+
+1. `POST /agent/{id}/heartbeat` returns `200` with `{ "config_version_desired": N }` (a legacy `204` means "no information").
+2. If `N` is higher than the running config version, the heartbeat task calls `GET /agent/{id}/configuration` (`src/agent_config/server_sync.rs`).
+3. The response is merged with local-only fields, validated, and saved to the config file with `save_to_file_secure`.
+4. The file watcher detects the change and the normal reload path applies it via `Agent::reload_config()`.
+
+Merge rules:
+- `server.api_key` and `storage.cache_dir` are kept from the local config (the server only stores a digest of the key, and the cache directory is host-specific).
+- Every other field, including `server.url`, comes from the server.
+- The config is rejected if `agent_id` differs from the local one, if its version is not newer than the local version, or if it fails `validate()`.
+- `server.heartbeat_interval_secs` must be at least 60 seconds.
+
+Failure handling:
+- A failed fetch is logged and the agent keeps its current config.
+- The same desired version is not re-fetched for 3 heartbeats after an attempt, so a save that is still being applied (or a failing server) does not cause a fetch on every heartbeat.
+
 ## Future Enhancements
-
-### Server-Initiated Config Updates
-
-**Status**: Planned - see `ReloadTrigger::ServerVersionChange(u32)`
-
-The agent will periodically poll the server for config updates:
-
-1. Agent includes current config version in heartbeat or dedicated polling
-2. Server compares version numbers
-3. If server version is newer, it returns updated config
-4. Agent reloads with server-provided config
-
-Implementation considerations:
-- Exponential backoff for polling failures
-- Conflict resolution (file changes vs server changes)
-- Security (verify server's authority to update config)
-- Audit logging for server-initiated changes
 
 ### Dynamic Monitoring Task Restart
 
@@ -436,4 +437,4 @@ Reloading a typical config (< 100 endpoints) has negligible performance impact.
 
 - [Configuration Reference](PROJECT_STRUCTURE.md) - Complete config file format
 - [Agent Architecture](README.md) - Overall agent design
-- [OpenAPI Specification](../api/openapi/api/spec.yaml) - Server API for future server-initiated reloads
+- [OpenAPI Specification](../api/openapi/api/spec.yaml) - Server API for heartbeat and configuration endpoints

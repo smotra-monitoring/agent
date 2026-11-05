@@ -11,6 +11,9 @@ use std::path::Path;
 use tokio::fs as async_fs;
 use tokio::io::AsyncWriteExt;
 
+/// Lower bound that keeps a server-supplied config from flooding the server with heartbeats.
+const MIN_HEARTBEAT_INTERVAL_SECS: i64 = 60;
+
 impl AgentConfig {
     /// Load configuration from a TOML file
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
@@ -107,6 +110,13 @@ impl AgentConfig {
 
         if self.server.url.is_empty() {
             return Err(Error::Config("server URL cannot be empty".to_string()));
+        }
+
+        if self.server.heartbeat_interval_secs < MIN_HEARTBEAT_INTERVAL_SECS {
+            return Err(Error::Config(format!(
+                "server heartbeat interval must be at least {} seconds",
+                MIN_HEARTBEAT_INTERVAL_SECS
+            )));
         }
 
         if self.server.api_key.is_some() && self.server.api_key.as_ref().unwrap().is_empty() {
@@ -300,6 +310,33 @@ mod tests {
         assert!(
             result.is_err(),
             "zero self_upgrade.check_interval_secs should fail validation"
+        );
+    }
+
+    /// Heartbeat intervals below the 60 s floor are rejected; 60 s itself is accepted.
+    #[test]
+    fn test_validate_heartbeat_interval_minimum() {
+        let mut config = AgentConfig {
+            agent_id: Uuid::now_v7(),
+            ..Default::default()
+        };
+
+        config.server.heartbeat_interval_secs = 59;
+        assert!(
+            config.validate().is_err(),
+            "59 s heartbeat interval should fail validation"
+        );
+
+        config.server.heartbeat_interval_secs = 0;
+        assert!(
+            config.validate().is_err(),
+            "zero heartbeat interval should fail validation"
+        );
+
+        config.server.heartbeat_interval_secs = 60;
+        assert!(
+            config.validate().is_ok(),
+            "60 s heartbeat interval should pass validation"
         );
     }
 }
