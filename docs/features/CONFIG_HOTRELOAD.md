@@ -284,7 +284,7 @@ The server drives config changes through the heartbeat; no separate polling time
 
 1. `POST /agent/{id}/heartbeat` returns `200` with `{ "config_version_desired": N }` (a legacy `204` means "no information").
 2. If `N` is higher than the running config version, the heartbeat task calls `GET /agent/{id}/configuration` (`src/agent_config/server_sync.rs`).
-3. The response is merged with local-only fields, validated, and saved to the config file with `save_to_file_secure`.
+3. The response is merged with local-only fields, validated, and saved to the config file with `save_to_file_secure`, which writes a temporary file in the same directory, syncs it, and renames it over the config so a crash or full disk never leaves a partial file.
 4. The file watcher detects the change and the normal reload path applies it via `Agent::reload_config()`.
 
 Merge rules:

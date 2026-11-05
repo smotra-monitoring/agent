@@ -70,6 +70,7 @@ tmp
 tokio
 traceroute
 udpconnect
+unparsable
 Utc
 Uuid
 UUIDv
