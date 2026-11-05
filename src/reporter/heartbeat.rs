@@ -37,7 +37,8 @@ impl HeartbeatReporter {
             RefreshKind::nothing()
                 .with_cpu(CpuRefreshKind::everything())
                 .with_memory(MemoryRefreshKind::everything()),
-        );
+        )
+        .map_err(|e| Error::Monitoring(format!("Failed to initialize system info: {e}")))?;
 
         Ok(Self {
             config,
@@ -164,9 +165,15 @@ impl HeartbeatReporter {
         (usage_mb, total_mb)
     }
 
-    /// Get system uptime in seconds. Returns 0 on unsupported platforms.
+    /// Get system uptime in seconds. Returns 0 if unavailable.
     async fn get_uptime_secs(&self) -> i64 {
-        System::uptime() as i64
+        match System::uptime() {
+            Ok(secs) => secs as i64,
+            Err(e) => {
+                tracing::warn!("Failed to get system uptime: {e}");
+                0
+            }
+        }
     }
 }
 
