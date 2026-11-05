@@ -4,6 +4,7 @@
 
 use std::path::Path;
 
+use reqwest::Url;
 use tracing::{info, warn};
 
 use crate::error::{Error, Result};
@@ -66,6 +67,7 @@ async fn fetch_configuration(local: &AgentConfig) -> Result<AgentConfig> {
 /// Apply server config on top of local state, keeping fields the server cannot know.
 ///
 /// `api_key` is kept because the server only stores its digest; `cache_dir` is a host path.
+/// Configs that lower transport security (https -> non-https, `verify_tls` true -> false) are rejected.
 fn merge_server_config(local: &AgentConfig, mut remote: AgentConfig) -> Result<AgentConfig> {
     if remote.agent_id != local.agent_id {
         warn!(
@@ -89,11 +91,54 @@ fn merge_server_config(local: &AgentConfig, mut remote: AgentConfig) -> Result<A
         )));
     }
 
+    reject_scheme_downgrade(local, &remote)?;
+    reject_tls_verification_downgrade(local, &remote)?;
+
     remote.server.api_key = local.server.api_key.clone();
     remote.storage.cache_dir = local.storage.cache_dir.clone();
 
     remote.validate()?;
     Ok(remote)
+}
+
+fn reject_scheme_downgrade(local: &AgentConfig, remote: &AgentConfig) -> Result<()> {
+    // An unparsable local URL is reported by local validation, not here.
+    let Ok(local_url) = Url::parse(&local.server.url) else {
+        return Ok(());
+    };
+    if local_url.scheme() != "https" {
+        return Ok(());
+    }
+
+    let remote_url = Url::parse(&remote.server.url).map_err(|e| {
+        Error::Config(format!(
+            "server config has an invalid server URL '{}': {}",
+            remote.server.url, e
+        ))
+    })?;
+    if remote_url.scheme() != "https" {
+        warn!(
+            "Rejecting server config: server URL downgrade {} -> {}",
+            local.server.url, remote.server.url
+        );
+        return Err(Error::Config(format!(
+            "server config lowers security by changing server URL from {} to {}",
+            local.server.url, remote.server.url
+        )));
+    }
+
+    Ok(())
+}
+
+fn reject_tls_verification_downgrade(local: &AgentConfig, remote: &AgentConfig) -> Result<()> {
+    if local.server.verify_tls && !remote.server.verify_tls {
+        warn!("Rejecting server config: it disables TLS certificate verification");
+        return Err(Error::Config(
+            "server config lowers security by disabling TLS certificate verification".to_string(),
+        ));
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -137,10 +182,10 @@ mod tests {
 
         #[test]
         fn keeps_api_key_and_cache_dir_and_takes_the_rest() {
-            let local = local_config("https://old.example.com");
+            let mut local = local_config("https://old.example.com");
+            local.server.verify_tls = false;
             let mut remote = remote_config(&local, 2);
             remote.server.url = "https://new.example.com".to_string();
-            remote.server.verify_tls = false;
             remote.self_upgrade.enabled = true;
 
             let merged = merge_server_config(&local, remote).unwrap();
@@ -150,8 +195,87 @@ mod tests {
             assert_eq!(merged.version, 2);
             assert_eq!(merged.agent_name, "from-server");
             assert_eq!(merged.server.url, "https://new.example.com");
-            assert!(!merged.server.verify_tls);
             assert!(merged.self_upgrade.enabled);
+        }
+
+        #[test]
+        fn rejects_https_to_http_downgrade() {
+            let local = local_config("https://x.example.com");
+            let mut remote = remote_config(&local, 2);
+            remote.server.url = "http://x.example.com".to_string();
+
+            assert!(merge_server_config(&local, remote).is_err());
+        }
+
+        #[test]
+        fn rejects_https_to_other_scheme() {
+            let local = local_config("https://x.example.com");
+            let mut remote = remote_config(&local, 2);
+            remote.server.url = "ftp://x.example.com".to_string();
+
+            assert!(merge_server_config(&local, remote).is_err());
+        }
+
+        #[test]
+        fn rejects_downgrade_with_uppercase_scheme_in_remote() {
+            let local = local_config("HTTPS://x.example.com");
+            let mut remote = remote_config(&local, 2);
+            remote.server.url = "HTTP://x.example.com".to_string();
+
+            assert!(merge_server_config(&local, remote).is_err());
+        }
+
+        #[test]
+        fn rejects_unparsable_remote_url_when_local_is_https() {
+            let local = local_config("https://x.example.com");
+            let mut remote = remote_config(&local, 2);
+            remote.server.url = "not a url".to_string();
+
+            assert!(merge_server_config(&local, remote).is_err());
+        }
+
+        #[test]
+        fn allows_http_to_https_upgrade() {
+            let local = local_config("http://x.example.com");
+            let mut remote = remote_config(&local, 2);
+            remote.server.url = "https://x.example.com".to_string();
+
+            let merged = merge_server_config(&local, remote).unwrap();
+
+            assert_eq!(merged.server.url, "https://x.example.com");
+        }
+
+        #[test]
+        fn allows_http_to_http_change() {
+            let local = local_config("http://x.example.com");
+            let mut remote = remote_config(&local, 2);
+            remote.server.url = "http://y.example.com".to_string();
+
+            let merged = merge_server_config(&local, remote).unwrap();
+
+            assert_eq!(merged.server.url, "http://y.example.com");
+        }
+
+        #[test]
+        fn rejects_verify_tls_true_to_false() {
+            let local = local_config("https://x.example.com");
+            assert!(local.server.verify_tls);
+            let mut remote = remote_config(&local, 2);
+            remote.server.verify_tls = false;
+
+            assert!(merge_server_config(&local, remote).is_err());
+        }
+
+        #[test]
+        fn allows_verify_tls_false_to_true() {
+            let mut local = local_config("https://x.example.com");
+            local.server.verify_tls = false;
+            let mut remote = remote_config(&local, 2);
+            remote.server.verify_tls = true;
+
+            let merged = merge_server_config(&local, remote).unwrap();
+
+            assert!(merged.server.verify_tls);
         }
 
         #[test]
@@ -327,6 +451,30 @@ mod tests {
                 .with_status(200)
                 .with_header("content-type", "application/json")
                 .with_body(serde_json::to_string(&remote_config(&local, 1)).unwrap())
+                .create_async()
+                .await;
+            let file = NamedTempFile::new().unwrap();
+            std::fs::write(file.path(), "original").unwrap();
+
+            assert!(sync_config_from_server(&local, file.path()).await.is_err());
+
+            assert_eq!(std::fs::read_to_string(file.path()).unwrap(), "original");
+        }
+
+        #[tokio::test]
+        async fn leaves_file_untouched_when_security_is_downgraded() {
+            let mut server = mockito::Server::new_async().await;
+            let local = local_config(&server.url());
+            let mut remote = remote_config(&local, 2);
+            remote.server.verify_tls = false;
+            server
+                .mock(
+                    "GET",
+                    format!("/agent/{}/configuration", local.agent_id).as_str(),
+                )
+                .with_status(200)
+                .with_header("content-type", "application/json")
+                .with_body(serde_json::to_string(&remote).unwrap())
                 .create_async()
                 .await;
             let file = NamedTempFile::new().unwrap();

@@ -290,7 +290,8 @@ The server drives config changes through the heartbeat; no separate polling time
 Merge rules:
 - `server.api_key` and `storage.cache_dir` are kept from the local config (the server only stores a digest of the key, and the cache directory is host-specific).
 - Every other field, including `server.url`, comes from the server.
-- The config is rejected if `agent_id` differs from the local one, if its version is not newer than the local version, or if it fails `validate()`.
+- The config is rejected if `agent_id` differs from the local one, if its version is not newer than the local version, if it lowers security, or if it fails `validate()`.
+- Lowering security means changing `server.url` from `https` to any other scheme (or to an unparsable URL), or changing `server.verify_tls` from `true` to `false`. Upgrades (`http` to `https`, `false` to `true`) are accepted. To downgrade deliberately, edit the local config file by hand.
 - `server.heartbeat_interval_secs` must be at least 60 seconds.
 
 Failure handling:

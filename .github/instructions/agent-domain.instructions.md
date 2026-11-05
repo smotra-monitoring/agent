@@ -71,5 +71,5 @@ Config sync is heartbeat-driven (`src/agent_config/server_sync.rs`, called from 
 - `POST /agent/{id}/heartbeat` returns `{ config_version_desired }`; a legacy `204` carries no version.
 - When desired > current, the agent fetches `GET /agent/{id}/configuration`, merges it, and saves it to the config file. The file watcher applies it via `Agent::reload_config()`.
 - Local-only fields kept on merge: `server.api_key` and `storage.cache_dir`. Everything else (including `server.url`) comes from the server.
-- Rejected: `agent_id` mismatch, version not newer than local, failed `validate()`. `server.heartbeat_interval_secs` has a 60 s minimum.
+- Rejected: `agent_id` mismatch, version not newer than local, security downgrade (`server.url` https -> non-https, `server.verify_tls` true -> false), failed `validate()`. `server.heartbeat_interval_secs` has a 60 s minimum.
 - Never write a server-supplied config to disk without going through `merge_server_config`.
