@@ -14,6 +14,19 @@ use tokio::io::AsyncWriteExt;
 /// Lower bound that keeps a server-supplied config from flooding the server with heartbeats.
 const MIN_HEARTBEAT_INTERVAL_SECS: i64 = 60;
 
+/// Create a new owner-only file at `path`, write `content` and fsync it.
+async fn write_synced_file(path: &Path, content: &[u8]) -> std::io::Result<()> {
+    let mut options = async_fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(unix)]
+    options.mode(0o600);
+
+    let mut file = options.open(path).await?;
+    file.write_all(content).await?;
+    file.flush().await?;
+    file.sync_all().await
+}
+
 impl AgentConfig {
     /// Load configuration from a TOML file
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
@@ -24,10 +37,11 @@ impl AgentConfig {
             .map_err(|e| Error::Config(format!("Failed to parse config: {}", e)))
     }
 
-    /// Save configuration to a TOML file asynchronously with secure permissions
+    /// Save configuration to a TOML file atomically with secure permissions
     ///
-    /// This method writes the configuration and sets file permissions to 0600
-    /// on Unix systems (owner read/write only) to protect sensitive data like API keys.
+    /// The config is written to a temporary file next to `path` (mode 0600 on Unix, to protect
+    /// API keys), synced to disk, then renamed over `path`. On any failure the existing file
+    /// is left untouched, so readers see either the old or the new config, never a partial one.
     ///
     /// # Arguments
     ///
@@ -37,40 +51,57 @@ impl AgentConfig {
     ///
     /// Returns an error if:
     /// * Serialization to TOML fails
-    /// * File cannot be created or written
-    /// * Permissions cannot be set (Unix only)
+    /// * The temporary file cannot be created, written or synced
+    /// * The temporary file cannot be renamed over `path`
     pub async fn save_to_file_secure(&self, path: impl AsRef<Path>) -> Result<()> {
-        let path = path.as_ref();
         let content = toml::to_string_pretty(self)
             .map_err(|e| Error::Config(format!("Failed to serialize config: {}", e)))?;
 
-        // Write to file
-        let mut file = async_fs::File::create(path)
+        // Replace the real file rather than a symlink pointing at it.
+        let target = async_fs::canonicalize(path.as_ref())
             .await
-            .map_err(|e| Error::Config(format!("Failed to create config file: {}", e)))?;
+            .unwrap_or_else(|_| path.as_ref().to_path_buf());
+        let file_name = target
+            .file_name()
+            .ok_or_else(|| Error::Config("Config path has no file name".to_string()))?;
+        let dir = match target.parent() {
+            Some(parent) if !parent.as_os_str().is_empty() => parent,
+            _ => Path::new("."),
+        };
 
-        file.write_all(content.as_bytes())
-            .await
-            .map_err(|e| Error::Config(format!("Failed to write config file: {}", e)))?;
+        // Same directory as the target so the rename stays on one filesystem.
+        let tmp_path = dir.join(format!(
+            ".{}.{}.tmp",
+            file_name.to_string_lossy(),
+            Uuid::now_v7()
+        ));
 
-        file.flush()
-            .await
-            .map_err(|e| Error::Config(format!("Failed to flush config file: {}", e)))?;
+        if let Err(e) = write_synced_file(&tmp_path, content.as_bytes()).await {
+            let _ = async_fs::remove_file(&tmp_path).await;
+            return Err(Error::Config(format!(
+                "Failed to write temporary config file: {}",
+                e
+            )));
+        }
 
-        // Set secure permissions on Unix systems
+        if let Err(e) = async_fs::rename(&tmp_path, &target).await {
+            let _ = async_fs::remove_file(&tmp_path).await;
+            return Err(Error::Config(format!(
+                "Failed to replace config file: {}",
+                e
+            )));
+        }
+
+        // Persist the rename itself across power loss.
         #[cfg(unix)]
         {
-            use std::os::unix::fs::PermissionsExt;
-
-            let mut perms = file
-                .metadata()
+            let dir_handle = async_fs::File::open(dir)
                 .await
-                .map_err(|e| Error::Config(format!("Failed to read file metadata: {}", e)))?
-                .permissions();
-            perms.set_mode(0o600); // Owner read/write only
-            async_fs::set_permissions(path, perms)
+                .map_err(|e| Error::Config(format!("Failed to open config directory: {}", e)))?;
+            dir_handle
+                .sync_all()
                 .await
-                .map_err(|e| Error::Config(format!("Failed to set file permissions: {}", e)))?;
+                .map_err(|e| Error::Config(format!("Failed to sync config directory: {}", e)))?;
         }
 
         Ok(())
@@ -249,6 +280,48 @@ mod tests {
                 "File permissions should be 0600"
             );
         }
+    }
+
+    #[tokio::test]
+    async fn test_save_overwrites_atomically_without_leftovers() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.toml");
+
+        let mut config = AgentConfig {
+            agent_name: "First".to_string(),
+            ..Default::default()
+        };
+        config.save_to_file_secure(&path).await.unwrap();
+
+        config.agent_name = "Second".to_string();
+        config.save_to_file_secure(&path).await.unwrap();
+
+        let content = std::fs::read_to_string(&path).unwrap();
+        assert!(content.contains("Second") && !content.contains("First"));
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mode = std::fs::metadata(&path).unwrap().permissions().mode();
+            assert_eq!(mode & 0o777, 0o600);
+        }
+
+        let entries: Vec<_> = std::fs::read_dir(dir.path()).unwrap().collect();
+        assert_eq!(entries.len(), 1, "temporary file must not be left behind");
+    }
+
+    #[tokio::test]
+    async fn test_save_failure_leaves_no_temp_file() {
+        let dir = tempfile::tempdir().unwrap();
+        // A directory cannot be replaced by a file, so the final rename fails.
+        let target = dir.path().join("config.toml");
+        std::fs::create_dir(&target).unwrap();
+
+        let result = AgentConfig::default().save_to_file_secure(&target).await;
+        assert!(result.is_err());
+
+        let entries: Vec<_> = std::fs::read_dir(dir.path()).unwrap().collect();
+        assert_eq!(entries.len(), 1, "temporary file must be cleaned up");
     }
 
     #[tokio::test]
