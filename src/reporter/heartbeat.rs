@@ -3,7 +3,7 @@
 use crate::core::{AgentHealthStatus, AgentHeartbeat, AgentMetrics, AgentStatus};
 use crate::error::{Error, Result};
 use crate::http_client::build_client;
-use crate::openapi::AgentConfig;
+use crate::openapi::{AgentConfig, AgentHeartbeatResponse};
 use chrono::Utc;
 use parking_lot::RwLock;
 use std::sync::Arc;
@@ -80,7 +80,10 @@ impl HeartbeatReporter {
     }
 
     /// Send heartbeat to the server
-    pub async fn send_heartbeat(&self) -> Result<()> {
+    ///
+    /// Returns the config version the server wants the agent to run, or `None` when the
+    /// server did not report one (legacy `204` response or unparseable body).
+    pub async fn send_heartbeat(&self) -> Result<Option<i64>> {
         // Snapshot the live config so all fields within this call are consistent.
         let config = self.config.read().clone();
 
@@ -104,9 +107,19 @@ impl HeartbeatReporter {
         let response = request.send().await?;
 
         match response.status().as_u16() {
+            200 => match response.json::<AgentHeartbeatResponse>().await {
+                Ok(body) => {
+                    debug!("Heartbeat sent successfully");
+                    Ok(Some(body.config_version_desired))
+                }
+                Err(e) => {
+                    warn!("Heartbeat accepted but response body is invalid: {}", e);
+                    Ok(None)
+                }
+            },
             204 => {
                 debug!("Heartbeat sent successfully");
-                Ok(())
+                Ok(None)
             }
             401 => {
                 warn!("Heartbeat rejected: Unauthorized (invalid API key)");
@@ -327,5 +340,104 @@ mod tests {
 
         // Verify timestamp is set
         assert!(heartbeat.timestamp.timestamp() > 0);
+    }
+
+    mod send_heartbeat_tests {
+        use super::*;
+        use crate::http_client::user_agent;
+
+        async fn reporter_for(server: &mockito::ServerGuard) -> (HeartbeatReporter, String) {
+            let config = create_test_config();
+            {
+                let mut c = config.write();
+                c.server.url = server.url();
+                c.server.api_key = Some("sk_test".to_string());
+            }
+            let path = format!("/agent/{}/heartbeat", config.read().agent_id);
+            (
+                HeartbeatReporter::new(config, create_test_status()).unwrap(),
+                path,
+            )
+        }
+
+        /// A 200 response carries the desired config version.
+        #[tokio::test]
+        async fn returns_desired_version_on_200() {
+            let mut server = mockito::Server::new_async().await;
+            let (reporter, path) = reporter_for(&server).await;
+            let mock = server
+                .mock("POST", path.as_str())
+                .match_header("user-agent", user_agent())
+                .match_header("x-agent-api-key", "sk_test")
+                .with_status(200)
+                .with_header("content-type", "application/json")
+                .with_body(r#"{"config_version_desired": 7}"#)
+                .create_async()
+                .await;
+
+            let desired = reporter.send_heartbeat().await.unwrap();
+
+            assert_eq!(desired, Some(7));
+            mock.assert_async().await;
+        }
+
+        /// A legacy 204 response succeeds without a desired version.
+        #[tokio::test]
+        async fn returns_none_on_204() {
+            let mut server = mockito::Server::new_async().await;
+            let (reporter, path) = reporter_for(&server).await;
+            server
+                .mock("POST", path.as_str())
+                .with_status(204)
+                .create_async()
+                .await;
+
+            assert_eq!(reporter.send_heartbeat().await.unwrap(), None);
+        }
+
+        /// A 200 with an unparseable body still counts as a delivered heartbeat.
+        #[tokio::test]
+        async fn returns_none_on_200_with_invalid_body() {
+            let mut server = mockito::Server::new_async().await;
+            let (reporter, path) = reporter_for(&server).await;
+            server
+                .mock("POST", path.as_str())
+                .with_status(200)
+                .with_body("not json")
+                .create_async()
+                .await;
+
+            assert_eq!(reporter.send_heartbeat().await.unwrap(), None);
+        }
+
+        #[tokio::test]
+        async fn maps_401_to_authentication_error() {
+            let mut server = mockito::Server::new_async().await;
+            let (reporter, path) = reporter_for(&server).await;
+            server
+                .mock("POST", path.as_str())
+                .with_status(401)
+                .create_async()
+                .await;
+
+            let err = reporter.send_heartbeat().await.unwrap_err();
+
+            assert!(matches!(err, Error::Authentication(_)), "got {:?}", err);
+        }
+
+        #[tokio::test]
+        async fn maps_500_to_network_error() {
+            let mut server = mockito::Server::new_async().await;
+            let (reporter, path) = reporter_for(&server).await;
+            server
+                .mock("POST", path.as_str())
+                .with_status(500)
+                .create_async()
+                .await;
+
+            let err = reporter.send_heartbeat().await.unwrap_err();
+
+            assert!(matches!(err, Error::Network(_)), "got {:?}", err);
+        }
     }
 }

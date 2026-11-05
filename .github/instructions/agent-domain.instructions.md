@@ -63,14 +63,13 @@ Lightweight heartbeat for reporting agent health to the server (separate from fu
 - `examples/` and plugins cannot reach the private module; they must set their own `smotra-agent/<version> (<name>/<version>)` style UA.
 - Tests that mock HTTP endpoints with `mockito` should `match_header("user-agent", ...)`.
 
-## Configuration Versioning and Server Polling
+## Configuration Versioning and Server Sync
 
-The `Config` struct has a `version: u32` field (starts at 1) for synchronization with the server.
+The `AgentConfig` struct has a `version` field for synchronization with the server.
 
-**TODO — Config Polling from Server** (not yet implemented):
-- Agent periodically polls server for updated configuration.
-- Include current version in `X-Config-Version` HTTP request header.
-- Server returns `304 Not Modified` if versions match; otherwise returns new config with updated version.
-- Agent validates, applies, and persists the new config to disk.
-- On config update, reload monitoring tasks with new endpoints/settings.
-- Skip polling if server unreachable. Use exponential backoff on failures.
+Config sync is heartbeat-driven (`src/agent_config/server_sync.rs`, called from `src/reporter/server.rs`):
+- `POST /agent/{id}/heartbeat` returns `{ config_version_desired }`; a legacy `204` carries no version.
+- When desired > current, the agent fetches `GET /agent/{id}/configuration`, merges it, and saves it to the config file. The file watcher applies it via `Agent::reload_config()`.
+- Local-only fields kept on merge: `server.api_key` and `storage.cache_dir`. Everything else (including `server.url`) comes from the server.
+- Rejected: `agent_id` mismatch, version not newer than local, failed `validate()`. `server.heartbeat_interval_secs` has a 60 s minimum.
+- Never write a server-supplied config to disk without going through `merge_server_config`.

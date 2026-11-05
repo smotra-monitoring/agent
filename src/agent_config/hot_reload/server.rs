@@ -3,7 +3,9 @@
 //! Coordinates config hot-reload from multiple sources:
 //! - File system changes to the config file (via notify debouncer)
 //! - SIGHUP signal on Unix systems
-//! - Future: Server-initiated config version changes
+//!
+//! Server-initiated config changes arrive through the config file: the heartbeat task saves
+//! the new config and the file watcher triggers a regular reload.
 
 use std::path::PathBuf;
 use tokio::sync::{broadcast, mpsc};
@@ -25,9 +27,6 @@ pub enum ReloadTrigger {
     FileChange(),
     /// SIGHUP signal received (Unix only)
     Signal,
-    /// Server reported a new config version (future implementation)
-    #[allow(dead_code)]
-    ServerVersionChange(u32),
 }
 
 /// Run the hot reload orchestration task
@@ -95,9 +94,7 @@ pub async fn run_hot_reload(
                 info!("Config reload triggered: {:?}", trigger);
 
                 match trigger {
-                    ReloadTrigger::FileChange() | ReloadTrigger::Signal
-                     => {
-
+                    ReloadTrigger::FileChange() | ReloadTrigger::Signal => {
                         match AgentConfig::load_and_validate_config(&config_path) {
                             Ok(new_config) => {
                                 info!(
@@ -119,11 +116,6 @@ pub async fn run_hot_reload(
                                 // Continue running even if one reload fails
                             }
                         }
-
-                    }
-                    ReloadTrigger::ServerVersionChange(version) => {
-                        info!("Reload triggered by server version change: {}", version);
-                        unimplemented!("Server-initiated config version change handling is not implemented yet");
                     }
                 }
 
@@ -553,15 +545,6 @@ mod tests {
         assert!(config.is_some(), "Expected config received");
 
         trigger_tx.send(ReloadTrigger::Signal).unwrap();
-        let config = tokio::time::timeout(Duration::from_millis(100), config_rx.recv())
-            .await
-            .expect("Should receive reload trigger within timeout");
-
-        assert!(config.is_some(), "Expected config received");
-
-        trigger_tx
-            .send(ReloadTrigger::ServerVersionChange(3))
-            .unwrap();
         let config = tokio::time::timeout(Duration::from_millis(100), config_rx.recv())
             .await
             .expect("Should receive reload trigger within timeout");

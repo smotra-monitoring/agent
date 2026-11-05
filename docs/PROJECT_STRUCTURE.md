@@ -9,6 +9,7 @@
 ### Configuration Module (`src/agent_config/`)
 - `src/agent_config/mod.rs` - Module exports for configuration
 - `src/agent_config/loader.rs` - Configuration loading, validation, and secure saving logic
+- `src/agent_config/server_sync.rs` - Fetches the server's desired config, merges local-only fields, and saves it to the config file
 - `src/agent_config/types.rs` - Configuration data structures (Config, MonitoringConfig, StorageConfig)
 - `src/agent_config/server_config/` - Server configuration submodule
   - `src/agent_config/server_config/mod.rs` - Server config module exports
@@ -217,7 +218,7 @@
 1. **Traceroute**: Implement TracerouteChecker (types already defined)
 2. **TCP/UDP/HTTP Checks**: Implement TcpConnectChecker, UdpConnectChecker, HttpGetChecker (types already defined)
 3. **Cache disk persistence**: Complete on-disk persistence in `src/cache/store.rs`
-4. **Config server polling**: Implement server-side config polling with version tracking
+4. ~~**Config server polling**~~ Done: heartbeat-driven config sync (`src/agent_config/server_sync.rs`)
 
 ### Medium Priority
 1. **Enhanced Testing**: Expand unit and integration test coverage

@@ -108,7 +108,7 @@ pub struct ServerConfig {
     /// API key for authentication
     pub api_key: Option<String>,
     /// Heartbeat interval in seconds
-    #[validate(range(min = 1))]
+    #[validate(range(min = 60))]
     pub heartbeat_interval_secs: i64,
     /// Enable TLS verification
     pub verify_tls: bool,
@@ -368,6 +368,14 @@ pub struct AgentHeartbeat {
     pub health_status: AgentHealthStatus,
     pub metrics: AgentMetrics,
     pub agent_status: AgentStatus,
+}
+
+/// AgentHeartbeatResponse
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentHeartbeatResponse {
+    /// Configuration version the server wants the agent to run. When higher than the
+    /// agent's current version, the agent fetches GET /agent/{agentId}/configuration.
+    pub config_version_desired: i64,
 }
 
 /// AgentMetrics
@@ -1319,6 +1327,11 @@ pub struct PostClaimAgentResponse409 {
 #[derive(Debug, Clone, Deserialize)]
 pub struct GetAgentConfigurationResponse200 {
     pub body: AgentConfig,
+}
+/// Heartbeat received
+#[derive(Debug, Clone, Deserialize)]
+pub struct SendAgentHeartbeatResponse200 {
+    pub body: AgentHeartbeatResponse,
 }
 /// Batch accepted for processing
 #[derive(Debug, Clone, Deserialize)]
