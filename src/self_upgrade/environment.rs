@@ -6,9 +6,11 @@ pub fn is_containerized() -> bool {
 
 #[cfg(target_os = "macos")]
 pub fn is_managed_by_launchd() -> bool {
-    use sysinfo::{Pid, ProcessesToUpdate, System};
+    use sysinfo::{ProcessesToUpdate, System};
 
-    let mut s = System::new();
+    let Ok(mut s) = System::new() else {
+        return false;
+    };
     // ProcessesToUpdate::All and true to clear out dead processes
     s.refresh_processes(ProcessesToUpdate::All, true);
 
