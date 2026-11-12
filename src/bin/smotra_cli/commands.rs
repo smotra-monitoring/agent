@@ -24,16 +24,10 @@ pub async fn show_status(config_path: PathBuf) -> Result<()> {
 
 /// Validate configuration
 pub async fn validate_config(config_path: PathBuf) -> Result<()> {
-    match AgentConfig::from_file(&config_path) {
-        Ok(config) => match config.validate() {
-            Ok(_) => println!("✓ Configuration is valid"),
-            Err(e) => {
-                eprintln!("✗ Configuration validation failed: {}", e);
-                return Err(e);
-            }
-        },
+    match AgentConfig::load_and_validate_config(&config_path) {
+        Ok(_) => println!("✓ Configuration is valid"),
         Err(e) => {
-            eprintln!("✗ Failed to load configuration: {}", e);
+            eprintln!("✗ Configuration validation failed: {}", e);
             return Err(e);
         }
     }
