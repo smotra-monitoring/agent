@@ -28,7 +28,10 @@ async fn write_synced_file(path: &Path, content: &[u8]) -> std::io::Result<()> {
 }
 
 impl AgentConfig {
-    /// Load configuration from a TOML file
+    /// Load configuration from a TOML file without validating it.
+    ///
+    /// Only for flows that need a not-yet-valid config (e.g. before claiming); otherwise use
+    /// [`Self::load_and_validate_config`].
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         let content = fs::read_to_string(path.as_ref())
             .map_err(|e| Error::Config(format!("Failed to read config file: {}", e)))?;
