@@ -70,6 +70,8 @@ The `AgentConfig` struct has a `version` field for synchronization with the serv
 Config sync is heartbeat-driven (`src/agent_config/server_sync.rs`, called from `src/reporter/server.rs`):
 - `POST /agent/{id}/heartbeat` returns `{ config_version_desired }`; a legacy `204` carries no version.
 - When desired > current, the agent fetches `GET /agent/{id}/configuration`, merges it, and saves it to the config file. The file watcher applies it via `Agent::reload_config()`.
-- Local-only fields kept on merge: `server.api_key` and `storage.cache_dir`. Everything else (including `server.url`) comes from the server.
-- Rejected: `agent_id` mismatch, version not newer than local, security downgrade (`server.url` https -> non-https, `server.verify_tls` true -> false), failed `validate()`. `server.heartbeat_interval_secs` has a 60 s minimum.
+- The response is an envelope; `base_config` is a JSON Merge Patch (RFC 7396) over `AgentConfig`, returned by the server unprocessed. Effective config = `Default` -> local config file -> `base_config`; `null` removes a key so the default applies. Arrays replace as a whole. Merge helpers live in `src/agent_config/merge_patch.rs`.
+- Envelope `id` must match `agent_id`; `name` becomes `agent_name`; `config_version_desired` becomes `version`.
+- Rejected (whole config, nothing written): `id` mismatch, version not newer than local, patch containing `agent_id`/`agent_name`/`version`/`server.api_key`/`storage.cache_dir`, unknown keys or wrong types in `base_config`, security downgrade (`server.url` https -> non-https, `server.verify_tls` true -> false), failed `validate()`. `server.heartbeat_interval_secs` has a 60 s minimum.
+- Keep `merge_server_config` a short pipeline of small helpers; do not grow it into one long function.
 - Never write a server-supplied config to disk without going through `merge_server_config`.
