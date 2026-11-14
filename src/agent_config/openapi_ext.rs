@@ -116,7 +116,7 @@ impl Default for SelfUpgradeConfig {
         Self {
             enabled: false,
             github_repo_url: String::from("https://github.com/smotra-monitoring/agent"),
-            check_interval_secs: 3600,
+            check_interval_secs: 24 * 3600,
         }
     }
 }
