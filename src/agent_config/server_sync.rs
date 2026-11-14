@@ -438,6 +438,7 @@ mod tests {
                 merged.monitoring.interval_secs,
                 local.monitoring.interval_secs
             );
+            assert_eq!(merged.agent_name, "from-server");
         }
 
         #[test]
