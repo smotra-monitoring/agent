@@ -3,6 +3,7 @@
 
 mod hot_reload;
 mod loader;
+mod merge_patch;
 mod openapi_ext;
 mod server_sync;
 

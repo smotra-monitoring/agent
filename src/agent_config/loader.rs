@@ -3,6 +3,7 @@
 use tracing::info;
 use uuid::Uuid;
 
+use super::merge_patch::layer_over_defaults;
 use crate::claim::AgentCredentials;
 use crate::error::{Error, Result};
 use crate::openapi::AgentConfig;
@@ -28,13 +29,96 @@ async fn write_synced_file(path: &Path, content: &[u8]) -> std::io::Result<()> {
 }
 
 impl AgentConfig {
-    /// Load configuration from a TOML file
+    /// Load and validate configuration from file
+    ///
+    /// Convenience function that loads a config file and validates it in one step.
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - Path to the configuration file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// * File cannot be read
+    /// * TOML parsing fails
+    /// * Configuration validation fails
+    pub fn load_and_validate_config(path: impl AsRef<Path>) -> Result<Self> {
+        info!("Loading config from: {:?}", path.as_ref());
+        let config = Self::from_file(path)?;
+        config.validate()?;
+        info!("Config loaded and validated successfully");
+        Ok(config)
+    }
+
+    /// Load configuration from a TOML file without validating it.
+    /// Keys missing from the file fall back to `AgentConfig::default()`.
+    ///
+    /// Only for flows that need a not-yet-valid config (e.g. before claiming); otherwise use
+    /// [`Self::load_and_validate_config`].
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         let content = fs::read_to_string(path.as_ref())
             .map_err(|e| Error::Config(format!("Failed to read config file: {}", e)))?;
 
-        toml::from_str(&content)
-            .map_err(|e| Error::Config(format!("Failed to parse config: {}", e)))
+        let local: serde_json::Value = toml::from_str(&content)
+            .map_err(|e| Error::Config(format!("Failed to parse toml-config: {}", e)))?;
+
+        serde_json::from_value(layer_over_defaults(&local)?).map_err(|e| {
+            Error::Config(format!(
+                "Failed to merge 'Default config' with toml-config: {}",
+                e
+            ))
+        })
+    }
+
+    /// Validate the configuration
+    pub fn validate(&self) -> Result<()> {
+        if self.agent_id == Uuid::nil() {
+            return Err(Error::Config("agent_id cannot be nil UUID".to_string()));
+        }
+
+        if self.monitoring.interval_secs == 0 {
+            return Err(Error::Config(
+                "monitoring interval must be greater than 0".to_string(),
+            ));
+        }
+
+        if self.server.timeout_secs == 0 {
+            return Err(Error::Config(
+                "server timeout must be greater than 0".to_string(),
+            ));
+        }
+
+        if self.server.url.is_empty() {
+            return Err(Error::Config("server URL cannot be empty".to_string()));
+        }
+
+        if self.server.heartbeat_interval_secs < MIN_HEARTBEAT_INTERVAL_SECS {
+            return Err(Error::Config(format!(
+                "server heartbeat interval must be at least {} seconds",
+                MIN_HEARTBEAT_INTERVAL_SECS
+            )));
+        }
+
+        if self.server.api_key.is_some() && self.server.api_key.as_ref().unwrap().is_empty() {
+            return Err(Error::ConfigApiKey(
+                "server API key cannot be empty".to_string(),
+            ));
+        }
+
+        if self.self_upgrade.github_repo_url.is_empty() {
+            return Err(Error::Config(
+                "self_upgrade.github_repo_url cannot be empty".to_string(),
+            ));
+        }
+
+        if self.self_upgrade.check_interval_secs <= 0 {
+            return Err(Error::Config(
+                "self_upgrade.check_interval_secs must be greater than 0".to_string(),
+            ));
+        }
+
+        Ok(())
     }
 
     /// Save configuration to a TOML file atomically with secure permissions
@@ -119,78 +203,6 @@ impl AgentConfig {
     pub fn apply_claim_result(&mut self, claim_result: AgentCredentials) {
         self.agent_id = claim_result.agent_id;
         self.server.api_key = Some(claim_result.api_key);
-    }
-
-    /// Validate the configuration
-    pub fn validate(&self) -> Result<()> {
-        if self.agent_id == Uuid::nil() {
-            return Err(Error::Config("agent_id cannot be nil UUID".to_string()));
-        }
-
-        if self.monitoring.interval_secs == 0 {
-            return Err(Error::Config(
-                "monitoring interval must be greater than 0".to_string(),
-            ));
-        }
-
-        if self.server.timeout_secs == 0 {
-            return Err(Error::Config(
-                "server timeout must be greater than 0".to_string(),
-            ));
-        }
-
-        if self.server.url.is_empty() {
-            return Err(Error::Config("server URL cannot be empty".to_string()));
-        }
-
-        if self.server.heartbeat_interval_secs < MIN_HEARTBEAT_INTERVAL_SECS {
-            return Err(Error::Config(format!(
-                "server heartbeat interval must be at least {} seconds",
-                MIN_HEARTBEAT_INTERVAL_SECS
-            )));
-        }
-
-        if self.server.api_key.is_some() && self.server.api_key.as_ref().unwrap().is_empty() {
-            return Err(Error::ConfigApiKey(
-                "server API key cannot be empty".to_string(),
-            ));
-        }
-
-        if self.self_upgrade.github_repo_url.is_empty() {
-            return Err(Error::Config(
-                "self_upgrade.github_repo_url cannot be empty".to_string(),
-            ));
-        }
-
-        if self.self_upgrade.check_interval_secs <= 0 {
-            return Err(Error::Config(
-                "self_upgrade.check_interval_secs must be greater than 0".to_string(),
-            ));
-        }
-
-        Ok(())
-    }
-
-    /// Load and validate configuration from file
-    ///
-    /// Convenience function that loads a config file and validates it in one step.
-    ///
-    /// # Arguments
-    ///
-    /// * `path` - Path to the configuration file
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// * File cannot be read
-    /// * TOML parsing fails
-    /// * Configuration validation fails
-    pub fn load_and_validate_config(path: impl AsRef<Path>) -> Result<Self> {
-        info!("Loading config from: {:?}", path.as_ref());
-        let config = Self::from_file(path)?;
-        config.validate()?;
-        info!("Config loaded and validated successfully");
-        Ok(config)
     }
 }
 
@@ -354,6 +366,23 @@ mod tests {
             Some("sk_integration_test".to_string())
         );
         assert_eq!(loaded_config.agent_name, "Integration Test Agent");
+    }
+
+    #[test]
+    fn test_from_file_fills_missing_keys_with_defaults() {
+        let file = NamedTempFile::new().unwrap();
+        std::fs::write(
+            file.path(),
+            "agent_name = \"partial\"\n[monitoring]\ninterval_secs = 5\n",
+        )
+        .unwrap();
+
+        let config = AgentConfig::from_file(file.path()).unwrap();
+
+        assert_eq!(config.agent_name, "partial");
+        assert_eq!(config.monitoring.interval_secs, 5);
+        assert_eq!(config.monitoring.timeout_secs, 1);
+        assert_eq!(config.server.url, ServerConfig::default().url);
     }
 
     #[test]

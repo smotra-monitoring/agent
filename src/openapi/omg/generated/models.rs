@@ -51,7 +51,40 @@ pub struct AgentCacheStats {
     pub capacity: i64,
 }
 
-/// AgentConfig
+/// JSON Merge Patch (RFC 7396) over the `AgentConfig` structure, stored and returned
+/// unprocessed (a partial object, not a full `AgentConfig`).
+/// The agent builds its configuration as: built-in defaults, then local overrides,
+/// then this patch.
+/// - Objects merge key by key; scalars and arrays (`tags`, `endpoints`) replace the whole value.
+/// - `null` removes the key from the local overrides, so the agent default applies again.
+/// - A key absent from the patch leaves the agent's current value unchanged.
+/// - Must not contain `agent_id`, `agent_name`, `version`, `server.api_key`, `storage.cache_dir`.
+/// - Unknown keys or values of the wrong type make the agent reject the whole patch.
+pub type BaseConfig = std::collections::HashMap<String, serde_json::Value>;
+
+/// Agent record with its stored configuration patch, as returned by the server.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentConfigPatch {
+    pub id: UUIDv7,
+    pub workspace_id: UUIDv7,
+    /// Human-readable agent name; the agent maps it to `agent_name`
+    pub name: String,
+    /// Configuration version the agent must run after applying `base_config`
+    pub config_version_desired: i64,
+    /// JSON Merge Patch (RFC 7396) over the `AgentConfig` structure, stored and returned
+    /// unprocessed (a partial object, not a full `AgentConfig`).
+    /// The agent builds its configuration as: built-in defaults, then local overrides,
+    /// then this patch.
+    /// - Objects merge key by key; scalars and arrays (`tags`, `endpoints`) replace the whole value.
+    /// - `null` removes the key from the local overrides, so the agent default applies again.
+    /// - A key absent from the patch leaves the agent's current value unchanged.
+    /// - Must not contain `agent_id`, `agent_name`, `version`, `server.api_key`, `storage.cache_dir`.
+    /// - Unknown keys or values of the wrong type make the agent reject the whole patch.
+    pub base_config: std::collections::HashMap<String, serde_json::Value>,
+}
+
+/// Effective agent configuration after merging defaults, local overrides and the server
+/// patch. Never sent by the server; the server returns `AgentConfigPatch`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentConfig {
     /// Configuration version (used for syncing with server)
@@ -1326,7 +1359,7 @@ pub struct PostClaimAgentResponse409 {
 /// Configuration retrieved successfully
 #[derive(Debug, Clone, Deserialize)]
 pub struct GetAgentConfigurationResponse200 {
-    pub body: AgentConfig,
+    pub body: AgentConfigPatch,
 }
 /// Heartbeat received
 #[derive(Debug, Clone, Deserialize)]
