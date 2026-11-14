@@ -547,7 +547,7 @@ mod tests {
                     format!("/agent/{}/configuration", local.agent_id).as_str(),
                 )
                 .match_header("user-agent", user_agent())
-                .match_header("x-agent-api-key", "sk_local")
+                .match_header("x-agent-api-key", local.server.api_key.as_deref().unwrap())
                 .with_status(200)
                 .with_header("content-type", "application/json")
                 .with_body(serde_json::to_string(&body).unwrap())
