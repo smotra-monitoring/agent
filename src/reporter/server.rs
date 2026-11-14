@@ -225,10 +225,13 @@ mod tests {
     async fn heartbeat_with_newer_desired_version_persists_server_config() {
         let mut server = mockito::Server::new_async().await;
         let local = test_config(&server.url(), 1);
-        let mut remote = local.clone();
-        remote.version = 2;
-        remote.agent_name = "from-server".to_string();
-        remote.server.api_key = None;
+        let envelope = serde_json::json!({
+            "id": local.agent_id,
+            "workspace_id": Uuid::now_v7(),
+            "name": "from-server",
+            "config_version_desired": 2,
+            "base_config": {}
+        });
 
         let heartbeat = server
             .mock(
@@ -247,7 +250,7 @@ mod tests {
             )
             .with_status(200)
             .with_header("content-type", "application/json")
-            .with_body(serde_json::to_string(&remote).unwrap())
+            .with_body(envelope.to_string())
             .expect(1)
             .create_async()
             .await;

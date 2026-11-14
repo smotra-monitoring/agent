@@ -29,12 +29,14 @@ async fn agent_applies_server_config_after_heartbeat_reports_newer_version() {
     };
     local.save_to_file_secure(&config_path).await.unwrap();
 
-    // The server sends neither the api_key nor the agent's host-specific cache_dir.
-    let mut remote = local.clone();
-    remote.version = 2;
-    remote.agent_name = "from-server".to_string();
-    remote.server.api_key = None;
-    remote.storage.cache_dir = "./server-cache".to_string();
+    // The patch names only what the server wants to change; everything else stays local.
+    let envelope = serde_json::json!({
+        "id": local.agent_id,
+        "workspace_id": Uuid::now_v7(),
+        "name": "from-server",
+        "config_version_desired": 2,
+        "base_config": {"monitoring": {"interval_secs": 30}}
+    });
 
     server
         .mock(
@@ -53,7 +55,7 @@ async fn agent_applies_server_config_after_heartbeat_reports_newer_version() {
         )
         .with_status(200)
         .with_header("content-type", "application/json")
-        .with_body(serde_json::to_string(&remote).unwrap())
+        .with_body(envelope.to_string())
         .create_async()
         .await;
 
@@ -83,6 +85,7 @@ async fn agent_applies_server_config_after_heartbeat_reports_newer_version() {
     let saved = AgentConfig::from_file(&config_path).unwrap();
     assert_eq!(saved.version, 2);
     assert_eq!(saved.agent_name, "from-server");
+    assert_eq!(saved.monitoring.interval_secs, 30);
     assert_eq!(saved.server.api_key.as_deref(), Some("sk_local"));
     assert_eq!(saved.storage.cache_dir, local.storage.cache_dir);
 }
@@ -112,10 +115,15 @@ async fn agent_rejects_server_config_that_disables_tls_verification() {
     };
     local.save_to_file_secure(&config_path).await.unwrap();
 
-    let mut remote = local.clone();
-    remote.version = 2;
-    remote.agent_name = "from-server".to_string();
-    remote.server.verify_tls = false;
+    let envelope = serde_json::json!(
+        {
+            "id": local.agent_id,
+            "workspace_id": Uuid::now_v7(),
+            "name": "from-server",
+            "config_version_desired": 2,
+            "base_config": {"server": {"verify_tls": false}}
+        }
+    );
 
     server
         .mock(
@@ -134,7 +142,7 @@ async fn agent_rejects_server_config_that_disables_tls_verification() {
         )
         .with_status(200)
         .with_header("content-type", "application/json")
-        .with_body(serde_json::to_string(&remote).unwrap())
+        .with_body(envelope.to_string())
         .create_async()
         .await;
 
