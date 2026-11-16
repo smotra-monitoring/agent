@@ -230,7 +230,9 @@ mod tests {
             "workspace_id": Uuid::now_v7(),
             "name": "from-server",
             "config_version_desired": 2,
-            "base_config": {}
+            "base_config": {},
+            "tags": [],
+            "endpoints": []
         });
 
         let heartbeat = server

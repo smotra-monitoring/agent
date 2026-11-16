@@ -61,14 +61,14 @@ pub(super) fn reject_unknown_fields(patch: &Value) -> Result<()> {
 fn find_dropped_key(sent: &Value, kept: &Value, path: String) -> Option<String> {
     match (sent, kept) {
         (Value::Object(sent_map), Value::Object(kept_map)) => {
-            sent_map.iter().find_map(|(key, value)| {
+            sent_map.iter().find_map(|(sent_key, sent_value)| {
                 let child = if path.is_empty() {
-                    key.clone()
+                    sent_key.clone()
                 } else {
-                    format!("{}.{}", path, key)
+                    format!("{}.{}", path, sent_key)
                 };
-                match kept_map.get(key) {
-                    Some(kept_value) => find_dropped_key(value, kept_value, child),
+                match kept_map.get(sent_key) {
+                    Some(kept_value) => find_dropped_key(sent_value, kept_value, child),
                     None => Some(child),
                 }
             })
