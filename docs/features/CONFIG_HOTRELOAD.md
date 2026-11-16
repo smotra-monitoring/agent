@@ -284,15 +284,17 @@ The server drives config changes through the heartbeat; no separate polling time
 
 1. `POST /agent/{id}/heartbeat` returns `200` with `{ "config_version_desired": N }` (a legacy `204` means "no information").
 2. If `N` is higher than the running config version, the heartbeat task calls `GET /agent/{id}/configuration` (`src/agent_config/server_sync.rs`).
-3. The response is an envelope (`id`, `workspace_id`, `name`, `config_version_desired`, `base_config`). `base_config` is the stored config as a JSON Merge Patch (RFC 7396): a partial `AgentConfig` that the server returns unprocessed, without filling in defaults.
-4. The agent builds the new config as `Default` -> local config file -> `base_config`, validates it, and saves it to the config file with `save_to_file_secure`, which writes a temporary file in the same directory, syncs it, and renames it over the config so a crash or full disk never leaves a partial file.
+3. The response is an envelope (`id`, `workspace_id`, `name`, `config_version_desired`, `base_config`, `tags`, `endpoints`). `base_config` is the stored config as a JSON Merge Patch (RFC 7396): a partial `AgentConfig` that the server returns unprocessed, without filling in defaults. `tags` and `endpoints` are resolved by the server and returned at the top level, not inside `base_config`.
+4. The agent builds the new config as `Default` -> local config file -> `base_config`, then overlays the server-owned fields from the envelope, validates it, and saves it to the config file with `save_to_file_secure`, which writes a temporary file in the same directory, syncs it, and renames it over the config so a crash or full disk never leaves a partial file.
 5. The file watcher detects the change and the normal reload path applies it via `Agent::reload_config()`.
 
 Merge rules:
-- Objects merge key by key. Scalars and arrays (`tags`, `endpoints`) replace the previous value as a whole.
+- Objects merge key by key. Scalars and arrays replace the previous value as a whole.
 - A key missing from `base_config` keeps the agent's current value. Because the result is written back to the config file, a key that is later dropped from `base_config` is **not** reverted; send `null` for it.
 - `null` removes the key, so the `Default` value applies again (also for a whole section such as `"monitoring": null`).
-- `id` must equal the local `agent_id`, and `name` becomes `agent_name`. `base_config` must not contain `agent_id`, `agent_name`, `version`, `server.api_key` or `storage.cache_dir` (the server only stores a digest of the key, and the cache directory is host-specific); a patch that mentions them, even as `null`, is rejected.
+- Server-owned fields are overlaid after the merge, so the server value always wins: `agent_id` (from `id`, which must equal the local `agent_id`), `agent_name` (from `name`), `version` (from `config_version_desired`), `tags` and `endpoints` (from the top-level fields). `tags` and `endpoints` replace the local lists wholesale, so empty lists clear them.
+- `server.api_key` and `storage.cache_dir` always stay local (the server only stores a digest of the key, and the cache directory is host-specific).
+- `base_config` must not contain `agent_id`, `agent_name`, `version`, `tags`, `endpoints`, `server.api_key` or `storage.cache_dir`; a patch that mentions them, even as `null`, is rejected.
 - Any problem in `base_config` rejects the whole config: unknown keys at any depth, values of the wrong type, a missing required field of an array item, or a non-object value.
 - The config is also rejected if `config_version_desired` is not newer than the local version, if it lowers security, or if it fails `validate()`.
 - Lowering security means changing `server.url` from `https` to any other scheme (or to an unparsable URL), or changing `server.verify_tls` from `true` to `false`. Upgrades (`http` to `https`, `false` to `true`) are accepted. To downgrade deliberately, edit the local config file by hand.
