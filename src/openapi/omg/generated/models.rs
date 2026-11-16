@@ -60,7 +60,7 @@ pub struct AgentCacheStats {
 /// - A key absent from the patch leaves the agent's current value unchanged.
 /// - Must not contain `agent_id`, `agent_name`, `version`, `server.api_key`, `storage.cache_dir`.
 /// - Must not contain `tags` or `endpoints`; the server resolves them and returns them
-///   only as the top-level `tags` and `endpoints` fields.
+/// only as the top-level `tags` and `endpoints` fields.
 /// - Unknown keys or values of the wrong type make the agent reject the whole patch.
 pub type BaseConfig = std::collections::HashMap<String, serde_json::Value>;
 
@@ -82,7 +82,7 @@ pub struct AgentConfigPatch {
     /// - A key absent from the patch leaves the agent's current value unchanged.
     /// - Must not contain `agent_id`, `agent_name`, `version`, `server.api_key`, `storage.cache_dir`.
     /// - Must not contain `tags` or `endpoints`; the server resolves them and returns them
-    ///   only as the top-level `tags` and `endpoints` fields.
+    /// only as the top-level `tags` and `endpoints` fields.
     /// - Unknown keys or values of the wrong type make the agent reject the whole patch.
     pub base_config: std::collections::HashMap<String, serde_json::Value>,
     /// Agent tags resolved by the server; they replace the agent's tags wholesale
