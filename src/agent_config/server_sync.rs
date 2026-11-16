@@ -505,15 +505,18 @@ mod tests {
 
             let merged = merge_server_config(&local, &remote).unwrap();
 
+            // local only fields should be preserved
             assert_eq!(merged.agent_id, local.agent_id);
-            assert_eq!(merged.agent_name, "from-server");
+            assert_eq!(merged.server.api_key.as_deref(), Some("sk_local"));
+            assert_eq!(merged.storage.cache_dir, "/var/local/cache");
+
+            // server owned fields should be updated from the remote
             assert_eq!(merged.version, 3);
+            assert_eq!(merged.agent_name, "from-server");
             assert_eq!(merged.tags, remote.tags);
             assert_eq!(merged.endpoints.len(), 2);
             assert_eq!(merged.endpoints[0].address, "8.8.8.8");
             assert_eq!(merged.monitoring.interval_secs, 30);
-            assert_eq!(merged.server.api_key.as_deref(), Some("sk_local"));
-            assert_eq!(merged.storage.cache_dir, "/var/local/cache");
         }
 
         #[test]
