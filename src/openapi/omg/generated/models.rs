@@ -55,10 +55,12 @@ pub struct AgentCacheStats {
 /// unprocessed (a partial object, not a full `AgentConfig`).
 /// The agent builds its configuration as: built-in defaults, then local overrides,
 /// then this patch.
-/// - Objects merge key by key; scalars and arrays (`tags`, `endpoints`) replace the whole value.
+/// - Objects merge key by key; scalars and arrays replace the whole value.
 /// - `null` removes the key from the local overrides, so the agent default applies again.
 /// - A key absent from the patch leaves the agent's current value unchanged.
 /// - Must not contain `agent_id`, `agent_name`, `version`, `server.api_key`, `storage.cache_dir`.
+/// - Must not contain `tags` or `endpoints`; the server resolves them and returns them
+///   only as the top-level `tags` and `endpoints` fields.
 /// - Unknown keys or values of the wrong type make the agent reject the whole patch.
 pub type BaseConfig = std::collections::HashMap<String, serde_json::Value>;
 
@@ -75,12 +77,18 @@ pub struct AgentConfigPatch {
     /// unprocessed (a partial object, not a full `AgentConfig`).
     /// The agent builds its configuration as: built-in defaults, then local overrides,
     /// then this patch.
-    /// - Objects merge key by key; scalars and arrays (`tags`, `endpoints`) replace the whole value.
+    /// - Objects merge key by key; scalars and arrays replace the whole value.
     /// - `null` removes the key from the local overrides, so the agent default applies again.
     /// - A key absent from the patch leaves the agent's current value unchanged.
     /// - Must not contain `agent_id`, `agent_name`, `version`, `server.api_key`, `storage.cache_dir`.
+    /// - Must not contain `tags` or `endpoints`; the server resolves them and returns them
+    ///   only as the top-level `tags` and `endpoints` fields.
     /// - Unknown keys or values of the wrong type make the agent reject the whole patch.
     pub base_config: std::collections::HashMap<String, serde_json::Value>,
+    /// Agent tags resolved by the server; they replace the agent's tags wholesale
+    pub tags: Vec<String>,
+    /// Endpoints the agent must monitor, resolved by the server via topology membership
+    pub endpoints: Vec<Endpoint>,
 }
 
 /// Effective agent configuration after merging defaults, local overrides and the server
