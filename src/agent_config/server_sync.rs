@@ -16,11 +16,13 @@ use crate::error::{Error, Result};
 use crate::http_client::build_client;
 use crate::openapi::{AgentConfig, AgentConfigPatch};
 
-/// Config paths the patch must not touch: identity comes from the envelope, the rest is host-owned.
+/// Config paths the patch must not touch: the server returns them in the envelope, the rest is host-owned.
 const PROTECTED_KEYS: &[&[&str]] = &[
     &["agent_id"],
     &["agent_name"],
     &["version"],
+    &["tags"],
+    &["endpoints"],
     &["server", "api_key"],
     &["storage", "cache_dir"],
 ];
@@ -131,7 +133,10 @@ fn check_version(local: &AgentConfig, envelope: &AgentConfigPatch) -> Result<()>
 }
 
 fn reject_protected_keys(patch: &Value) -> Result<()> {
-    match PROTECTED_KEYS.iter().find(|path| touches_path(patch, path)) {
+    match PROTECTED_KEYS
+        .iter()
+        .find(|path| is_touches_path(patch, path))
+    {
         Some(path) => Err(Error::Config(format!(
             "server config must not set '{}'",
             path.join(".")
@@ -141,7 +146,7 @@ fn reject_protected_keys(patch: &Value) -> Result<()> {
 }
 
 /// True if the patch sets or removes `path`, including by nulling one of its parent objects.
-fn touches_path(patch: &Value, path: &[&str]) -> bool {
+fn is_touches_path(patch: &Value, path: &[&str]) -> bool {
     let Some((key, rest)) = path.split_first() else {
         return true;
     };
@@ -149,7 +154,7 @@ fn touches_path(patch: &Value, path: &[&str]) -> bool {
     match patch.get(key) {
         None => false,
         Some(Value::Null) => true,
-        Some(child) => touches_path(child, rest),
+        Some(child) => is_touches_path(child, rest),
     }
 }
 
@@ -164,12 +169,16 @@ fn build_effective(local: &AgentConfig, patch: &Value) -> Result<Value> {
 }
 
 /// 1. Converts from the JSON::Value into an `AgentConfig`.
-/// 2. Copy agent_name and config_version from the envelope into the effective config.
+/// 2. Overlays the server-owned fields from the envelope: `agent_name`, `version`, `tags`, `endpoints`.
+///
+/// `agent_id`, `server.api_key` and `storage.cache_dir` stay local.
 fn into_config(effective: Value, envelope: &AgentConfigPatch) -> Result<AgentConfig> {
     let mut config: AgentConfig = serde_json::from_value(effective)
         .map_err(|e| Error::Config(format!("server config is not a valid agent config: {}", e)))?;
     config.agent_name = envelope.name.clone();
     config.version = envelope.config_version_desired;
+    config.tags = envelope.tags.clone();
+    config.endpoints = envelope.endpoints.clone();
 
     Ok(config)
 }
@@ -226,7 +235,7 @@ fn reject_tls_verification_downgrade(local: &AgentConfig, remote: &AgentConfig) 
 mod tests {
     use super::*;
     use crate::http_client::user_agent;
-    use crate::openapi::{ServerConfig, StorageConfig};
+    use crate::openapi::{Endpoint, ServerConfig, StorageConfig};
     use serde_json::json;
     use tempfile::NamedTempFile;
     use uuid::Uuid;
@@ -249,7 +258,17 @@ mod tests {
         }
     }
 
-    /// The server's response for `local`: the stored patch as is, plus identity and version.
+    fn endpoint(address: &str) -> Endpoint {
+        Endpoint {
+            id: Uuid::now_v7(),
+            address: address.to_string(),
+            port: None,
+            enabled: true,
+            tags: vec![],
+        }
+    }
+
+    /// The server's response for `local`: the stored patch as is, plus identity, version and no tags/endpoints.
     fn envelope(local: &AgentConfig, version: i64, base_config: Value) -> AgentConfigPatch {
         AgentConfigPatch {
             id: local.agent_id,
@@ -257,6 +276,8 @@ mod tests {
             name: "from-server".to_string(),
             config_version_desired: version,
             base_config: serde_json::from_value(base_config).unwrap(),
+            tags: vec![],
+            endpoints: vec![],
         }
     }
 
@@ -301,6 +322,8 @@ mod tests {
                 json!({"agent_id": "0197f96c-b278-7f64-a32f-dae3cabe1ff0"}),
                 json!({"agent_name": "x"}),
                 json!({"version": 9}),
+                json!({"tags": ["x"]}),
+                json!({"endpoints": []}),
                 json!({"server": {"api_key": "sk_other"}}),
                 json!({"storage": {"cache_dir": "/tmp"}}),
             ];
@@ -315,6 +338,8 @@ mod tests {
             assert!(reject_protected_keys(&json!({"server": {"api_key": null}})).is_err());
             assert!(reject_protected_keys(&json!({"server": null})).is_err());
             assert!(reject_protected_keys(&json!({"storage": null})).is_err());
+            assert!(reject_protected_keys(&json!({"tags": null})).is_err());
+            assert!(reject_protected_keys(&json!({"endpoints": null})).is_err());
         }
 
         #[test]
@@ -370,6 +395,18 @@ mod tests {
 
             assert_eq!(effective["tags"], json!(["c"]));
         }
+
+        #[test]
+        fn keeps_local_tags_and_endpoints_when_the_patch_omits_them() {
+            let mut local = local_config("https://x.example.com");
+            local.tags = vec!["a".to_string()];
+            local.endpoints = vec![endpoint("1.1.1.1")];
+
+            let effective = build_effective(&local, &json!({})).unwrap();
+
+            assert_eq!(effective["tags"], json!(["a"]));
+            assert_eq!(effective["endpoints"][0]["address"], "1.1.1.1");
+        }
     }
 
     mod into_config_tests {
@@ -385,6 +422,37 @@ mod tests {
             assert_eq!(config.agent_name, "from-server");
             assert_eq!(config.version, 5);
             assert_eq!(config.agent_id, local.agent_id);
+        }
+
+        #[test]
+        fn overlays_tags_and_endpoints_from_the_envelope() {
+            let mut local = local_config("https://x.example.com");
+            local.tags = vec!["local".to_string()];
+            local.endpoints = vec![endpoint("local.example.com")];
+            let mut remote = envelope(&local, 5, json!({}));
+            remote.tags = vec!["a".to_string(), "b".to_string()];
+            remote.endpoints = vec![endpoint("8.8.8.8")];
+            let effective = build_effective(&local, &json!({})).unwrap();
+
+            let config = into_config(effective, &remote).unwrap();
+
+            assert_eq!(config.tags, remote.tags);
+            assert_eq!(config.endpoints.len(), 1);
+            assert_eq!(config.endpoints[0].id, remote.endpoints[0].id);
+            assert_eq!(config.endpoints[0].address, "8.8.8.8");
+        }
+
+        #[test]
+        fn empty_envelope_lists_clear_local_tags_and_endpoints() {
+            let mut local = local_config("https://x.example.com");
+            local.tags = vec!["local".to_string()];
+            local.endpoints = vec![endpoint("local.example.com")];
+            let effective = build_effective(&local, &json!({})).unwrap();
+
+            let config = into_config(effective, &envelope(&local, 5, json!({}))).unwrap();
+
+            assert!(config.tags.is_empty());
+            assert!(config.endpoints.is_empty());
         }
 
         #[test]
@@ -424,6 +492,51 @@ mod tests {
             assert_eq!(merged.storage.cache_dir, "/var/local/cache");
             assert_eq!(merged.agent_name, "from-server");
             assert_eq!(merged.version, 2);
+        }
+
+        #[test]
+        fn overlays_server_owned_fields_and_keeps_local_only_fields() {
+            let mut local = local_config("https://x.example.com");
+            local.tags = vec!["local".to_string()];
+            local.endpoints = vec![endpoint("local.example.com")];
+            let mut remote = envelope(&local, 3, json!({"monitoring": {"interval_secs": 30}}));
+            remote.tags = vec!["a".to_string()];
+            remote.endpoints = vec![endpoint("8.8.8.8"), endpoint("1.1.1.1")];
+
+            let merged = merge_server_config(&local, &remote).unwrap();
+
+            // local only fields should be preserved
+            assert_eq!(merged.agent_id, local.agent_id);
+            assert_eq!(merged.server.api_key.as_deref(), Some("sk_local"));
+            assert_eq!(merged.storage.cache_dir, "/var/local/cache");
+
+            // server owned fields should be updated from the remote
+            assert_eq!(merged.version, 3);
+            assert_eq!(merged.agent_name, "from-server");
+            assert_eq!(merged.tags, remote.tags);
+            assert_eq!(merged.endpoints.len(), 2);
+            assert_eq!(merged.endpoints[0].address, "8.8.8.8");
+            assert_eq!(merged.monitoring.interval_secs, 30);
+        }
+
+        #[test]
+        fn empty_server_lists_clear_local_tags_and_endpoints() {
+            let mut local = local_config("https://x.example.com");
+            local.tags = vec!["local".to_string()];
+            local.endpoints = vec![endpoint("local.example.com")];
+
+            let merged = merge(&local, json!({})).unwrap();
+
+            assert!(merged.tags.is_empty());
+            assert!(merged.endpoints.is_empty());
+        }
+
+        #[test]
+        fn rejects_tags_and_endpoints_in_base_config() {
+            let local = local_config("https://x.example.com");
+
+            assert!(merge(&local, json!({"tags": ["x"]})).is_err());
+            assert!(merge(&local, json!({"endpoints": []})).is_err());
         }
 
         #[test]
@@ -540,7 +653,9 @@ mod tests {
         async fn returns_envelope_on_200() {
             let mut server = mockito::Server::new_async().await;
             let local = local_config(&server.url());
-            let body = envelope(&local, 2, json!({"monitoring": {"interval_secs": 30}}));
+            let mut body = envelope(&local, 2, json!({"monitoring": {"interval_secs": 30}}));
+            body.tags = vec!["edge".to_string()];
+            body.endpoints = vec![endpoint("8.8.8.8")];
             let mock = server
                 .mock(
                     "GET",
@@ -559,6 +674,9 @@ mod tests {
             assert_eq!(fetched.config_version_desired, 2);
             assert_eq!(fetched.name, "from-server");
             assert_eq!(fetched.base_config["monitoring"]["interval_secs"], 30);
+            assert_eq!(fetched.tags, ["edge"]);
+            assert_eq!(fetched.endpoints.len(), 1);
+            assert_eq!(fetched.endpoints[0].address, "8.8.8.8");
             mock.assert_async().await;
         }
 
@@ -610,7 +728,7 @@ mod tests {
             for body in [
                 "{not json".to_string(),
                 format!(
-                    r#"{{"id":"{0}","workspace_id":"{0}","name":"n","config_version_desired":2,"base_config":"{{}}"}}"#,
+                    r#"{{"id":"{0}","workspace_id":"{0}","name":"n","config_version_desired":2,"base_config":"{{}}","tags":[],"endpoints":[]}}"#,
                     Uuid::now_v7()
                 ),
             ] {
@@ -629,6 +747,28 @@ mod tests {
 
                 assert!(fetch_configuration(&local).await.is_err(), "body {body}");
             }
+        }
+
+        #[tokio::test]
+        async fn fails_when_tags_or_endpoints_are_missing() {
+            let mut server = mockito::Server::new_async().await;
+            let local = local_config(&server.url());
+            let body = format!(
+                r#"{{"id":"{0}","workspace_id":"{0}","name":"n","config_version_desired":2,"base_config":{{}}}}"#,
+                local.agent_id
+            );
+            server
+                .mock(
+                    "GET",
+                    format!("/agent/{}/configuration", local.agent_id).as_str(),
+                )
+                .with_status(200)
+                .with_header("content-type", "application/json")
+                .with_body(body)
+                .create_async()
+                .await;
+
+            assert!(fetch_configuration(&local).await.is_err());
         }
 
         #[tokio::test]
@@ -663,12 +803,10 @@ mod tests {
         async fn persists_merged_config_with_secure_permissions() {
             let mut server = mockito::Server::new_async().await;
             let local = local_config(&server.url());
-            serve(
-                &mut server,
-                &local,
-                &envelope(&local, 2, json!({"monitoring": {"interval_secs": 30}})),
-            )
-            .await;
+            let mut remote = envelope(&local, 2, json!({"monitoring": {"interval_secs": 30}}));
+            remote.tags = vec!["edge".to_string()];
+            remote.endpoints = vec![endpoint("8.8.8.8")];
+            serve(&mut server, &local, &remote).await;
             let file = NamedTempFile::new().unwrap();
 
             let version = sync_config_from_server(&local, file.path()).await.unwrap();
@@ -678,6 +816,9 @@ mod tests {
             assert_eq!(saved.version, 2);
             assert_eq!(saved.agent_name, "from-server");
             assert_eq!(saved.monitoring.interval_secs, 30);
+            assert_eq!(saved.tags, remote.tags);
+            assert_eq!(saved.endpoints.len(), 1);
+            assert_eq!(saved.endpoints[0].address, "8.8.8.8");
             assert_eq!(saved.server.api_key.as_deref(), Some("sk_local"));
             assert_eq!(saved.storage.cache_dir, "/var/local/cache");
 
@@ -749,7 +890,7 @@ mod tests {
             let path = &["a"];
 
             assert!(
-                touches_path(&patch, path),
+                is_touches_path(&patch, path),
                 "Patch should touch the specified path"
             );
         }
@@ -760,7 +901,7 @@ mod tests {
             let path = &["c"];
 
             assert!(
-                !touches_path(&patch, path),
+                !is_touches_path(&patch, path),
                 "Patch should not touch the specified path"
             );
         }
@@ -771,7 +912,7 @@ mod tests {
             let path = &["a", "b"];
 
             assert!(
-                touches_path(&patch, path),
+                is_touches_path(&patch, path),
                 "Patch should touch the specified nested path"
             );
         }

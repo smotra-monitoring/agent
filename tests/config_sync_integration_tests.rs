@@ -16,6 +16,7 @@ async fn agent_applies_server_config_after_heartbeat_reports_newer_version() {
         version: 1,
         agent_id: Uuid::now_v7(),
         agent_name: "local".to_string(),
+        tags: vec!["local".to_string()],
         server: ServerConfig {
             url: server.url(),
             api_key: Some("sk_local".to_string()),
@@ -29,13 +30,18 @@ async fn agent_applies_server_config_after_heartbeat_reports_newer_version() {
     };
     local.save_to_file_secure(&config_path).await.unwrap();
 
-    // The patch names only what the server wants to change; everything else stays local.
+    // The patch names only what the server wants to change; tags and endpoints are server-owned.
+    let endpoint_id = Uuid::now_v7();
     let envelope = serde_json::json!({
         "id": local.agent_id,
         "workspace_id": Uuid::now_v7(),
         "name": "from-server",
         "config_version_desired": 2,
-        "base_config": {"monitoring": {"interval_secs": 30}}
+        "base_config": {"monitoring": {"interval_secs": 30}},
+        "tags": ["edge", "eu"],
+        "endpoints": [
+            {"id": endpoint_id, "address": "8.8.8.8", "enabled": true, "tags": []}
+        ]
     });
 
     server
@@ -86,6 +92,10 @@ async fn agent_applies_server_config_after_heartbeat_reports_newer_version() {
     assert_eq!(saved.version, 2);
     assert_eq!(saved.agent_name, "from-server");
     assert_eq!(saved.monitoring.interval_secs, 30);
+    assert_eq!(saved.tags, ["edge", "eu"]);
+    assert_eq!(saved.endpoints.len(), 1);
+    assert_eq!(saved.endpoints[0].id, endpoint_id);
+    assert_eq!(saved.endpoints[0].address, "8.8.8.8");
     assert_eq!(saved.server.api_key.as_deref(), Some("sk_local"));
     assert_eq!(saved.storage.cache_dir, local.storage.cache_dir);
 }
@@ -121,7 +131,9 @@ async fn agent_rejects_server_config_that_disables_tls_verification() {
             "workspace_id": Uuid::now_v7(),
             "name": "from-server",
             "config_version_desired": 2,
-            "base_config": {"server": {"verify_tls": false}}
+            "base_config": {"server": {"verify_tls": false}},
+            "tags": [],
+            "endpoints": []
         }
     );
 

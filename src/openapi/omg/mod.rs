@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 #[allow(non_camel_case_types)]
-#[allow(clippy::enum_variant_names)]
+#[allow(clippy::all)]
 mod generated;
 
 #[allow(dead_code)]
