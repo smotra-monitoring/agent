@@ -1384,6 +1384,11 @@ pub struct SubmitAgentResultsResponse202 {
 pub struct ListAgentsResponse200 {
     pub body: AgentListResponse,
 }
+/// Agent retrieved successfully
+#[derive(Debug, Clone, Deserialize)]
+pub struct GetAgentResponse200 {
+    pub body: Agent,
+}
 /// Report generated successfully
 #[derive(Debug, Clone, Deserialize)]
 pub struct GetResultReportResponse200 {
