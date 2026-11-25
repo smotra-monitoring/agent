@@ -46,7 +46,7 @@ flate2 = "1"
 tar = "0"
 hostname = "0"
 if-addrs = "0"
-notify = "8"
+notify = "9"
 notify-debouncer-full = "0"
 validator = { version = "0.21.0", features = ["derive"] }
 regex = "1.13.1"
