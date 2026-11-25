@@ -3,8 +3,10 @@
 //! Provides file system watching for config file changes.
 //! Sends reload triggers through provided channel when changes are detected.
 
-use notify::{Config as NotifyConfig, RecommendedWatcher, RecursiveMode};
-use notify_debouncer_full::{new_debouncer_opt, DebounceEventResult, Debouncer, NoCache};
+use notify_debouncer_full::notify::{RecommendedWatcher, RecursiveMode};
+use notify_debouncer_full::{
+    new_debouncer_opt, Config as DebouncerConfig, DebounceEventResult, Debouncer, NoCache,
+};
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::sync::mpsc;
@@ -52,9 +54,10 @@ impl ConfigFileWatcher {
         let trigger_tx = self.trigger_tx.clone();
         let config_path = self.config_path.clone();
 
+        let debouncer_config = DebouncerConfig::default().with_timeout(Duration::from_millis(500));
+
         let mut debouncer = new_debouncer_opt::<_, RecommendedWatcher, NoCache>(
-            Duration::from_millis(500), // Debounce duration
-            None,                       // No custom tick rate
+            debouncer_config,
             move |result: DebounceEventResult| match result {
                 Ok(events) => {
                     for event in events {
@@ -82,7 +85,6 @@ impl ConfigFileWatcher {
                 }
             },
             NoCache,
-            NotifyConfig::default(),
         )
         .map_err(|e| Error::Config(format!("Failed to create file watcher: {}", e)))?;
 
