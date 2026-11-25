@@ -69,9 +69,6 @@ mod tests {
         println!("is_managed_by_launchd: {}", result);
 
         // Note: In a real test, we would mock the sysinfo calls to simulate different parent processes.
-
-        // For now, we just assert that the function runs without panicking.
-        assert!(true);
     }
 
     #[cfg(target_os = "linux")]
