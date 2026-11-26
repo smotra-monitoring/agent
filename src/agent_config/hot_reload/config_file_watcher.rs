@@ -89,7 +89,7 @@ impl ConfigFileWatcher {
         .map_err(|e| Error::Config(format!("Failed to create file watcher: {}", e)))?;
 
         // Watch the parent directory (some editors replace files instead of modifying them)
-        let watch_path = self.config_path.parent().unwrap_or_else(|| Path::new("."));
+        let watch_path = watch_dir(&self.config_path);
 
         debouncer
             .watch(watch_path, RecursiveMode::NonRecursive)
@@ -102,11 +102,30 @@ impl ConfigFileWatcher {
     }
 }
 
+/// Directory to watch for `config_path`; a bare filename has an empty parent, which notify rejects.
+fn watch_dir(config_path: &Path) -> &Path {
+    match config_path.parent() {
+        Some(parent) if !parent.as_os_str().is_empty() => parent,
+        _ => Path::new("."),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::openapi::AgentConfig;
     use tempfile::NamedTempFile;
+
+    /// Regression: `config.toml` has an empty parent, which made `watch` fail with "No path was found".
+    #[test]
+    fn test_watch_dir_bare_filename_uses_current_dir() {
+        assert_eq!(watch_dir(Path::new("config.toml")), Path::new("."));
+        assert_eq!(watch_dir(Path::new("./config.toml")), Path::new("."));
+        assert_eq!(
+            watch_dir(Path::new("/etc/smotra/config.toml")),
+            Path::new("/etc/smotra")
+        );
+    }
 
     #[tokio::test]
     async fn test_config_file_watcher_creation() {
