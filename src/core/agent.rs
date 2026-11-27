@@ -124,7 +124,11 @@ impl Agent {
             let shutdown_rx = self.subscribe_shutdown();
 
             tokio::spawn(async move {
-                crate::agent_config::run_hot_reload(config_path, config_tx, shutdown_rx).await
+                if let Err(e) =
+                    crate::agent_config::run_hot_reload(config_path, config_tx, shutdown_rx).await
+                {
+                    error!("Config hot-reload task failed: {}", e);
+                }
             })
         };
 

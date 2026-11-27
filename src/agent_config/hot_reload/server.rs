@@ -9,7 +9,7 @@
 
 use std::path::PathBuf;
 use tokio::sync::{broadcast, mpsc};
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 use super::config_file_watcher::ConfigFileWatcher;
 use super::sighup::handle_sighup;
@@ -67,8 +67,10 @@ pub async fn run_hot_reload(
 
     // Start watching for file changes
     if let Err(e) = file_watcher.start_watching() {
-        warn!("Failed to start config file watching: {}", e);
-        warn!("Config hot-reload from file changes will not be available");
+        error!("Failed to start config file watching: {}", e);
+        error!(
+            "File-change and server-pushed config updates will not be applied until restart; SIGHUP still works"
+        );
     } else {
         info!("Config file watching enabled");
     }
