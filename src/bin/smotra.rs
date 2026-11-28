@@ -156,7 +156,7 @@ async fn main() -> Result<()> {
         print_info(&config)?;
     }
 
-    info!("Starting the agent");
+    info!("Starting the agent, version: {}", env!("CARGO_PKG_VERSION"));
 
     let agent = Agent::new(cli.config)?;
     agent.start().await.map_err(|e| {
