@@ -111,7 +111,7 @@ pub async fn run_hot_reload(
                                     break;
                                 }
 
-                                info!("Config reload completed successfully");
+                                info!("'Config reload' signal sent successfully with trigger '{:?}'", trigger);
                             }
                             Err(e) => {
                                 error!("Failed to load config during reload: {}", e);
